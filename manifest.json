@@ -1,5 +1,31 @@
 {
  "files": {
+  "Xenova/wavlm-base-plus-sv/README.md": {
+   "sha256": "8d27bc6f8b0b983b51659afe7b406b6a1b3d23d59f80dca8499d0200163a060d",
+   "size": 2152,
+   "src": "3ab9d3afcd78184d0855961217cce3e0ac863442"
+  },
+  "Xenova/wavlm-base-plus-sv/config.json": {
+   "sha256": "75efe37fb015f22d82af367dcef974c39119fa4c6505d16a82d86f604a431f4e",
+   "size": 58609,
+   "src": "9c6e4240654c7fdbc805678f3df7782d80ac6813"
+  },
+  "Xenova/wavlm-base-plus-sv/onnx/model_quantized.onnx": {
+   "parts": 2,
+   "sha256": "576bf6017796bdd179824d801b3a355a1dda2451559c6a398562175e33589f68",
+   "size": 101683453,
+   "src": "576bf6017796bdd179824d801b3a355a1dda2451559c6a398562175e33589f68"
+  },
+  "Xenova/wavlm-base-plus-sv/preprocessor_config.json": {
+   "sha256": "99272fe8ccfab114b68b478681ea47ee3a1ce62bb788cb92dd6e4f69fb1f1da2",
+   "size": 215,
+   "src": "10f6def8c83d70a2b087a567dcf523b75152a80b"
+  },
+  "Xenova/wavlm-base-plus-sv/quantize_config.json": {
+   "sha256": "b073ca6f0ade094cfa676150989f20dc15e1a5b40826f6f0aac85fa99626dbea",
+   "size": 1154,
+   "src": "7ae5f3f16a7f35e8e366ca22ee50f42de325cfad"
+  },
   "onnx-community/whisper-base/README.md": {
    "sha256": "60a378018182c57cf382866ddfbf0fb2b4031b3895ae932aa34ecb8ff7065a13",
    "size": 531,
@@ -88,6 +114,13 @@
   }
  },
  "models": {
+  "Xenova/wavlm-base-plus-sv": {
+   "onnx": [
+    "model_quantized"
+   ],
+   "size": 101745583,
+   "use": "講者聲紋"
+  },
   "onnx-community/whisper-base": {
    "onnx": [
     "decoder_model_merged_q4",
@@ -100,5 +133,5 @@
    "use": "語音辨識（預設）"
   }
  },
- "updated": "2026-10-20T11:35:27Z"
+ "updated": "2026-10-20T11:36:36Z"
 }
