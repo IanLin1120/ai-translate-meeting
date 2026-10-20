@@ -3,3 +3,4 @@ sherpa-onnx==1.13.8
 opencc-python-reimplemented==0.1.7
 imageio-ffmpeg==0.6.0
 numpy
+scipy

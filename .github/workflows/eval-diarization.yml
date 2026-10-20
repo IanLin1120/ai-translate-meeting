@@ -1,0 +1,39 @@
+name: 評估講者辨識
+
+# 用 AMI 會議語料測試講者辨識的參數（結果在執行頁面的註記）
+on:
+  workflow_dispatch:
+    inputs:
+      n:
+        description: 測試幾場會議
+        default: '3'
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -q -r scripts/requirements-transcribe.txt pyarrow
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/aitm
+          key: aitm-models-v1-none
+          restore-keys: aitm-models-v1-
+      - name: 講者辨識模型
+        run: |
+          M=~/.cache/aitm; mkdir -p $M/seg
+          [ -f $M/seg/model.onnx ] || (curl -sSL https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2 | tar xj -C /tmp && cp /tmp/sherpa-onnx-pyannote-segmentation-3-0/model.onnx $M/seg/)
+          [ -f $M/emb.onnx ] || curl -sSL -o $M/emb.onnx https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx
+      - name: 評估
+        env:
+          N_MEETINGS: ${{ inputs.n }}
+        run: python3 scripts/eval_diar.py
