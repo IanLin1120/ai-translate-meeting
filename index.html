@@ -501,12 +501,12 @@ const ASRM={tiny:{r:'onnx-community/whisper-tiny',n:'Whisper Tiny',s:'約 40 MB�
 const MTE={auto:{n:'自動選擇',s:'中↔英用 Opus-MT，其他語言用 NLLB-200'},opus:{n:'Opus-MT（中↔英）',s:'Helsinki-NLP・各約 100 MB・最快'},nllb:{n:'NLLB-200（200 種語言）',s:'Meta・約 900 MB・非商業授權'},m2m:{n:'M2M100（100 種語言）',s:'Meta・約 1 GB・MIT 授權'},q05:{n:'Qwen2.5 0.5B（LLM 翻譯）',s:'阿里巴巴・約 500 MB・語氣較自然，建議 WebGPU',r:'onnx-community/Qwen2.5-0.5B-Instruct'},q15:{n:'Qwen2.5 1.5B（LLM 翻譯）',s:'約 1.2 GB・品質最好，需要 WebGPU',r:'onnx-community/Qwen2.5-1.5B-Instruct'}};
 const HFS=[['https://huggingface.co/','Hugging Face 官方'],['https://hf-mirror.com/','hf-mirror 鏡像（官方連不上時）']];
 const DEF={theme:'sea',mode:'auto',font:16,blur:18,glass:.4,ui:'auto',surf:'paper',onb:0,src:'auto',tgt:'zh-TW',eng:'auto',asr:'base',asrc:'',dev:'wasm',hf:'https://huggingface.co/',
- mlang:'zh',mtr:'',thr:.8,maxSpk:0,fine:1,hall:1,keepAud:1,tw:1,lvtts:1,lvm:'one',lvA:'zh-TW',lvB:'en',lvSil:.7,tsub:'text',msrc:'gh',autoUpd:1,mcloud:'gh',cmodel:'large-v3-turbo',ghTok:'',thr2:3,v13:0};
+ mlang:'zh',mtr:'',thr:.8,maxSpk:0,fine:1,hall:1,keepAud:1,tw:1,lvtts:1,lvm:'one',lvA:'zh-TW',lvB:'en',lvSil:.7,tsub:'text',msrc:'gh',autoUpd:1,mcloud:'gh',cmodel:'sensevoice',ghTok:'',thr2:3,v13:0,v15:0};
 let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.4.1';
+const APP_VER='1.5.0';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -884,7 +884,7 @@ async function mSeg(m,s){const k=m.id+':'+String(++m.seq).padStart(6,'0');await 
 async function mPump(){if(mBusy)return;mBusy=1;
  while(MQ.length){const k=MQ.shift();try{const q=await iget('q',k);if(q){const m=await getM(q.mid);if(m)await mProc(m,q)}}catch(e){console.warn(e);if(/fetch|網路|network|Failed/i.test(e.message)){MQ.unshift(k);mBusy=0;mStatus();toast('AI 模型需要網路下載，連上網路後會自動繼續辨識',4000);setTimeout(mPump,15000);return}}
   await idel('q',k);mStatus();if(cur=='meet')mPend()}
- mBusy=0;for(const id in MS){const m=MS[id];if(m.st=='proc'&&!(R.on&&R.m==m)){m.st='done';saveM(m)}}mStatus();if(cur=='meet'&&R.m)mPend()}
+ mBusy=0;for(const id in MS){const m=MS[id];if(m.st=='proc'&&!(R.on&&R.m==m)){m.st='done';if(!m.cm&&m.u.some(u=>u.e))recluster(m);saveM(m);if(R.m==m&&cur=='meet')renderMeet();if(MD.id==m.id)renderMD()}}mStatus();if(cur=='meet'&&R.m)mPend()}
 /* 一段語音:Whisper 轉文字 → pyannote 切講者 → WavLM 聲紋比對 → 合併成句子 */
 async function mProc(m,q){const a=i2f(q.pcm),dur=a.length/16000;
  const r=await AI.call('asr',{repo:asrRepo(),lang:m.lang=='auto'?null:m.lang,audio:a.slice(0)});
@@ -918,10 +918,36 @@ function assign(m,e,len){if(!e){if(!m.spk.length)newSpk(m);return m.spk[0].id}
  const max=+S.set.maxSpk||0,thr=+S.set.thr+(len<2?-.04:0);
  let s=best;if(!best||(bs<thr&&(!max||m.spk.length<max)))s=newSpk(m);
  const w=Math.min(len||1,6);if(!s.v)s.v=Array.from(v,x=>x*w);else for(let i=0;i<v.length;i++)s.v[i]+=v[i]*w;s.n++;return s.id}
-function recluster(m){const keep={};m.spk.forEach(s=>keep[s.id]=s.name);m.spk=[];
- m.u.forEach(u=>{if(u.e)u.s=assign(m,Float32Array.from(u.e),Math.max(1,u.t1-u.t0))});
- const lastE=null;m.u.forEach((u,i)=>{if(!u.e)u.s=i?m.u[i-1].s:(m.spk[0]?m.spk[0].id:newSpk(m).id)});
- m.spk.forEach(s=>{if(keep[s.id]&&!/^講者 \d+$/.test(keep[s.id]))s.name=keep[s.id]});m.spk=m.spk.filter(s=>m.u.some(u=>u.s==s.id));saveM(m)}
+/* 講者分群:平均連結階層分群 → 零碎小群併入最像的群 → 依群中心反覆修正 */
+function ahcLabels(E,dur,k,thr,minS){const n=E.length;if(n<2)return new Array(n).fill(0);
+ const X=E.map(v=>{let s=0;for(const x of v)s+=x*x;s=Math.sqrt(s)||1;return Float32Array.from(v,x=>x/s)}),d=X[0].length;
+ const S=new Float32Array(n*n);for(let i=0;i<n;i++)for(let j=i;j<n;j++){let s=0;const a=X[i],b=X[j];for(let q=0;q<d;q++)s+=a[q]*b[q];S[i*n+j]=S[j*n+i]=s}
+ const act=new Uint8Array(n).fill(1),sz=new Float64Array(n).fill(1),lab=Array.from({length:n},(_,i)=>i),best=new Int32Array(n),bs=new Float64Array(n);
+ const rowBest=i=>{let b=-1,v=-9;for(let j=0;j<n;j++)if(j!=i&&act[j]&&S[i*n+j]>v){v=S[i*n+j];b=j}best[i]=b;bs[i]=v};
+ for(let i=0;i<n;i++)rowBest(i);let cnt=n;
+ while(cnt>1){let i=-1,v=-9;for(let q=0;q<n;q++)if(act[q]&&best[q]>=0&&bs[q]>v){v=bs[q];i=q}if(i<0)break;
+  if(k?cnt<=k:1-v>thr)break;const j=best[i];
+  for(let c=0;c<n;c++)if(act[c]&&c!=i&&c!=j){const s=(sz[i]*S[i*n+c]+sz[j]*S[j*n+c])/(sz[i]+sz[j]);S[i*n+c]=S[c*n+i]=s}
+  act[j]=0;sz[i]+=sz[j];cnt--;for(let q=0;q<n;q++)if(lab[q]==j)lab[q]=i;
+  for(let q=0;q<n;q++)if(act[q]&&(q==i||best[q]==i||best[q]==j))rowBest(q);else if(act[q]&&S[q*n+i]>bs[q]){bs[q]=S[q*n+i];best[q]=i}}
+ let L=lab.slice();const tot=dur.reduce((a,b)=>a+b,0);if(minS==null)minS=Math.min(10,Math.max(3,tot*.015));
+ const cent=()=>{const C=new Map();L.forEach((l,i)=>{let c=C.get(l);if(!c){c=new Float64Array(d);C.set(l,c)}for(let q=0;q<d;q++)c[q]+=X[i][q]});for(const c of C.values()){let s=0;for(const x of c)s+=x*x;s=Math.sqrt(s)||1;for(let q=0;q<d;q++)c[q]/=s}return C};
+ const dot=(a,b)=>{let s=0;for(let q=0;q<d;q++)s+=a[q]*b[q];return s};
+ for(let it=0;it<6;it++){let C=cent();
+  if(!k){for(;;){const ks=[...C.keys()];if(ks.length<2)break;const T=new Map();L.forEach((l,i)=>T.set(l,(T.get(l)||0)+dur[i]));const s=ks.reduce((a,b)=>T.get(a)<=T.get(b)?a:b);if(T.get(s)>=minS)break;
+   const t=ks.filter(x=>x!=s).reduce((a,b)=>dot(C.get(s),C.get(a))>=dot(C.get(s),C.get(b))?a:b);L=L.map(l=>l==s?t:l);C=cent()}}
+  const ks=[...C.keys()],nw=X.map(x=>ks.reduce((a,b)=>dot(x,C.get(a))>=dot(x,C.get(b))?a:b));if(nw.every((v,i)=>v==L[i]))break;L=nw}
+ const o=new Map();return L.map(l=>{if(!o.has(l))o.set(l,o.size);return o.get(l)})}
+/* 重新分辨講者:雲端結果用 3D-Speaker 聲紋、手機結果用 WavLM 聲紋,門檻不同 */
+function recluster(m,k){const it=m.u.map((u,i)=>[u,i]).filter(([u])=>u.e&&u.e.length);if(!it.length)return;
+ const cloud=!!m.cm,sl=+S.set.thr||.8;
+ const thr=cloud?Math.max(.4,Math.min(.85,1.4-sl)):Math.max(.05,Math.min(.35,.12+(.8-sl)*.5));
+ const lab=ahcLabels(it.map(([u])=>u.e),it.map(([u])=>Math.max(.5,u.t1-u.t0)),k||+S.set.maxSpk||0,thr);
+ const keep={};m.spk.forEach(s=>keep[s.id]=s);const vote={};it.forEach(([u],j)=>{(vote[lab[j]]=vote[lab[j]]||{})[u.s]=(vote[lab[j]][u.s]||0)+1});
+ m.spk=[];const map={};[...new Set(lab)].forEach(l=>{const s=newSpk(m);map[l]=s.id;const old=Object.entries(vote[l]).sort((a,b)=>b[1]-a[1])[0];const o=old&&keep[old[0]];if(o&&!/^講者 \d+$/.test(o.name)&&!m.spk.some(x=>x.name==o.name)){s.name=o.name;s.c=o.c}});
+ it.forEach(([u],j)=>u.s=map[lab[j]]);
+ m.u.forEach((u,i)=>{if(!(u.e&&u.e.length)){let b=null,bd=1e9;it.forEach(([v])=>{const d=Math.abs(v.t0-u.t0);if(d<bd){bd=d;b=v}});u.s=b?b.s:m.spk[0].id}});
+ m.spk.forEach(s=>s.n=m.u.filter(u=>u.s==s.id).length);m.spk=m.spk.filter(s=>s.n);saveM(m)}
 /* 講者改名/合併 */
 async function spkMenu(m,sid){const s=spkOf(m,sid);const k=await menu(s.name,[['ren','✏️ 改名（例如：Ian、王經理）'],...m.spk.filter(x=>x.id!=sid).map(x=>['mg'+x.id,`🔗 併入「${x.name}」（同一個人）`]),['col','🎨 換顏色']]);
  if(k=='ren'){const n=prompt('講者名稱',s.name);if(n&&n.trim()){s.name=n.trim();saveM(m)}}
@@ -985,8 +1011,8 @@ async function cloudRun(m){if(CLOUD[m.id])return;CLOUD[m.id]=1;
    if(m.cj.up[name])continue;const b=await iget('a',m.id+':'+a.n);if(!b)continue;
    cloudSt(m,`上傳錄音 ${k}/${m.aud.length}`,0);await ghUpload(rel,name,b,(s,t)=>cloudSt(m,`上傳錄音 ${k}/${m.aud.length}（${fmtMB(s)}/${fmtMB(t)}）`,s/t*100));m.cj.up[name]=1;saveM(m)}
   if(!parts.length)throw new Error('沒有錄音檔可以上傳');
-  if(!m.cj.job){const spk=+S.set.maxSpk||0,thr=Math.max(.3,Math.min(.85,1.3-S.set.thr));
-   const job=new Blob([JSON.stringify({parts,lang:m.lang=='auto'?'auto':m.lang,model:S.set.cmodel||'large-v3-turbo',speakers:spk,thr,tw:S.set.tw?1:0})],{type:'application/json'});
+  if(!m.cj.job){const spk=+S.set.maxSpk||0,sens=Math.max(.4,Math.min(.85,1.4-(+S.set.thr||.8)));
+   const job=new Blob([JSON.stringify({parts,lang:m.lang=='auto'?'auto':m.lang,model:S.set.cmodel||'sensevoice',speakers:spk,sens,tw:S.set.tw?1:0})],{type:'application/json'});
    await ghUpload(rel,'job.json',job);m.cj.job=1;saveM(m)}
   if(!m.cj.disp){cloudSt(m,'啟動 GitHub 轉文字');await ghApi('POST','/actions/workflows/transcribe.yml/dispatches',{ref:'main',inputs:{release:String(rel)}});m.cj.disp=Date.now();saveM(m)}
   /* 等結果:讀草稿 Release 的說明欄進度 */
@@ -1102,12 +1128,12 @@ function renderSet(){const s=S.set,sg=(id,a,v)=>`<div class="seg glass" id="${id
  const P=perm();let I=null;if(IS_APP){try{I=JSON.parse(NB.info())}catch(e){}}
  const pst=v=>v=='yes'?'<span class="pst ok">已允許</span>':'<span class="pst no">未允許 ›</span>';
  let h=sec('🎙 語音辨識（OpenAI Whisper）',`<div class="grp glass">${Object.entries(ASRM).map(([k,a])=>`<div class="row${s.asr==k&&!s.asrc?' on':''}" data-asr="${k}"><b>${a.n}<small>${a.s}</small></b><span class="ck">✔</span></div>`).join('')}<div class="sl"><label>自訂 Whisper 模型（ONNX 格式，進階）</label><input class="ti" id="asrc" value="${esc(s.asrc)}" placeholder="例如 onnx-community/whisper-small" autocomplete="off" autocapitalize="off" spellcheck="false"><small>留白就用上面選的模型。可填 Hugging Face 上任何 Transformers.js 相容的 Whisper 模型。</small></div></div>`);
- h+=sec('👥 講者辨識'+(s.mcloud=='gh'?'（雲端與手機共用）':'（pyannote＋WavLM 聲紋）'),`<div class="grp glass"><div class="sl"><label>同一人判定門檻<span id="o_thr">${Math.round(s.thr*100)}%</span></label><input type="range" min="60" max="95" value="${Math.round(s.thr*100)}" data-r="thr"><small>講者被拆成太多人 → 調低；不同人被當成同一人 → 調高</small></div>
+ h+=sec('👥 講者辨識'+(s.mcloud=='gh'?'（GitHub：pyannote＋3D-Speaker 聲紋）':'（手機：pyannote＋WavLM 聲紋）'),`<div class="grp glass"><div class="sl"><label>同一人判定門檻<span id="o_thr">${Math.round(s.thr*100)}%</span></label><input type="range" min="60" max="95" value="${Math.round(s.thr*100)}" data-r="thr"><small>講者被拆成太多人 → 調低；不同人被當成同一人 → 調高</small></div>
   <div class="sl"><label>預期講者人數<span>${s.maxSpk?'最多 '+s.maxSpk+' 人':'自動'}</span></label><input type="range" min="0" max="10" value="${s.maxSpk}" data-r="maxSpk"><small>知道開會人數時設定，分得會更準（0＝自動）</small></div>
   ${tg('fine','精細切換講者','同一段話裡換人講話也能切開（多用一點運算）')}</div>`);
  h+=sec('📝 逐字稿',`<div class="grp glass">${tg('tw','中文輸出為繁體（台灣用語）','Whisper 預設常輸出簡體，自動用 OpenCC 轉成繁體')}${tg('hall','過濾「幻聽」字幕','移除「請訂閱」「字幕由…提供」這類模型亂補的句子')}${tg('keepAud','保存錄音檔','可以從逐字稿任一句直接播放原音（約 15 MB／小時）')}</div>`);
  h+=sec('🌐 翻譯引擎',`<div class="grp glass">${Object.entries(MTE).map(([k,e])=>`<div class="row${s.eng==k?' on':''}" data-eng="${k}"><b>${e.n}<small>${e.s}</small></b><span class="ck">✔</span></div>`).join('')}</div>`);
- let G=sec('☁️ GitHub 雲端轉文字',`<div class="grp glass"><div class="sl"><label>會議錄音・音檔轉文字在哪裡運算</label>${sg('smcloud',[['gh','GitHub 雲端'],['local','這支手機']],s.mcloud)}<small>${s.mcloud=='gh'?'錄音上傳到你 GitHub 的草稿 Release（只有你看得到）→ GitHub 伺服器辨識 → 錄音立刻從 GitHub 刪除 → 結果傳回手機。手機不用下載語音模型。':'在手機上辨識，不需要網路，但要下載模型、比較耗電。'}</small></div>${s.mcloud=='gh'?`<div class="sl"><label>GitHub 權杖<span id="tokst">${s.ghTok?'已設定':'未設定'}</span></label><input class="ti" id="ghtok" type="password" value="${esc(s.ghTok)}" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false"><small>建立方式：GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token → Repository access 只選 <b>${GH.repo}</b> → Permissions 把 <b>Contents</b> 和 <b>Actions</b> 設成 Read and write。權杖只存在這支手機裡。</small><div class="pr" style="margin-top:8px"><button class="btn sm" data-a="tokmk">🔑 到 GitHub 建立權杖</button><button class="btn sm on" data-a="toktest">測試連線</button></div></div><div class="sl"><label>雲端語音模型</label>${sg('scm',[['large-v3-turbo','Turbo 最準'],['medium','Medium'],['small','Small 最快']],s.cmodel)}<small>GitHub 伺服器用 CPU 運算，Turbo 大約要錄音長度的 0.3～0.6 倍時間（1 小時會議約 20～40 分鐘）</small></div>`:''}</div>`);
+ let G=sec('☁️ GitHub 雲端轉文字',`<div class="grp glass"><div class="sl"><label>會議錄音・音檔轉文字在哪裡運算</label>${sg('smcloud',[['gh','GitHub 雲端'],['local','這支手機']],s.mcloud)}<small>${s.mcloud=='gh'?'錄音上傳到你 GitHub 的草稿 Release（只有你看得到）→ GitHub 伺服器辨識 → 錄音立刻從 GitHub 刪除 → 結果傳回手機。手機不用下載語音模型。':'在手機上辨識，不需要網路，但要下載模型、比較耗電。'}</small></div>${s.mcloud=='gh'?`<div class="sl"><label>GitHub 權杖<span id="tokst">${s.ghTok?'已設定':'未設定'}</span></label><input class="ti" id="ghtok" type="password" value="${esc(s.ghTok)}" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false"><small>建立方式：GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token → Repository access 只選 <b>${GH.repo}</b> → Permissions 把 <b>Contents</b> 和 <b>Actions</b> 設成 Read and write。權杖只存在這支手機裡。</small><div class="pr" style="margin-top:8px"><button class="btn sm" data-a="tokmk">🔑 到 GitHub 建立權杖</button><button class="btn sm on" data-a="toktest">測試連線</button></div></div><div class="sl"><label>雲端語音模型</label>${sg('scm',[['sensevoice','SenseVoice（中英最準）'],['large-v3-turbo','Whisper Turbo（多國語言）']],s.cmodel)}<small>${s.cmodel=='sensevoice'?'阿里巴巴 SenseVoice：中文、英文、中英夾雜、日、韓、粵語最準，速度很快（1 小時會議約 5～10 分鐘）':'OpenAI Whisper：支援約 100 種語言，但中文準確度較低、速度較慢（1 小時會議約 20～40 分鐘）'}</small></div>`:''}</div>`);
  G+=sec('☁️ GitHub 雲端（功能與模型）',`<div class="grp glass"><div class="sl"><label>AI 模型下載來源</label>${sg('smsrc',[['gh','GitHub 優先'],['hf','Hugging Face']],s.msrc)}<small id="ghinfo">GitHub 鏡像：讀取中…</small></div>
   ${IS_APP?tg('autoUpd','自動更新功能','開啟 App 時從 GitHub 下載最新版介面與功能（不用重新安裝 APK）'):''}
   <div class="row" data-a="upd"><span>🔄</span><b>檢查更新<small>目前版本 v${APP_VER}${IS_APP&&I?'・APK v'+I.ver:''}</small></b>›</div>
@@ -1535,7 +1561,7 @@ $('#pmL').onclick=()=>{S.set.onb=1;save();$('#pm').classList.remove('on')};
 addEventListener('beforeunload',e=>{if(R.on){e.preventDefault();e.returnValue=''}});
 (async()=>{const d=await iget('k','s');if(d){S.set={...DEF,...d.set};S.hist=d.hist||[];S.meets=d.meets||[];S.fav=d.fav||[]}if(['word','phr','gram','term','fav'].includes(S.set.lsub))LS.sub=S.set.lsub;if(!TH[S.set.theme])S.set.theme='sea';
  /* v1.3:手機預設改用 CPU(GPU 容易發燙、當機);開 App 時不自動開相機/麥克風 */
- if(!S.set.v13){S.set.dev='wasm';S.set.v13=1;save()}if(S.set.tsub=='cam'||S.set.tsub=='live')S.set.tsub='text';
+ if(!S.set.v13){S.set.dev='wasm';S.set.v13=1;save()}if(!S.set.v15){if(S.set.cmodel=='large-v3-turbo'||S.set.cmodel=='medium'||S.set.cmodel=='small')S.set.cmodel='sensevoice';S.set.v15=1;save()}if(S.set.tsub=='cam'||S.set.tsub=='live')S.set.tsub='text';
  layout();apply();show('tr');
  /* 上次沒處理完的語音片段 → 繼續辨識;錄音中被關掉的會議 → 標記完成 */
  const ks=((await ikeys('q'))||[]).map(String).sort();for(const x of S.meets){if(x.st=='rec'){const m=await getM(x.id);if(m){m.st=ks.some(k=>k.startsWith(m.id))?'proc':'done';saveM(m)}}}

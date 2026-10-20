@@ -13,6 +13,9 @@ on:
       test:
         description: 測試模式：填 tests/ 裡的音檔路徑
         required: false
+      test_model:
+        description: 測試模式用的模型（sensevoice / large-v3-turbo）
+        required: false
 
 permissions:
   contents: write
@@ -50,13 +53,20 @@ jobs:
           M=~/.cache/aitm; mkdir -p $M/seg
           [ -f $M/seg/model.onnx ] || (curl -sSL https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2 | tar xj -C /tmp && cp /tmp/sherpa-onnx-pyannote-segmentation-3-0/model.onnx $M/seg/)
           [ -f $M/emb.onnx ] || curl -sSL -o $M/emb.onnx https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx
-          ls -la $M $M/seg
+          if [ ! -f $M/sensevoice/model.int8.onnx ]; then
+            mkdir -p $M/sensevoice
+            curl -sSL https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2 | tar xj -C /tmp
+            cp /tmp/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/{model.int8.onnx,tokens.txt} $M/sensevoice/
+            rm -rf /tmp/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17
+          fi
+          ls -la $M $M/seg $M/sensevoice
 
       - name: 轉文字與講者辨識
         env:
           GITHUB_TOKEN: ${{ github.token }}
           RELEASE_ID: ${{ inputs.release }}
           TEST_FILE: ${{ inputs.test }}
+          TEST_MODEL: ${{ inputs.test_model }}
         run: python3 scripts/transcribe.py
 
       - name: 計算模型快取版本

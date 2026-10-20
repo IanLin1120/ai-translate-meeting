@@ -2,12 +2,14 @@
 """GitHub 雲端會議轉文字（在 GitHub Actions 上執行）
 
 流程：讀取草稿 Release 裡 App 上傳的錄音 → 下載後立刻從 GitHub 刪除錄音
-      → faster-whisper 轉文字（中英夾雜） → sherpa-onnx 分辨講者
+      → 分辨講者（diarize.py）→ 每段發言用 SenseVoice（或 Whisper）轉文字
       → 結果 result.json 上傳回同一個草稿 Release，App 取回後會刪除整個 Release。
 隱私：這個儲存庫是公開的，Actions 紀錄任何人都看得到，所以這裡「絕不」印出逐字稿內容。
 """
 import json, os, re, subprocess, sys, tempfile, time, traceback, urllib.request, urllib.error
 import numpy as np
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 REPO = os.environ["GITHUB_REPOSITORY"]
 TOKEN = os.environ["GITHUB_TOKEN"]
@@ -85,7 +87,7 @@ def main():
     t_start = time.time()
     tmp = tempfile.mkdtemp()
     if TEST:
-        job = {"parts": [{"name": os.path.basename(TEST), "t0": 0}], "lang": "auto", "model": "large-v3-turbo", "speakers": 0, "tw": 1}
+        job = {"parts": [{"name": os.path.basename(TEST), "t0": 0}], "lang": "auto", "model": os.environ.get("TEST_MODEL") or "sensevoice", "speakers": 0, "tw": 1}
         files = {os.path.basename(TEST): TEST}
     else:
         rel = gh("GET", f"/releases/{REL}")
@@ -131,116 +133,97 @@ def main():
     if dur < 0.5:
         return {"dur": dur, "segs": [], "speakers": 0}
 
-    # ---- 講者辨識（sherpa-onnx：pyannote segmentation 3.0 + 3D-Speaker ERes2Net 聲紋） ----
-    import sherpa_onnx
-    status("分辨講者", 0)
+    # ---- 1. 講者辨識：先切段、算聲紋、分群（diarize.py） ----
+    import diarize as DZ
     n_spk = int(job.get("speakers") or 0)
-    thr = float(job.get("thr") or 0.5)
-    cfg = sherpa_onnx.OfflineSpeakerDiarizationConfig(
-        segmentation=sherpa_onnx.OfflineSpeakerSegmentationModelConfig(
-            pyannote=sherpa_onnx.OfflineSpeakerSegmentationPyannoteModelConfig(model=f"{MODELS}/seg/model.onnx"), num_threads=4),
-        embedding=sherpa_onnx.SpeakerEmbeddingExtractorConfig(model=f"{MODELS}/emb.onnx", num_threads=4),
-        clustering=sherpa_onnx.FastClusteringConfig(num_clusters=n_spk if n_spk > 0 else -1, threshold=thr),
-        min_duration_on=0.3, min_duration_off=0.5)
-    sd = sherpa_onnx.OfflineSpeakerDiarization(cfg)
+    sens = float(job.get("sens") or 0.6)
+    status("分辨講者", 0)
     last = [0.0]
 
-    def cb(done, n):
+    def prog(p):
         if time.time() - last[0] > 20:
             last[0] = time.time()
-            status("分辨講者", done / max(n, 1) * 100)
-        return 0
-    turns = [(r.start, r.end, r.speaker) for r in sd.process(audio, callback=cb).sort_by_start_time()]
-    print(f"講者段落 {len(turns)}，講者 {len(set(t[2] for t in turns))} 位", flush=True)
+            status("分辨講者", p)
+    pieces, embs = DZ.segments_and_embeddings(audio, MODELS, prog, threads=os.cpu_count() or 4)
+    labs = DZ.label(pieces, embs, n_spk, sens)
+    print(f"段落 {len(pieces)}，講者 {len(set(labs))} 位", flush=True)
 
-    # ---- 語音轉文字（faster-whisper，CPU int8） ----
-    from faster_whisper import WhisperModel
-    model = job.get("model") or "large-v3-turbo"
-    status("載入語音模型")
-    wm = WhisperModel(model, device="cpu", compute_type="int8", cpu_threads=os.cpu_count() or 4, download_root=f"{MODELS}/whisper")
+    # ---- 2. 相鄰同一人的段落合併成「一段發言」（每段只會有一個人） ----
+    turns = []
+    for (s, e), k, x in zip(pieces, labs, embs):
+        if turns and turns[-1]["spk"] == k and s - turns[-1]["e"] < 0.8 and e - turns[-1]["s"] < 25:
+            turns[-1]["e"] = e
+            if x is not None:
+                turns[-1]["E"].append(x)
+        else:
+            turns.append({"s": s, "e": e, "spk": k, "E": [x] if x is not None else []})
+
+    # ---- 3. 每段發言各自轉文字 ----
+    model = job.get("model") or "sensevoice"
     lang = job.get("lang") or "auto"
-    lang = None if lang in ("auto", "") else lang
-    prompt = "以下是會議錄音，內容是繁體中文和 English 夾雜。" if lang in (None, "zh") else None
+    if model == "sensevoice" and lang not in ("auto", "zh", "en", "ja", "ko", "yue"):
+        model = "large-v3-turbo"  # SenseVoice 不支援的語言改用 Whisper
+    clip = lambda u: audio[int(max(0, u["s"] - 0.15) * SR):int(min(dur, u["e"] + 0.15) * SR)]
     status("語音轉文字", 0)
-    segs, info = wm.transcribe(audio, language=lang, task="transcribe", beam_size=5, vad_filter=True,
-                               vad_parameters={"min_silence_duration_ms": 500}, word_timestamps=True,
-                               condition_on_previous_text=False, initial_prompt=prompt)
-    words = []
-    for s in segs:
-        if time.time() - last[0] > 20:
-            last[0] = time.time()
-            status("語音轉文字", min(99, s.end / dur * 100))
-        if s.no_speech_prob > 0.8 and s.avg_logprob < -1:
-            continue
-        for w in (s.words or []):
-            words.append((w.start, w.end, w.word))
-    print(f"偵測語言 {info.language}，{len(words)} 個詞", flush=True)
+    if model == "sensevoice":
+        import sherpa_onnx
+        d = f"{MODELS}/sensevoice"
+        rec = sherpa_onnx.OfflineRecognizer.from_sense_voice(model=f"{d}/model.int8.onnx", tokens=f"{d}/tokens.txt",
+                                                             num_threads=os.cpu_count() or 4, use_itn=True,
+                                                             language=lang if lang in ("zh", "en", "ja", "ko", "yue") else "auto")
+        B = 16
+        for i in range(0, len(turns), B):
+            batch = turns[i:i + B]
+            ss = []
+            for u in batch:
+                st = rec.create_stream()
+                st.accept_waveform(SR, clip(u))
+                ss.append(st)
+            rec.decode_streams(ss)
+            for u, st in zip(batch, ss):
+                u["text"] = st.result.text
+            if time.time() - last[0] > 20:
+                last[0] = time.time()
+                status("語音轉文字", min(99, (i + B) / len(turns) * 100))
+        det = lang
+    else:
+        from faster_whisper import WhisperModel
+        status("載入語音模型")
+        wm = WhisperModel(model, device="cpu", compute_type="int8", cpu_threads=os.cpu_count() or 4, download_root=f"{MODELS}/whisper")
+        wl = None if lang in ("auto", "") else lang
+        prompt = "以下是會議錄音，內容是繁體中文和 English 夾雜。" if wl in (None, "zh") else None
+        det = wl
+        for i, u in enumerate(turns):
+            segs, info = wm.transcribe(clip(u), language=wl, beam_size=5, vad_filter=False, condition_on_previous_text=False,
+                                       without_timestamps=True, initial_prompt=prompt)
+            u["text"] = "".join(s.text for s in segs if not (s.no_speech_prob > 0.8 and s.avg_logprob < -1))
+            det = det or info.language
+            if time.time() - last[0] > 20:
+                last[0] = time.time()
+                status("語音轉文字", min(99, (i + 1) / len(turns) * 100))
 
-    # ---- 每個詞配給重疊最多的講者，連續同一講者的詞合併成句子 ----
-    def spk_at(a, b):
-        best, bo = None, 0.0
-        for s, e, k in turns:
-            if e < a - 2:
-                continue
-            if s > b + 2:
-                break
-            o = min(b, e) - max(a, s)
-            if o > bo:
-                bo, best = o, k
-        if best is None:  # 沒重疊 → 取最近的段落
-            m = min(turns, key=lambda t: min(abs(t[0] - b), abs(t[1] - a)), default=None)
-            best = m[2] if m else 0
-        return best
-
+    # ---- 4. 整理：繁體、去掉幻聽字幕、附上聲紋向量（App 可以再「重新分辨講者」） ----
     cc = None
     if job.get("tw", 1):
         import opencc
         cc = opencc.OpenCC("s2twp")
-    out, cur = [], None
-    for a, b, w in words:
-        k = spk_at(a, b)
-        brk = cur is None or k != cur["spk"] or a - cur["e"] > 1.2 or len(cur["text"]) > 200
-        if not brk and re.search(r"[。！？!?.]$", cur["text"].strip()) and a - cur["e"] > 0.6:
-            brk = True
-        if brk:
-            if cur:
-                out.append(cur)
-            cur = {"s": round(a, 2), "e": round(b, 2), "spk": int(k), "text": w}
-        else:
-            cur["e"] = round(b, 2)
-            cur["text"] += w
-    if cur:
-        out.append(cur)
     res = []
-    for u in out:
-        t = re.sub(r"\s+", " ", u["text"]).strip()
-        t = re.sub(r"(?<=[一-鿿，。！？、]) (?=[一-鿿])", "", t)
+    for u in turns:
+        t = re.sub(r"\s+", " ", u.get("text") or "").strip()
+        t = re.sub(r"(?<=[\u4e00-\u9fff，。！？、]) (?=[\u4e00-\u9fff])", "", t)
         t = re.sub(r"(.{2,20}?)(?:\s*\1){3,}", r"\1\1", t)
         if not t or re.fullmatch(r"[\s.。,，!！?？…\-]*", t) or (HALL.search(t) and len(t) < 40):
             continue
-        u["text"] = to_tw(t, cc)
-        res.append(u)
-
-    # ---- 每句的聲紋向量（App 可以在手機上「重新分辨講者」） ----
-    status("整理結果")
-    try:
-        ext = sherpa_onnx.SpeakerEmbeddingExtractor(sherpa_onnx.SpeakerEmbeddingExtractorConfig(model=f"{MODELS}/emb.onnx", num_threads=4))
-        for u in res:
-            a = audio[int(u["s"] * SR):int(u["e"] * SR)]
-            if len(a) < SR:
-                continue
-            st = ext.create_stream()
-            st.accept_waveform(SR, a)
-            st.input_finished()
-            u["emb"] = [round(x, 4) for x in ext.compute(st)]
-    except Exception as e:
-        print("embedding skipped", e, flush=True)
+        item = {"s": round(u["s"], 2), "e": round(u["e"], 2), "spk": int(u["spk"]), "text": to_tw(t, cc)}
+        if u["E"]:
+            item["emb"] = [round(float(x), 4) for x in np.mean(np.stack(u["E"]), 0)]
+        res.append(item)
     ids = sorted({u["spk"] for u in res})
     remap = {k: i + 1 for i, k in enumerate(ids)}
     for u in res:
         u["spk"] = remap[u["spk"]]
     print(f"完成：{len(res)} 句、{len(ids)} 位講者，耗時 {(time.time() - t_start) / 60:.1f} 分鐘", flush=True)
-    return {"dur": round(dur, 2), "lang": info.language, "model": model, "speakers": len(ids), "segs": res,
+    return {"dur": round(dur, 2), "lang": det, "model": model, "speakers": len(ids), "segs": res,
             "took": round(time.time() - t_start, 1)}
 
 

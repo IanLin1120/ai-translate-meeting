@@ -40,7 +40,7 @@ App 下方的「學習」分頁：
 會議錄音和上傳的音檔改在 GitHub Actions 的伺服器上辨識，手機不用下載語音／講者模型：
 
 1. App 把錄音上傳到這個儲存庫的**草稿 Release**（只有擁有者看得到，不會進 Git 歷史）
-2. App 觸發 [`transcribe.yml`](.github/workflows/transcribe.yml)：faster-whisper（large-v3-turbo，中英夾雜）＋ sherpa-onnx 講者辨識（pyannote segmentation 3.0 ＋ 3D-Speaker ERes2Net）
+2. App 觸發 [`transcribe.yml`](.github/workflows/transcribe.yml)：先分辨講者（pyannote segmentation 3.0 切段 ＋ 3D-Speaker ERes2Net 聲紋 ＋ 階層分群，見 [`diarize.py`](scripts/diarize.py)），再把每段發言分別轉文字（預設 SenseVoice，中英夾雜最準；也可選 Whisper large-v3-turbo）
 3. 伺服器下載錄音後**立刻從 GitHub 刪除**；結果 `result.json` 放回草稿，App 取回後**刪除整個草稿**
 4. [`cleanup-jobs.yml`](.github/workflows/cleanup-jobs.yml) 每小時刪除超過 6 小時沒被取回的草稿
 
