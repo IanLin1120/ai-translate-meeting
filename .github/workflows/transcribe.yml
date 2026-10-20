@@ -1,0 +1,82 @@
+name: 雲端會議轉文字
+
+# App 上傳錄音到草稿 Release 後觸發；處理完錄音立即刪除，結果放回草稿 Release 給 App 取回。
+# 注意：公開儲存庫的 Actions 紀錄任何人都看得到，所以腳本不會印出任何逐字稿內容。
+run-name: 轉文字 ${{ inputs.release || 'test' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 草稿 Release ID（App 自動填）
+        required: false
+      test:
+        description: 測試模式：填 tests/ 裡的音檔路徑
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  transcribe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts
+            tests
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/requirements-transcribe.txt
+
+      - name: 安裝套件
+        run: pip install -q -r scripts/requirements-transcribe.txt
+
+      - name: 還原 AI 模型快取
+        id: mcache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/aitm
+          key: aitm-models-v1-none
+          restore-keys: aitm-models-v1-
+
+      - name: 下載講者辨識模型
+        run: |
+          M=~/.cache/aitm; mkdir -p $M/seg
+          [ -f $M/seg/model.onnx ] || (curl -sSL https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2 | tar xj -C /tmp && cp /tmp/sherpa-onnx-pyannote-segmentation-3-0/model.onnx $M/seg/)
+          [ -f $M/emb.onnx ] || curl -sSL -o $M/emb.onnx https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx
+          ls -la $M $M/seg
+
+      - name: 轉文字與講者辨識
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ inputs.release }}
+          TEST_FILE: ${{ inputs.test }}
+        run: python3 scripts/transcribe.py
+
+      - name: 計算模型快取版本
+        if: always()
+        id: mkey
+        run: echo "k=aitm-models-v1-$(cd ~/.cache/aitm 2>/dev/null && find . -type f -size +1k | sort | sha1sum | cut -c1-12)" >> $GITHUB_OUTPUT
+
+      - name: 儲存 AI 模型快取（有新模型時）
+        if: always() && steps.mkey.outputs.k != steps.mcache.outputs.cache-matched-key
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: ~/.cache/aitm
+          key: ${{ steps.mkey.outputs.k }}
+
+      - name: 失敗時清除錄音
+        if: failure() && inputs.release != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for a in $(gh api repos/${{ github.repository }}/releases/${{ inputs.release }}/assets --jq '.[]|select(.name!="result.json")|.id'); do
+            gh api -X DELETE repos/${{ github.repository }}/releases/assets/$a || true
+          done

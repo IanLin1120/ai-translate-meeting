@@ -1,0 +1,25 @@
+name: 清除過期的轉文字工作
+
+# 每小時檢查：超過 6 小時還沒被 App 取回的草稿工作（job-*），連同裡面的檔案一起刪除
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 刪除過期草稿
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          now=$(date +%s)
+          gh api --paginate repos/${{ github.repository }}/releases --jq '.[]|select(.draft and (.name|startswith("job-")))|[.id,.created_at]|@tsv' |
+          while IFS=$'\t' read -r id created; do
+            age=$(( now - $(date -d "$created" +%s) ))
+            if [ $age -gt 21600 ]; then echo "delete $id"; gh api -X DELETE repos/${{ github.repository }}/releases/$id || true; fi
+          done
