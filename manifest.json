@@ -1,5 +1,65 @@
 {
  "files": {
+  "Xenova/opus-mt-zh-en/README.md": {
+   "sha256": "5ca823749ad58d6fae244198cf3c3c5a7f319793b6d8904af3029012a76cd589",
+   "size": 571,
+   "src": "0bb94a2baf9309cc76798066ea86803b1e2a99fa"
+  },
+  "Xenova/opus-mt-zh-en/config.json": {
+   "sha256": "293d318fce41dbf04114eac45037bb88a32d7c4ee21011a75e24a8b98ca45ad1",
+   "size": 1389,
+   "src": "dcd3adfa622976cc4a51c68d115dc9d443d3cbd0"
+  },
+  "Xenova/opus-mt-zh-en/generation_config.json": {
+   "sha256": "8dc29fef0fe82109f94ef3c2e6ea6bded3215d357b226c34cf7b4630726766c9",
+   "size": 293,
+   "src": "11cf47bfd6c2e512bf7ab5d58d49ab109732647a"
+  },
+  "Xenova/opus-mt-zh-en/onnx/decoder_model_merged_quantized.onnx": {
+   "sha256": "c6b7f04ff1ba0fbd1bf6852599b4c0cad6fe512d57cd887f44ef36cf705424cb",
+   "size": 60212804,
+   "src": "c6b7f04ff1ba0fbd1bf6852599b4c0cad6fe512d57cd887f44ef36cf705424cb"
+  },
+  "Xenova/opus-mt-zh-en/onnx/encoder_model_quantized.onnx": {
+   "sha256": "84d5e171b626bc8b6b220d022ac58696e9528c25deeacca62b5cbf4364547a99",
+   "size": 52899742,
+   "src": "84d5e171b626bc8b6b220d022ac58696e9528c25deeacca62b5cbf4364547a99"
+  },
+  "Xenova/opus-mt-zh-en/quantize_config.json": {
+   "sha256": "c4778282349f504c7075f51468ca181d88580fbdc149ed9fcb921db61be4a2eb",
+   "size": 3124,
+   "src": "bc9b5598111931367960e6f11199c0f835390b4e"
+  },
+  "Xenova/opus-mt-zh-en/source.spm": {
+   "sha256": "e27a3a1b539f4959ec72ea60e453f49156289f95d4e6000b29332efc45616203",
+   "size": 804677,
+   "src": "0ab361451ecc57b6223303c7b52e216ff40dc7e6"
+  },
+  "Xenova/opus-mt-zh-en/special_tokens_map.json": {
+   "sha256": "5e4d1f5e759d74cb1c2fe1d165cfc62b5237aa904de759380cd6f43042eec723",
+   "size": 74,
+   "src": "79ae7ea5bf033de69d0055820c57885e3d377bbb"
+  },
+  "Xenova/opus-mt-zh-en/target.spm": {
+   "sha256": "6a881f4717cd7265f53fea54fd3dc689c767c05338fac7a4590f3088cb2d7855",
+   "size": 806530,
+   "src": "878ae3c6ca6afea7971e3be0b18debdd0d41e3ea"
+  },
+  "Xenova/opus-mt-zh-en/tokenizer.json": {
+   "sha256": "b306d0301cf280bfd647d7067b5ade2a97b987e6d678df110703c002433643ff",
+   "size": 6381339,
+   "src": "545ab64f6d0ae9bbbb0c8899f04e1ae4f805fc87"
+  },
+  "Xenova/opus-mt-zh-en/tokenizer_config.json": {
+   "sha256": "08849acc0a539c4749d8665e9d6217735503a97871ccebeea8a762d5fba1acf7",
+   "size": 282,
+   "src": "9bae5b64c3a664f32d2aac60cbde97fc9e78a5ef"
+  },
+  "Xenova/opus-mt-zh-en/vocab.json": {
+   "sha256": "08a119a1defd522fa047cb5e3bfe3e89633e96caa38ced0dc9cee7ef1021a011",
+   "size": 1747906,
+   "src": "6deaada491d50c10819b654c1de4ab1d21cfdf88"
+  },
   "Xenova/wavlm-base-plus-sv/README.md": {
    "sha256": "8d27bc6f8b0b983b51659afe7b406b6a1b3d23d59f80dca8499d0200163a060d",
    "size": 2152,
@@ -134,6 +194,14 @@
   }
  },
  "models": {
+  "Xenova/opus-mt-zh-en": {
+   "onnx": [
+    "decoder_model_merged_quantized",
+    "encoder_model_quantized"
+   ],
+   "size": 122858731,
+   "use": "翻譯 中→英"
+  },
   "Xenova/wavlm-base-plus-sv": {
    "onnx": [
     "model_quantized"
@@ -160,5 +228,5 @@
    "use": "語音辨識（預設）"
   }
  },
- "updated": "2026-10-20T11:36:47Z"
+ "updated": "2026-10-20T11:36:52Z"
 }
