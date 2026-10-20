@@ -1,5 +1,62 @@
 {
  "files": {
+  "Xenova/m2m100_418M/README.md": {
+   "sha256": "fc4c4aeac92d17f16d5e94e6a36779e5b9e7bec98f470d38ea7b4a3fb3d9de8e",
+   "size": 559,
+   "src": "e4bd2fdac0077b3e541f6008daefc7e1a2ec33f6"
+  },
+  "Xenova/m2m100_418M/config.json": {
+   "sha256": "1dbdf77ddc7809acd4c54ccf0eab46f840b40174afb1b6f6de8787244e832938",
+   "size": 908,
+   "src": "4f466cf3049e59ef8bb5de9b67f4275fa8f7257a"
+  },
+  "Xenova/m2m100_418M/generation_config.json": {
+   "sha256": "722210dd0bee7bef4e8e7f9a8574d8c56a2dfff723d73f390ce67892740b9009",
+   "size": 233,
+   "src": "434f8e78dc0d584e14d179bd47be7e329df86cb0"
+  },
+  "Xenova/m2m100_418M/onnx/decoder_model_merged_quantized.onnx": {
+   "parts": 4,
+   "sha256": "007654bcabb6cea6fd3bde34ce933137b431330b3755781145d7b6906270b45a",
+   "size": 344128178,
+   "src": "007654bcabb6cea6fd3bde34ce933137b431330b3755781145d7b6906270b45a"
+  },
+  "Xenova/m2m100_418M/onnx/encoder_model_quantized.onnx": {
+   "parts": 4,
+   "sha256": "13a94e354a9140764eb81102d77d3ec6952d796e6f113c651eeb3c3443da0386",
+   "size": 287856370,
+   "src": "13a94e354a9140764eb81102d77d3ec6952d796e6f113c651eeb3c3443da0386"
+  },
+  "Xenova/m2m100_418M/quantize_config.json": {
+   "sha256": "db45915f44ebe0ccacbc75c8a58b43c72f7fd18bf8d1b4520b7b557114bf81cf",
+   "size": 3370,
+   "src": "e539fd3cd9de8f28520705749c63a6b8e65be51b"
+  },
+  "Xenova/m2m100_418M/sentencepiece.bpe.model": {
+   "sha256": "d8f7c76ed2a5e0822be39f0a4f95a55eb19c78f4593ce609e2edbc2aea4d380a",
+   "size": 2423393,
+   "src": "d8f7c76ed2a5e0822be39f0a4f95a55eb19c78f4593ce609e2edbc2aea4d380a"
+  },
+  "Xenova/m2m100_418M/special_tokens_map.json": {
+   "sha256": "009ea667e0ca903c10dac22cf7ae3a3a0b173ff33f8c64154fddd8c043805622",
+   "size": 1559,
+   "src": "57f8d1552234eca0ba0dfb591805015ccb69ce74"
+  },
+  "Xenova/m2m100_418M/tokenizer.json": {
+   "sha256": "03d9e111731c2d71f39a2c2a88499743e4c251385d07f0384b4349a23ba54363",
+   "size": 7988527,
+   "src": "cd68f923c35fc0da05d4bb83125bdcbe6ff9211b"
+  },
+  "Xenova/m2m100_418M/tokenizer_config.json": {
+   "sha256": "bacfd4b9da25a61e01f17abe660465f616c9a1a3f5e23ab9ad3326c3788f2d9f",
+   "size": 1813,
+   "src": "b177ccaad20b2538951a05fcaf7093bd2b0a92b1"
+  },
+  "Xenova/m2m100_418M/vocab.json": {
+   "sha256": "b6e77e474aeea8f441363aca7614317c06381f3eacfe10fb9856d5081d1074cc",
+   "size": 3708092,
+   "src": "380e263bf4efc45fa72251fb19336a9593307bc4"
+  },
   "Xenova/nllb-200-distilled-600M/README.md": {
    "sha256": "8e987040f4d567c686ad41159052ae7c599ec404b644a553cdd11eb4e944d8c2",
    "size": 4801,
@@ -536,6 +593,14 @@
   }
  },
  "models": {
+  "Xenova/m2m100_418M": {
+   "onnx": [
+    "decoder_model_merged_quantized",
+    "encoder_model_quantized"
+   ],
+   "size": 646113002,
+   "use": "翻譯 100 種語言"
+  },
   "Xenova/nllb-200-distilled-600M": {
    "onnx": [
     "decoder_model_merged_quantized",
@@ -615,5 +680,5 @@
    "use": "語音辨識（最快）"
   }
  },
- "updated": "2026-10-20T11:42:50Z"
+ "updated": "2026-10-20T11:49:37Z"
 }
