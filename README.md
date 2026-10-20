@@ -15,6 +15,19 @@
 | `models.json` | 要鏡像的模型清單 | 修改後推送到 `main`，GitHub Actions 會自動同步 |
 | `android/` | APK 原始碼（WebView 外殼＋原生橋接） | — |
 
+## ☁️ GitHub 雲端會議轉文字
+
+會議錄音和上傳的音檔改在 GitHub Actions 的伺服器上辨識，手機不用下載語音／講者模型：
+
+1. App 把錄音上傳到這個儲存庫的**草稿 Release**（只有擁有者看得到，不會進 Git 歷史）
+2. App 觸發 [`transcribe.yml`](.github/workflows/transcribe.yml)：faster-whisper（large-v3-turbo，中英夾雜）＋ sherpa-onnx 講者辨識（pyannote segmentation 3.0 ＋ 3D-Speaker ERes2Net）
+3. 伺服器下載錄音後**立刻從 GitHub 刪除**；結果 `result.json` 放回草稿，App 取回後**刪除整個草稿**
+4. [`cleanup-jobs.yml`](.github/workflows/cleanup-jobs.yml) 每小時刪除超過 6 小時沒被取回的草稿
+
+公開儲存庫的 Actions 紀錄任何人都看得到，所以腳本不會在紀錄裡印出逐字稿內容。
+
+App 需要一組 **Fine-grained 權杖**：Repository access 只選本儲存庫，Permissions 把 **Contents** 和 **Actions** 設成 Read and write，填到 App「設定 → ☁️ GitHub 雲端轉文字」。
+
 ## 模型同步
 
 [`.github/workflows/sync-models.yml`](.github/workflows/sync-models.yml) 會從 Hugging Face 下載 `models.json` 列出的模型，切片後提交到 `models` 分支。

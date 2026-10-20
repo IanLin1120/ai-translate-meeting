@@ -236,6 +236,59 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
+    void http(String cb, String method, String url, String headers, byte[] body, File file) {
+        int code = 0; String out = "";
+        try {
+            String u = url;
+            for (int hop = 0; hop < 5; hop++) {
+                java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(u).openConnection();
+                c.setInstanceFollowRedirects(false);
+                c.setConnectTimeout(30000); c.setReadTimeout(300000);
+                c.setRequestMethod(method);
+                if (hop == 0 && headers != null && !headers.isEmpty()) {
+                    JSONObject h = new JSONObject(headers);
+                    java.util.Iterator<String> it = h.keys();
+                    while (it.hasNext()) { String k = it.next(); c.setRequestProperty(k, h.getString(k)); }
+                }
+                if (body != null || file != null) {
+                    c.setDoOutput(true);
+                    long len = file != null ? file.length() : body.length;
+                    c.setFixedLengthStreamingMode(len);
+                    OutputStream os = c.getOutputStream();
+                    if (file != null) {
+                        InputStream in = new java.io.FileInputStream(file);
+                        byte[] b = new byte[65536]; long sent = 0, last = 0; int n;
+                        while ((n = in.read(b)) > 0) {
+                            os.write(b, 0, n); sent += n;
+                            long now = System.currentTimeMillis();
+                            if (now - last > 400) { last = now; js("window.__httpP&&__httpP(" + JSONObject.quote(cb) + "," + sent + "," + len + ")"); }
+                        }
+                        in.close();
+                    } else os.write(body);
+                    os.close();
+                }
+                code = c.getResponseCode();
+                if ((code == 301 || code == 302 || code == 303 || code == 307 || code == 308) && c.getHeaderField("Location") != null) {
+                    u = new java.net.URL(new java.net.URL(u), c.getHeaderField("Location")).toString();
+                    method = "GET"; body = null; file = null; c.disconnect();
+                    continue;
+                }
+                InputStream in = code >= 400 ? c.getErrorStream() : c.getInputStream();
+                if (in != null) {
+                    java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
+                    byte[] b = new byte[65536]; int n;
+                    while ((n = in.read(b)) > 0) bo.write(b, 0, n);
+                    in.close();
+                    out = bo.toString("UTF-8");
+                }
+                c.disconnect();
+                break;
+            }
+        } catch (Exception e) { code = -1; out = String.valueOf(e.getMessage()); }
+        final String js = "window.__http&&__http(" + JSONObject.quote(cb) + "," + code + "," + JSONObject.quote(out) + ")";
+        js(js);
+    }
+
     /* ---------- 本機資源(含 COOP/COEP,讓 WASM 可用多執行緒) ---------- */
     class Client extends WebViewClient {
         @Override
@@ -362,6 +415,24 @@ public class MainActivity extends Activity {
             } catch (Exception e) { return false; }
         }
         @JavascriptInterface public void resetApp() { new File(getFilesDir(), "www/index.html").delete(); }
+
+        /* ---------- 原生 HTTP(連 GitHub API／上傳錄音,不受瀏覽器跨站限制) ---------- */
+        @JavascriptInterface public void req(String cb, String method, String url, String headers, String body) {
+            new Thread(() -> http(cb, method, url, headers, body == null ? null : body.getBytes(java.nio.charset.StandardCharsets.UTF_8), null)).start();
+        }
+        @JavascriptInterface public int upBegin() {
+            try {
+                File f = File.createTempFile("up", ".bin", getCacheDir());
+                int id = ++saveSeq;
+                saves.put(id, new Object[]{new FileOutputStream(f), f.getAbsolutePath()});
+                return id;
+            } catch (Exception e) { return 0; }
+        }
+        @JavascriptInterface public boolean upB64(int id, String b) { return saveB64(id, b); }
+        @JavascriptInterface public void upSend(int id, String cb, String method, String url, String headers) {
+            String path = saveEnd(id);
+            new Thread(() -> { File f = new File(path); http(cb, method, url, headers, null, f); f.delete(); }).start();
+        }
         @JavascriptInterface public void setBars(boolean dark) {
             ui.post(() -> {
                 Window w = getWindow();
