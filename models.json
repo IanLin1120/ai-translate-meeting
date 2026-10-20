@@ -1,0 +1,17 @@
+{
+  "_說明": "要鏡像到 GitHub（models 分支）的開源模型。onnx 欄位列出要下載的 ONNX 檔名（不含 .onnx），其餘設定檔會自動一起下載。修改這個檔案並推送到 main，GitHub Actions 就會自動同步。依重要性排序：前面的先同步。",
+  "models": [
+    { "id": "onnx-community/whisper-base", "use": "語音辨識（預設）", "onnx": ["encoder_model_quantized", "decoder_model_merged_quantized", "encoder_model", "encoder_model_fp16", "decoder_model_merged_q4", "decoder_model_merged_q4f16"] },
+    { "id": "Xenova/wavlm-base-plus-sv", "use": "講者聲紋", "onnx": ["model_quantized"] },
+    { "id": "onnx-community/pyannote-segmentation-3.0", "use": "講者分段", "onnx": ["model"] },
+    { "id": "Xenova/opus-mt-zh-en", "use": "翻譯 中→英", "onnx": ["encoder_model_quantized", "decoder_model_merged_quantized"] },
+    { "id": "Xenova/opus-mt-en-zh", "use": "翻譯 英→中", "onnx": ["encoder_model_quantized", "decoder_model_merged_quantized"] },
+    { "id": "onnx-community/whisper-tiny", "use": "語音辨識（最快）", "onnx": ["encoder_model_quantized", "decoder_model_merged_quantized", "encoder_model", "encoder_model_fp16", "decoder_model_merged_q4", "decoder_model_merged_q4f16"] },
+    { "id": "onnx-community/whisper-small", "use": "語音辨識（較準）", "onnx": ["encoder_model_quantized", "decoder_model_merged_quantized", "encoder_model_fp16", "decoder_model_merged_q4", "decoder_model_merged_q4f16"] },
+    { "id": "Xenova/nllb-200-distilled-600M", "use": "翻譯 200 種語言", "onnx": ["encoder_model_quantized", "decoder_model_merged_quantized"] },
+    { "id": "onnx-community/Qwen2.5-0.5B-Instruct", "use": "LLM 翻譯", "onnx": ["model_q4f16", "model_q4"] },
+    { "id": "Xenova/m2m100_418M", "use": "翻譯 100 種語言", "onnx": ["encoder_model_quantized", "decoder_model_merged_quantized"] },
+    { "id": "onnx-community/whisper-large-v3-turbo", "use": "語音辨識（最準，需 WebGPU）", "onnx": ["encoder_model_fp16", "decoder_model_merged_q4f16", "decoder_model_merged_q4"] },
+    { "id": "onnx-community/Qwen2.5-1.5B-Instruct", "use": "LLM 翻譯（高品質，需 WebGPU）", "onnx": ["model_q4f16"] }
+  ]
+}

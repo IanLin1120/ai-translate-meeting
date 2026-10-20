@@ -1,0 +1,53 @@
+name: 同步 AI 模型到 GitHub
+
+# 從 Hugging Face 下載 models.json 列出的開源模型，切片後存到 models 分支，
+# App 會透過 raw.githubusercontent.com 直接從 GitHub 下載模型。
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [models.json, scripts/sync_models.py, .github/workflows/sync-models.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-models
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - name: 釋放磁碟空間
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost || true
+          df -h /
+
+      - uses: actions/checkout@v4
+        with:
+          path: main
+
+      - name: 準備 models 分支
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global http.postBuffer 2147483648
+          REPO="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          if git ls-remote --exit-code --heads "$REPO" models; then
+            git clone --depth 1 --branch models --single-branch "$REPO" models
+          else
+            mkdir models && cd models && git init -q -b models && git remote add origin "$REPO"
+            printf '# AI 模型鏡像\n\n由 GitHub Actions 從 Hugging Face 自動同步，請勿手動修改。\n各模型授權請見 main 分支的 README。\n' > README.md
+          fi
+
+      - name: 下載並同步模型
+        run: python3 main/scripts/sync_models.py main/models.json models
+
+      - name: 結果
+        if: always()
+        run: |
+          df -h /
+          du -sh models --exclude=.git || true
+          python3 -c "import json;m=json.load(open('models/manifest.json'));[print(k,round(v['size']/1048576),'MB') for k,v in m['models'].items()]" || true

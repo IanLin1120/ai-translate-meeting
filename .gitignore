@@ -1,0 +1,4 @@
+android/assets/
+android/build/
+*.jks
+*.apk
