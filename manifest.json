@@ -1,0 +1,104 @@
+{
+ "files": {
+  "onnx-community/whisper-base/README.md": {
+   "sha256": "60a378018182c57cf382866ddfbf0fb2b4031b3895ae932aa34ecb8ff7065a13",
+   "size": 531,
+   "src": "7bd640e742c138d667e1aa9070902917cde368d2"
+  },
+  "onnx-community/whisper-base/added_tokens.json": {
+   "sha256": "9715fd2243b6f06a5858b5e32950d2853f73dd5bc201aafcf76f5082a2d8acd1",
+   "size": 34604,
+   "src": "e3d256c988462aa153dcabe2aa38b8e9b436c06f"
+  },
+  "onnx-community/whisper-base/config.json": {
+   "sha256": "f4d0608f7d918166da7edb3e188de5ef1bfe70d9802e785d271fd88111e9cf4b",
+   "size": 2243,
+   "src": "ce7faf5d5e56e82d4800e55f524582a525639ff7"
+  },
+  "onnx-community/whisper-base/generation_config.json": {
+   "sha256": "61070cf8de25b1e9256e8e102ded49d8d24a8369ed36ef84fdf21549e68125a0",
+   "size": 3832,
+   "src": "a57cdbf036979f80bb7ff092a0fee6256a81d329"
+  },
+  "onnx-community/whisper-base/merges.txt": {
+   "sha256": "2df2990a395e35e8dfbc7511e08c12d56018d8d04691e0133e5d63b21e154dc6",
+   "size": 493869,
+   "src": "6038932a2a1f09a66991b1c2adae0d14066fa29e"
+  },
+  "onnx-community/whisper-base/normalizer.json": {
+   "sha256": "bf1c507dc8724ca9cf9903640dacfb69dae2f00edee4f21ceba106a7392f26dd",
+   "size": 52666,
+   "src": "dd6ae819ad738ac1a546e9f9282ef325c33b9ea0"
+  },
+  "onnx-community/whisper-base/onnx/decoder_model_merged_q4.onnx": {
+   "parts": 2,
+   "sha256": "09f83b71ceedc97dab1d90b914715dc532a646a147abda11d83c64867b7c319c",
+   "size": 123602419,
+   "src": "09f83b71ceedc97dab1d90b914715dc532a646a147abda11d83c64867b7c319c"
+  },
+  "onnx-community/whisper-base/onnx/decoder_model_merged_quantized.onnx": {
+   "sha256": "fa3ef9902734ce5ae6f9ef2bdb2ba9a6c4b5785b09f4f420ce036573dc9d090b",
+   "size": 53693315,
+   "src": "fa3ef9902734ce5ae6f9ef2bdb2ba9a6c4b5785b09f4f420ce036573dc9d090b"
+  },
+  "onnx-community/whisper-base/onnx/encoder_model.onnx": {
+   "sha256": "a9f3b752833b49e880dec91ee5b6d936112be7c3ea07c221024ba493439f46fe",
+   "size": 82468078,
+   "src": "a9f3b752833b49e880dec91ee5b6d936112be7c3ea07c221024ba493439f46fe"
+  },
+  "onnx-community/whisper-base/onnx/encoder_model_fp16.onnx": {
+   "sha256": "ffba51b20185377c1b89362b1128148d0132de936a32b200af973da2a11a5369",
+   "size": 41332612,
+   "src": "ffba51b20185377c1b89362b1128148d0132de936a32b200af973da2a11a5369"
+  },
+  "onnx-community/whisper-base/onnx/encoder_model_quantized.onnx": {
+   "sha256": "5862993336bf33acd23736071aae2b32261d3b1b2f37780194460d4ef974dd46",
+   "size": 23201314,
+   "src": "5862993336bf33acd23736071aae2b32261d3b1b2f37780194460d4ef974dd46"
+  },
+  "onnx-community/whisper-base/preprocessor_config.json": {
+   "sha256": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d",
+   "size": 339,
+   "src": "91876762a536a746d268353c5cba57286e76b058"
+  },
+  "onnx-community/whisper-base/quantize_config.json": {
+   "sha256": "6e0e27f293a5c17ff2ca8046f06079c0120aa2ede6456faac8ec4b3203471a55",
+   "size": 10126,
+   "src": "dce20a7a4c0260823a4ee78104e723ebbe1b474b"
+  },
+  "onnx-community/whisper-base/special_tokens_map.json": {
+   "sha256": "e67ae3a0aaa99abcd9f187138e12db1f65c16a14761c50ef10eef2c174a7a691",
+   "size": 2194,
+   "src": "bf69932dca4b3719b59fdd8f6cc1978109509f6c"
+  },
+  "onnx-community/whisper-base/tokenizer.json": {
+   "sha256": "27fc476bfe7f17299480be2273fc0608e4d5a99aba2ab5dec5374b4482d1a566",
+   "size": 2480466,
+   "src": "1e95340ff836fad1b5932e800fb7b8c5e6d78a74"
+  },
+  "onnx-community/whisper-base/tokenizer_config.json": {
+   "sha256": "2e036e4dbacfdeb7242c7d4ec4149f4a16e86026048f94d1637e3a8ee9c6a573",
+   "size": 282682,
+   "src": "25be523be5ac50a7671a77f55acba082459d6314"
+  },
+  "onnx-community/whisper-base/vocab.json": {
+   "sha256": "50d6a919f0a0601d56a04eb583c780d18553aa388254ba3158eb6a00f13e2c1a",
+   "size": 1036584,
+   "src": "90e797dd4fd05d9dea443d702ca06be2463c5f2f"
+  }
+ },
+ "models": {
+  "onnx-community/whisper-base": {
+   "onnx": [
+    "decoder_model_merged_q4",
+    "decoder_model_merged_quantized",
+    "encoder_model",
+    "encoder_model_fp16",
+    "encoder_model_quantized"
+   ],
+   "size": 328697874,
+   "use": "語音辨識（預設）"
+  }
+ },
+ "updated": "2026-10-20T11:35:27Z"
+}
