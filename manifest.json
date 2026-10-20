@@ -26,6 +26,26 @@
    "size": 1154,
    "src": "7ae5f3f16a7f35e8e366ca22ee50f42de325cfad"
   },
+  "onnx-community/pyannote-segmentation-3.0/README.md": {
+   "sha256": "5caca54f4629125247e94da397f4f9ddb114622f58cbe0fc964664591d1b42d1",
+   "size": 4418,
+   "src": "6adcf3465a939a27eb3290c3082c91f0f55d63a6"
+  },
+  "onnx-community/pyannote-segmentation-3.0/config.json": {
+   "sha256": "5a4c6bb4f49f1b47c9bd398aac78b8cd4a9f30a0ff91b5c2dc68d05e13e160cf",
+   "size": 408,
+   "src": "a8127bd8293407db0710901e0fed72762400edc8"
+  },
+  "onnx-community/pyannote-segmentation-3.0/onnx/model.onnx": {
+   "sha256": "057ee564753071c0b09b5b611648b50ac188d50846bff5f01e9f7bbf1591ea25",
+   "size": 5986908,
+   "src": "057ee564753071c0b09b5b611648b50ac188d50846bff5f01e9f7bbf1591ea25"
+  },
+  "onnx-community/pyannote-segmentation-3.0/preprocessor_config.json": {
+   "sha256": "dfc7d35a3895f8997eb94521e28b1921c03480a34fa9bcbb6bef1f1934f81480",
+   "size": 158,
+   "src": "d2c05efd3da05b62e47e45602b659118301939ac"
+  },
   "onnx-community/whisper-base/README.md": {
    "sha256": "60a378018182c57cf382866ddfbf0fb2b4031b3895ae932aa34ecb8ff7065a13",
    "size": 531,
@@ -121,6 +141,13 @@
    "size": 101745583,
    "use": "講者聲紋"
   },
+  "onnx-community/pyannote-segmentation-3.0": {
+   "onnx": [
+    "model"
+   ],
+   "size": 5991892,
+   "use": "講者分段"
+  },
   "onnx-community/whisper-base": {
    "onnx": [
     "decoder_model_merged_q4",
@@ -133,5 +160,5 @@
    "use": "語音辨識（預設）"
   }
  },
- "updated": "2026-10-20T11:36:36Z"
+ "updated": "2026-10-20T11:36:47Z"
 }
