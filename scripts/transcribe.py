@@ -70,10 +70,9 @@ def download_asset(a, dest):
 
 
 def decode(path):
-    """用 ffmpeg 轉成 16 kHz 單聲道 float32（支援各種音訊／影片格式）"""
-    out = subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-i", path, "-ac", "1", "-ar", str(SR), "-f", "f32le", "-"],
-                         check=True, stdout=subprocess.PIPE).stdout
-    return np.frombuffer(out, dtype=np.float32).copy()
+    """轉成 16 kHz 單聲道 float32（PyAV／FFmpeg，支援各種音訊與影片格式）"""
+    from faster_whisper.audio import decode_audio
+    return np.asarray(decode_audio(path, sampling_rate=SR), dtype=np.float32)
 
 
 def to_tw(text, cc):
@@ -247,8 +246,10 @@ if __name__ == "__main__":
         r = main()
         if TEST:
             print("TEST RESULT:")
+            print(f"::notice title=測試結果::{r['took']} 秒・{r['speakers']} 位講者・語言 {r.get('lang')}")
             for u in r["segs"]:
                 print(f"  講者{u['spk']} [{u['s']:.1f}-{u['e']:.1f}] {u['text']}")
+                print(f"::notice title=講者{u['spk']} {u['s']:.1f}s::{u['text']}")
             sys.exit(0)
         data = json.dumps(r, ensure_ascii=False, separators=(",", ":")).encode()
         rel = gh("GET", f"/releases/{REL}")
@@ -257,5 +258,7 @@ if __name__ == "__main__":
         status("完成", 100, state="done")
     except Exception as e:
         traceback.print_exc()
+        tb = traceback.format_exc().strip().splitlines()
+        print(f"::error title=轉文字失敗::{type(e).__name__}: {str(e)[:200]} @ {' | '.join(l.strip() for l in tb[-4:-1])[:400]}")
         status("失敗", state="error", err=str(e)[:300])
         sys.exit(1)
