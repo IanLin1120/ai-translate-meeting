@@ -1,5 +1,57 @@
 {
  "files": {
+  "Xenova/nllb-200-distilled-600M/README.md": {
+   "sha256": "8e987040f4d567c686ad41159052ae7c599ec404b644a553cdd11eb4e944d8c2",
+   "size": 4801,
+   "src": "f6dc77e33d1283b1af27f8b41575cdedd5a2abaf"
+  },
+  "Xenova/nllb-200-distilled-600M/config.json": {
+   "sha256": "52f035acb54ac80e5ef7fe78d6967f8ddf8e8799f078d1a92a2c8168d8ff4a20",
+   "size": 873,
+   "src": "6a498b9686cbb3a8f4bdb7b9111579a8b68d9a77"
+  },
+  "Xenova/nllb-200-distilled-600M/generation_config.json": {
+   "sha256": "1ce846259ae04c572ae1863e358534bbc376ff3d3f100b1494feda6200b51de8",
+   "size": 189,
+   "src": "e4e63ec8f93739e46bbed52cca2bde4477cf32b2"
+  },
+  "Xenova/nllb-200-distilled-600M/onnx/decoder_model_merged_quantized.onnx": {
+   "parts": 6,
+   "sha256": "dd66608c2a4194e78f95548fa0e64f24302303698c5b09fa8e1f9e16ec00676b",
+   "size": 475505771,
+   "src": "dd66608c2a4194e78f95548fa0e64f24302303698c5b09fa8e1f9e16ec00676b"
+  },
+  "Xenova/nllb-200-distilled-600M/onnx/encoder_model_quantized.onnx": {
+   "parts": 5,
+   "sha256": "5cde664eacba07a62f198857ec6c06e09572b1ebb77c8137f1fa99ac604a3a28",
+   "size": 419120483,
+   "src": "5cde664eacba07a62f198857ec6c06e09572b1ebb77c8137f1fa99ac604a3a28"
+  },
+  "Xenova/nllb-200-distilled-600M/quantize_config.json": {
+   "sha256": "8f282a0d6c7bcc2d3755c67d26627c871bd55f83b2e8949495587cf6365b96c5",
+   "size": 3258,
+   "src": "a41426275ffe01d5c5b9aef70cf717ab8d9ea9af"
+  },
+  "Xenova/nllb-200-distilled-600M/sentencepiece.bpe.model": {
+   "sha256": "14bb8dfb35c0ffdea7bc01e56cea38b9e3d5efcdcb9c251d6b40538e1aab555a",
+   "size": 4852054,
+   "src": "14bb8dfb35c0ffdea7bc01e56cea38b9e3d5efcdcb9c251d6b40538e1aab555a"
+  },
+  "Xenova/nllb-200-distilled-600M/special_tokens_map.json": {
+   "sha256": "992bd4ed610d644d6823081937bcc91bb8878dd556cea4ae5327f2480361330e",
+   "size": 3548,
+   "src": "02fba84e401dd2017999a39cac2c1278591c3a03"
+  },
+  "Xenova/nllb-200-distilled-600M/tokenizer.json": {
+   "sha256": "8ac789ad7dabea44d41537822d48c516ba358374c51813e2cba78c006e150c94",
+   "size": 17331224,
+   "src": "8ac789ad7dabea44d41537822d48c516ba358374c51813e2cba78c006e150c94"
+  },
+  "Xenova/nllb-200-distilled-600M/tokenizer_config.json": {
+   "sha256": "ddf411c9f790d081e72de76bb8e8b714d74e160e61bc10c9bd8f56022dcd7fd7",
+   "size": 544,
+   "src": "9ee97ce45398eb1c4413a043b2d60e4ee730290b"
+  },
   "Xenova/opus-mt-en-zh/README.md": {
    "sha256": "4aeb4d31c2b0ab8dd06aaa6c8705f8bdada6869ca67def9c2e1f5475ff007530",
    "size": 571,
@@ -422,6 +474,14 @@
   }
  },
  "models": {
+  "Xenova/nllb-200-distilled-600M": {
+   "onnx": [
+    "decoder_model_merged_quantized",
+    "encoder_model_quantized"
+   ],
+   "size": 916822745,
+   "use": "翻譯 200 種語言"
+  },
   "Xenova/opus-mt-en-zh": {
    "onnx": [
     "decoder_model_merged_quantized",
@@ -485,5 +545,5 @@
    "use": "語音辨識（最快）"
   }
  },
- "updated": "2026-10-20T11:38:10Z"
+ "updated": "2026-10-20T11:40:24Z"
 }
