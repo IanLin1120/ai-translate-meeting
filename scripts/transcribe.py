@@ -70,9 +70,11 @@ def download_asset(a, dest):
 
 
 def decode(path):
-    """轉成 16 kHz 單聲道 float32（PyAV／FFmpeg，支援各種音訊與影片格式）"""
-    from faster_whisper.audio import decode_audio
-    return np.asarray(decode_audio(path, sampling_rate=SR), dtype=np.float32)
+    """用 FFmpeg（imageio-ffmpeg 內附）轉成 16 kHz 單聲道 float32，支援各種音訊與影片格式"""
+    import imageio_ffmpeg
+    out = subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(), "-nostdin", "-loglevel", "error", "-i", path, "-vn", "-ac", "1", "-ar", str(SR), "-f", "f32le", "-"],
+                         check=True, stdout=subprocess.PIPE).stdout
+    return np.frombuffer(out, dtype=np.float32).copy()
 
 
 def to_tw(text, cc):
@@ -117,7 +119,8 @@ def main():
     for p in job["parts"]:
         a = decode(files[p["name"]])
         parts.append((float(p.get("t0", 0)), a))
-        os.remove(files[p["name"]])
+        if not TEST:
+            os.remove(files[p["name"]])
     total = max([int(t0 * SR) + len(a) for t0, a in parts] + [0])
     audio = np.zeros(total, dtype=np.float32)
     for t0, a in parts:
