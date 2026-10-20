@@ -6,12 +6,32 @@
 - 🌐 **網頁版**：<https://ianlin1120.github.io/ai-translate-meeting/>
 - 📱 **Android APK**：[Releases](https://github.com/IanLin1120/ai-translate-meeting/releases/latest)
 
+## 📖 學習
+
+App 下方的「學習」分頁：
+
+- **單字**：47,000+ 個英文單字（依常用程度排列，可篩選國中／高中／牛津 3000／托福／雅思／GRE…）。單字卡有 KK 音標、各詞性的中文意思、中英對照例句、時態與詞形變化、相似詞、相反詞、用法提醒、易混淆字辨析、字根；搜尋時找不到會列出拼字最相近的字，還是沒有就用手機上的 AI 模型查
+- **片語**：3,600+ 個常見片語（動詞片語、介系詞片語、慣用語），一樣有片語卡和搜尋
+- **文法**：12 種時態的時間軸圖卡（邏輯、公式、使用時機、常搭配的時間詞、常見錯誤），加上被動語態、條件句、情態助動詞、不規則動詞表；可以輸入英文句子分析用了哪些時態
+- **專有名詞**：16 個行業分類（實驗室分析、環境工程、面板・半導體、品質管理、資訊、醫療、化學、法律、金融、物流…），★ 為精選詞（含說明）
+- **收藏**：單字、片語、時態、專有名詞都能加入收藏，並用翻面字卡複習
+
+詞庫放在 `data/`（GitHub Pages），第一次使用時下載並存在手機，之後可離線查詢。
+
+| 詞庫來源 | 內容 | 授權 |
+|---|---|---|
+| [ECDICT](https://github.com/skywind3000/ECDICT) | 英漢解釋、詞形變化、考試等級、字頻、近義詞辨析、字根 | MIT |
+| [CMU Pronouncing Dictionary](https://github.com/cmusphinx/cmudict) | 美式發音（轉換成 KK 音標） | BSD |
+| [WordNet 3.1](https://wordnet.princeton.edu/) | 英文例句、英英解釋、同義詞、反義詞 | WordNet License |
+| Opus-MT（本專案預先執行） | 例句的中文翻譯 | CC-BY 4.0 |
+
 ## 儲存庫結構
 
 | 位置 | 內容 | App 如何使用 |
 |---|---|---|
 | `main` 分支 → GitHub Pages | `index.html`（整個 App）、`lib/`（Transformers.js、ONNX Runtime、Tesseract、OpenCC）、`lib/tessdata/`（18 種語言 OCR 語言包）、`version.json` | 網頁版直接執行；APK 開啟時檢查 `version.json`，有新版就自動下載新的 `index.html`（不用重裝 APK） |
 | `models` 分支 | 開源 AI 模型（ONNX），超過 90 MB 的檔案切成 `.part000`、`.part001`…；`manifest.json` 記錄大小、sha256、分片數 | 透過 `raw.githubusercontent.com` 下載並自動把分片接回；GitHub 沒有的檔案才改用 Hugging Face |
+| `data/` | 學習頁的詞庫（單字、片語、例句、文法、專有名詞） | 學習頁第一次使用時下載並快取 |
 | `models.json` | 要鏡像的模型清單 | 修改後推送到 `main`，GitHub Actions 會自動同步 |
 | `android/` | APK 原始碼（WebView 外殼＋原生橋接） | — |
 

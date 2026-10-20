@@ -204,6 +204,87 @@ html[data-surf="paper"] .pn{background:var(--panel) url("data:image/svg+xml;utf8
 html[data-surf="paper"] .btn{box-shadow:none}
 html[data-surf="paper"] #nav button.on{background:var(--bg);box-shadow:inset 0 0 0 1px var(--edge)}
 html[data-surf="paper"] .seg.glass,html[data-surf="paper"] .lbar.glass{background:var(--bg2);box-shadow:inset 0 1px 2px rgba(0,0,0,.06)!important}
+
+/* ===== 學習 ===== */
+#lsg{overflow-x:auto;scrollbar-width:none}#lsg::-webkit-scrollbar{display:none}#lsg b{flex:1 0 auto;padding:6px 8px}#lsg b i{font-style:normal}
+@media (max-width:480px){#lsg b i{display:none}#lsg b{padding:6px 4px}}
+.lsb{display:flex;gap:6px;align-items:center;border-radius:999px;padding:4px 4px 4px 14px;margin-bottom:10px;position:sticky;top:0;z-index:5}
+.lsb input{flex:1;min-width:0;border:0;background:transparent;outline:0;padding:8px 0}
+.lsb .btn{min-height:38px;padding:0 14px;font-weight:700}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:0 0 10px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--edge);background:var(--glass);border-radius:99px;padding:4px 12px;font-size:.84em;cursor:pointer;white-space:nowrap}
+.chip.on{background:var(--ac);color:var(--onac);border-color:transparent}
+.wl{padding:10px 16px;border-bottom:1px solid var(--edge);cursor:pointer;display:flex;gap:10px;align-items:baseline}.wl:last-child{border:0}
+.wl b{font-weight:700;font-size:1.05em;flex:none;max-width:52%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wl i{font-style:normal;color:var(--sub);font-size:.82em;flex:none}
+.wl span{flex:1;min-width:0;color:var(--sub);font-size:.88em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}
+.wl.hit b{color:var(--ac)}
+.lhint{color:var(--sub);font-size:.84em;margin:2px 6px 8px}
+.lmore{display:block;margin:10px auto 0}
+/* 單字卡 */
+.wc{border-radius:26px;padding:18px 18px 14px;margin-bottom:12px;position:relative;overflow:hidden}
+.wc::after{content:"";position:absolute;right:-40px;top:-40px;width:150px;height:150px;border-radius:50%;background:var(--ac);opacity:.12;pointer-events:none}
+.wc h2{margin:0;font-size:2em;line-height:1.15;word-break:break-word;letter-spacing:.01em}
+.wc .kk{color:var(--sub);font-size:1.08em;margin-top:2px;font-family:"Lucida Sans Unicode","Arial Unicode MS","Noto Sans",sans-serif}
+.wc .kk small{font-size:.72em;margin-left:6px}
+.wca{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center}
+.wca .ib{background:var(--glass);border:1px solid var(--edge);width:40px;height:40px}
+.fav.on{background:#e7b416!important;border-color:transparent!important}
+.lv{display:inline-block;font-size:.72em;font-weight:700;padding:1px 8px;border-radius:99px;border:1px solid var(--edge);color:var(--sub);margin:0 4px 4px 0}
+.lv.hi{background:var(--ac);color:var(--onac);border-color:transparent}
+.ps{border-radius:22px;padding:12px 16px;margin-bottom:10px}
+.ps>h5{margin:0 0 6px;font-size:.95em;display:flex;align-items:center;gap:8px}
+.ps>h5 em{font-style:normal;background:var(--ac);color:var(--onac);border-radius:8px;padding:0 8px;font-size:.85em}
+.ps>h5 small{color:var(--sub);font-weight:400}
+.mn{margin:0;padding-left:1.5em}.mn li{margin:2px 0;line-height:1.55}
+.ex{margin:8px 0 0;padding:8px 12px;border-radius:14px;background:var(--glass);border:1px solid var(--edge)}
+.ex p{margin:0;line-height:1.5}.ex p.e{font-weight:500}.ex p.z{color:var(--sub);font-size:.92em;margin-top:2px}
+.ex .sp{float:right;border:0;background:transparent;cursor:pointer;font-size:1em;padding:0 0 0 6px}
+.ex mark{background:transparent;color:var(--ac);font-weight:700}
+.gl{color:var(--sub);font-size:.84em;margin-top:6px;font-style:italic}
+.stl{font-weight:700;color:var(--sub);font-size:.85em;margin:12px 4px 6px}
+.wchips{display:flex;flex-wrap:wrap;gap:6px}
+.wchips .chip{font-size:.9em}
+.fx{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:.94em}.fx span{color:var(--sub)}.fx b{font-weight:600}
+.nt{margin:0;padding-left:1.2em}.nt li{margin:4px 0;line-height:1.55}
+.rsg{margin-top:8px;padding:8px 12px;border-radius:14px;background:var(--glass);border:1px solid var(--edge);font-size:.9em}
+.rsg b{display:block;margin-bottom:4px}.rsg p{margin:2px 0;color:var(--sub)}.rsg p strong{color:var(--ink)}
+.ai{white-space:pre-wrap;line-height:1.65;font-size:.94em}
+/* 文法 */
+.tg{display:grid;grid-template-columns:68px repeat(3,1fr);gap:6px;margin-bottom:12px}
+.tg .h{font-size:.8em;color:var(--sub);text-align:center;align-self:end;font-weight:700}
+.tg .a{font-size:.78em;color:var(--sub);display:flex;flex-direction:column;justify-content:center;line-height:1.3}
+.tg .a b{color:var(--ink);font-size:1.12em}
+.tg button{border:1px solid var(--edge);background:var(--glass);border-radius:16px;padding:9px 4px;cursor:pointer;font-weight:700;font-size:.8em;line-height:1.3;min-height:62px;transition:.2s;word-break:break-word}
+.tg button small{display:block;font-weight:400;color:var(--sub);font-size:.86em;margin-top:3px;font-style:italic}
+.tg button.past{border-bottom:3px solid #8a7f72}.tg button.present{border-bottom:3px solid var(--ac)}.tg button.future{border-bottom:3px solid var(--ac2)}
+.tls{width:100%;height:auto;display:block}
+.fm{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:start}
+.fm>span{font-size:.78em;font-weight:700;border-radius:8px;padding:2px 8px;background:var(--ac);color:var(--onac);text-align:center;margin-top:2px}
+.fm>div b{display:block;font-weight:600}.fm>div i{color:var(--sub);font-size:.92em}
+.er{display:grid;grid-template-columns:1fr;gap:2px;padding:8px 0;border-bottom:1px solid var(--edge)}.er:last-child{border:0}
+.er .x{color:#c0392b;text-decoration:line-through;text-decoration-thickness:1px}.er .o{color:#3c8d40;font-weight:600}.er small{color:var(--sub)}
+[data-dk="1"] .er .x{color:#ff8a7a}[data-dk="1"] .er .o{color:#7fcf83}
+.irr{width:100%;border-collapse:collapse;font-size:.9em}.irr td,.irr th{padding:6px 8px;border-bottom:1px solid var(--edge);text-align:left}.irr th{color:var(--sub);font-weight:600}
+/* 專有名詞 */
+.cg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:10px}
+.cg button{border:1px solid var(--edge);background:var(--glass);border-radius:18px;padding:12px 10px;cursor:pointer;text-align:left;display:flex;gap:8px;align-items:center;transition:.2s}
+.cg button span{font-size:1.5em}.cg button b{display:block;font-size:.9em;line-height:1.3}.cg button small{color:var(--sub);font-size:.76em}
+.star{color:#c99a06;font-size:.8em;margin-left:4px}
+/* 複習卡 */
+.fc{perspective:1200px;margin:6px 0 12px;cursor:pointer}
+.fci{position:relative;min-height:260px;transition:transform .5s cubic-bezier(.2,.9,.25,1);transform-style:preserve-3d}
+.fc.flip .fci{transform:rotateY(180deg)}
+.fcf,.fcb{position:absolute;inset:0;border-radius:26px;padding:20px;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;overflow:auto}
+.fcb{transform:rotateY(180deg);align-items:stretch;text-align:left;justify-content:flex-start}
+.fcf h2{margin:0;font-size:2.1em}.fcf p{color:var(--sub);margin:6px 0 0}
+#tdict{display:none}
+/* 拍照翻譯：快門疊在相機畫面上 */
+#t-cam .camw{aspect-ratio:auto;max-height:none;height:min(62vh,520px)}
+#t-cam .camb{position:absolute;left:0;right:0;bottom:0;margin:0;padding:26px 0 16px;gap:34px;background:linear-gradient(transparent,rgba(0,0,0,.5))}
+#t-cam .camb .ib{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.35);color:#fff;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#t-cam .shut{border-color:rgba(255,255,255,.85)}
+#t-cam .lvs{position:absolute;left:12px;right:12px;top:10px;margin:0;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);font-size:.86em;pointer-events:none}
 </style></head><body>
 <div id="fT"></div><div id="fB"></div><div id="bgx"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
 <div id="hd" class="glass"><button class="ib" id="hl" title="AI 模型">🧠</button><h1 id="ttl">翻譯</h1><button class="ib" id="hr" title="">🕘</button></div>
@@ -216,7 +297,7 @@ html[data-surf="paper"] .seg.glass,html[data-surf="paper"] .lbar.glass{backgroun
  <div id="t-text">
   <div class="tbox glass"><textarea id="tin" placeholder="輸入或貼上要翻譯的文字…"></textarea><div class="tact"><button class="ib" id="tpaste" title="貼上">📋</button><button class="ib" id="tmic" title="語音輸入">🎤</button><button class="ib" id="tclr" title="清除">✕</button><span class="sp"></span><small id="tcnt">0 字</small></div></div>
   <div><button class="btn on bigb" id="tgo">🌐 翻譯</button>
-  <div class="tbox glass"><div class="tout ph" id="tout">翻譯結果會顯示在這裡</div><div class="tact"><button class="ib" id="tcp" title="複製">⧉</button><button class="ib" id="tsp" title="朗讀">🔊</button><button class="ib" id="tsh" title="分享">↗</button><span class="sp"></span><small id="teng"></small></div></div></div>
+  <div class="tbox glass"><div class="tout ph" id="tout">翻譯結果會顯示在這裡</div><div class="tact"><button class="ib" id="tcp" title="複製">⧉</button><button class="ib" id="tsp" title="朗讀">🔊</button><button class="ib" id="tsh" title="分享">↗</button><button class="ib" id="tnat" title="用 AI 語言模型重新翻譯（語氣較自然）">✨</button><span class="sp"></span><small id="teng"></small></div></div><div class="ps glass" id="tdict"></div></div>
   <div class="full"><h4>最近翻譯</h4><div class="grp glass" id="thist"></div></div>
  </div>
  <div id="t-img" style="display:none">
@@ -229,9 +310,8 @@ html[data-surf="paper"] .seg.glass,html[data-surf="paper"] .lbar.glass{backgroun
   <input type="file" id="ifile" accept="image/*" hidden>
  </div>
  <div id="t-cam" style="display:none">
-  <div class="camw"><video id="cvid" playsinline muted autoplay></video></div>
-  <div class="camb"><button class="ib glass" id="cflip" title="切換鏡頭" style="width:52px;height:52px">🔄</button><button class="shut" id="cshot" title="拍照翻譯"></button><button class="ib glass" id="cgal" title="從相簿選" style="width:52px;height:52px">🖼</button></div>
-  <p class="lvs" id="cst">對準要翻譯的文字，按下快門</p>
+  <div class="camw" id="camw"><video id="cvid" playsinline muted autoplay></video><p class="lvs" id="cst">對準要翻譯的文字，按下快門</p>
+  <div class="camb"><button class="ib glass" id="cflip" title="切換鏡頭" style="width:52px;height:52px">🔄</button><button class="shut" id="cshot" title="拍照翻譯"></button><button class="ib glass" id="cgal" title="從相簿選" style="width:52px;height:52px">🖼</button></div></div>
  </div>
  <div id="t-live" style="display:none">
   <div class="seg glass" id="lvm"><b class="on" data-m="one">🎧 單向翻譯</b><b data-m="duo">🗣 雙人對話</b></div>
@@ -256,6 +336,12 @@ html[data-surf="paper"] .seg.glass,html[data-surf="paper"] .lbar.glass{backgroun
  <div><div class="mlw glass" id="mlist"><p class="emp">按「● 開始錄音」後，逐字稿會即時出現在這裡<br><small>自動分辨不同講者・中英夾雜也能辨識</small></p></div></div>
 </div><input type="file" id="mfile" accept="audio/*,video/*" hidden></div></section>
 
+<!-- 學習 -->
+<section class="view" id="v-learn"><div class="in">
+ <div class="seg glass" id="lsg"><b class="on" data-s="word"><i>🔤 </i>單字</b><b data-s="phr"><i>💬 </i>片語</b><b data-s="gram"><i>📐 </i>文法</b><b data-s="term"><i>🏷 </i>專有名詞</b><b data-s="fav"><i>⭐ </i>收藏</b></div>
+ <div id="lbody"></div>
+</div></section>
+
 <!-- 紀錄 -->
 <section class="view" id="v-rec"><div class="in">
  <div class="seg glass" id="rsg"><b class="on" data-s="m">🎙 會議記錄</b><b data-s="t">🌐 翻譯紀錄</b></div>
@@ -270,6 +356,8 @@ html[data-surf="paper"] .seg.glass,html[data-surf="paper"] .lbar.glass{backgroun
 
 <!-- 會議詳細 -->
 <div class="sheet" id="md"><div class="pn"><div class="eh"><button class="ib" id="mdx">✕</button><b id="mdt"></b><button class="ib" id="mdm" title="更多">⋯</button></div><div class="eb" id="mdb"></div></div></div>
+<!-- 學習卡片 -->
+<div class="sheet" id="lc"><div class="pn"><div class="eh"><button class="ib" id="lcx">✕</button><b id="lct"></b><button class="ib" id="lcb" title="上一張">↩</button></div><div class="eb" id="lcb2"></div></div></div>
 <!-- 動作選單 -->
 <div class="sheet" id="act" style="z-index:140"><div class="dpn"><div id="actb"></div></div></div>
 <!-- AI 模型面板 -->
@@ -348,8 +436,19 @@ const H={
    return out}
   const key='mt:'+p.repo;drop('mt:',key);
   const pipe=await get(key,id,cb=>tryAll([()=>T.pipeline('translation',p.repo,{device:'wasm',dtype:'q8',progress_callback:cb}),()=>T.pipeline('translation',p.repo,{device:'wasm',dtype:'fp32',progress_callback:cb})]));
-  if(p.load)return 1;const opt={max_new_tokens:512};if(p.sl)opt.src_lang=p.sl;if(p.tl)opt.tgt_lang=p.tl;const out=[];
+  if(p.load)return 1;const opt={max_new_tokens:512,no_repeat_ngram_size:3,repetition_penalty:1.1};if(p.sl)opt.src_lang=p.sl;if(p.tl)opt.tgt_lang=p.tl;const out=[];
+  /* Opus-MT 英→中要在句首放語言標記 >>cmn_Hans<<。Transformers.js 會把這個標記拆成亂碼(> > cm n _ H ans < <),
+     模型就把亂碼一起「翻譯」出來,所以這裡直接把標記的 token ID 接在句子前面再生成 */
+  const tok=pipe.tokenizer,tid=p.tag&&tok.convert_tokens_to_ids?tok.convert_tokens_to_ids([p.tag])[0]:null;
+  if(tid!=null&&tid!==tok.unk_token_id){for(const t of p.texts){const ids=[tid,...Array.from(tok(t).input_ids.data,Number)],n=ids.length;
+    const o=await pipe.model.generate({input_ids:new T.Tensor('int64',BigInt64Array.from(ids,x=>BigInt(x)),[1,n]),attention_mask:new T.Tensor('int64',new BigInt64Array(n).fill(1n),[1,n]),...opt});
+    out.push(tok.batch_decode(o,{skip_special_tokens:true})[0]||'')}return out}
   for(const t of p.texts){const r=await pipe(t,opt);out.push((Array.isArray(r)?r[0]:r).translation_text||'')}return out},
+ /* 通用 LLM 問答(學習頁的 AI 解說) */
+ async llm(p,id,c){await lib(c);const g=c.dev!=='wasm'&&await gpu();const key='llm:'+p.repo+(g?':g':':c');drop('llm:',key);
+  const pipe=await get(key,id,cb=>tryAll(g?[()=>T.pipeline('text-generation',p.repo,{device:'webgpu',dtype:F16?'q4f16':'q4',progress_callback:cb}),()=>T.pipeline('text-generation',p.repo,{device:'wasm',dtype:'q4',progress_callback:cb})]:[()=>T.pipeline('text-generation',p.repo,{device:'wasm',dtype:'q4',progress_callback:cb}),()=>T.pipeline('text-generation',p.repo,{device:'wasm',dtype:'q8',progress_callback:cb})]));
+  const r=await pipe([{role:'system',content:p.sys},{role:'user',content:p.user}],{max_new_tokens:p.max||400,do_sample:false,repetition_penalty:1.1});const g0=r[0].generated_text;
+  return String(Array.isArray(g0)?g0.at(-1).content:g0).replace(/<think>[\s\S]*?<\/think>/g,'').trim()},
  /* 只把模型檔下載存到手機,不載入記憶體、不用 GPU */
  async prefetch(p,id,c){await lib(c);const host=T.env.remoteHost.replace(/\/*$/,'/'),cache=await caches.open(T.env.cacheKey||'transformers-cache');
   const man=c.gh?await manifest(c.gh):{files:{}},pre=p.repo+'/';let files=Object.keys(man.files||{}).filter(k=>k.startsWith(pre)).map(k=>k.slice(pre.length));
@@ -403,11 +502,11 @@ const MTE={auto:{n:'自動選擇',s:'中↔英用 Opus-MT，其他語言用 NLLB
 const HFS=[['https://huggingface.co/','Hugging Face 官方'],['https://hf-mirror.com/','hf-mirror 鏡像（官方連不上時）']];
 const DEF={theme:'sea',mode:'auto',font:16,blur:18,glass:.4,ui:'auto',surf:'paper',onb:0,src:'auto',tgt:'zh-TW',eng:'auto',asr:'base',asrc:'',dev:'wasm',hf:'https://huggingface.co/',
  mlang:'zh',mtr:'',thr:.8,maxSpk:0,fine:1,hall:1,keepAud:1,tw:1,lvtts:1,lvm:'one',lvA:'zh-TW',lvB:'en',lvSil:.7,tsub:'text',msrc:'gh',autoUpd:1,mcloud:'gh',cmodel:'large-v3-turbo',ghTok:'',thr2:3,v13:0};
-let S={set:{...DEF},hist:[],meets:[]},cur='tr';
+let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.3.1';
+const APP_VER='1.4.0';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -464,15 +563,15 @@ function apply(){const s=S.set,t=TH[s.theme]||TH.sea,dk=s.mode=='dark'||(s.mode=
  if(sf=='paper'){r.setProperty('--glass',mixHex(c[0],'#ffffff',dk?.06:.42));r.setProperty('--panel',mixHex(c[0],'#ffffff',dk?.035:.26));r.setProperty('--edge',dk?'rgba(255,255,255,.075)':'rgba(70,50,30,.13)');r.setProperty('--sh',dk?'rgba(0,0,0,.32)':'rgba(70,50,30,.10)')}}
 matchMedia('(prefers-color-scheme:dark)').addEventListener?.('change',apply);
 /* ---- 導覽 ---- */
-const NAV=[['tr','🌐','翻譯'],['meet','🎙','會議記錄'],['rec','📚','紀錄'],['set','⚙️','設定']];
+const NAV=[['tr','🌐','翻譯'],['learn','📖','學習'],['meet','🎙','會議記錄'],['rec','📚','紀錄'],['set','⚙️','設定']];
 $('#nav').innerHTML=NAV.map(n=>`<button data-v="${n[0]}"><span>${n[1]}</span>${n[2]}</button>`).join('');
 $('#nav').onclick=e=>{const b=e.target.closest('button');if(b)show(b.dataset.v)};
-const HR={tr:['🕘','翻譯紀錄'],meet:['📂','匯入音檔轉文字'],rec:['',''],set:['','']};
+const HR={tr:['🕘','翻譯紀錄'],learn:['⭐','我的收藏'],meet:['📂','匯入音檔轉文字'],rec:['',''],set:['','']};
 function show(v){if(cur=='tr'&&v!='tr'){camStop();if(LV.on)lvStop()}cur=v;document.documentElement.dataset.v=v;
  $$('.view').forEach(x=>x.classList.toggle('on',x.id=='v-'+v));$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v==v));
  $('#ttl').textContent=NAV.find(n=>n[0]==v)[2];const h=HR[v];$('#hr').textContent=h[0];$('#hr').title=h[1];$('#hr').style.visibility=h[0]?'visible':'hidden';
- ({tr:()=>tsub(S.set.tsub,1),meet:renderMeet,rec:renderRec,set:renderSet})[v]();document.getElementById('v-'+v).scrollTop=0}
-$('#hr').onclick=()=>{if(cur=='tr'){show('rec');rsub('t')}else if(cur=='meet')$('#mfile').click()};
+ ({tr:()=>tsub(S.set.tsub,1),learn:()=>lsub(LS.sub),meet:renderMeet,rec:renderRec,set:renderSet})[v]();document.getElementById('v-'+v).scrollTop=0}
+$('#hr').onclick=()=>{if(cur=='tr'){show('rec');rsub('t')}else if(cur=='meet')$('#mfile').click();else if(cur=='learn')lsub('fav')};
 
 /* ================= AI 運算管理(Web Worker) ================= */
 const AI={w:null,n:0,cb:{},
@@ -517,7 +616,7 @@ async function translate(text,src,tgt,o={}){text=String(text||'').trim();if(!tex
  const eng=o.eng||engFor(src,tgt),ck=[src,tgt,eng,text].join('|');if(TRC.has(ck))return TRC.get(ck);
  const paras=splitText(text),flat=[];paras.forEach(p=>p.forEach(s=>flat.push(s)));
  let inp=flat.slice(),p={texts:[]};
- if(eng=='opus'){if(isZh(src)){inp=await Promise.all(inp.map(toCN));p.repo='Xenova/opus-mt-zh-en'}else{p.repo='Xenova/opus-mt-en-zh';inp=inp.map(s=>'>>cmn_Hans<< '+s)}}
+ if(eng=='opus'){if(isZh(src)){inp=await Promise.all(inp.map(toCN));p.repo='Xenova/opus-mt-zh-en'}else{p.repo='Xenova/opus-mt-en-zh';p.tag='>>cmn_Hans<<'}}
  else if(eng=='nllb'){p.repo='Xenova/nllb-200-distilled-600M';p.sl=src=='zh-TW'?'zho_Hant':LANG[src].nl;p.tl=LANG[tgt].nl}
  else if(eng=='m2m'){p.repo='Xenova/m2m100_418M';p.sl=LANG[src].m2;p.tl=LANG[tgt].m2}
  else{p.llm=1;p.repo=MTE[eng].r;p.sname=LANG[src].en;p.tname=LANG[tgt].en}
@@ -525,6 +624,8 @@ async function translate(text,src,tgt,o={}){text=String(text||'').trim();if(!tex
  const res=p.texts.length?await AI.call('mt',p):[];const outF=flat.map(s=>s.match(/^\s*$/)?s:'');res.forEach((r,j)=>outF[idx[j]]=r);
  const cjk=isZh(tgt)||tgt=='ja';let k=0;const lines=paras.map(pp=>pp.map(()=>outF[k++]).filter(x=>x!==undefined).join(cjk?'':' ').replace(/\s+/g,' ').trim());
  let out=lines.join('\n');if(isZh(tgt))out=await zhOut(out,tgt);out=out.replace(/>>\w+<<\s*/g,'');
+ /* 中文譯文整理:去掉中文字之間多餘的空格、半形標點改全形、修正「0. 995」這類被拆開的小數 */
+ if(cjk)out=out.replace(/(\d)\s*\.\s+(\d)/g,'$1.$2').replace(/([\u3400-\u9fff])\s*,\s*/g,'$1，').replace(/([\u3400-\u9fff])\s*\?/g,'$1？').replace(/([\u3400-\u9fff])\s*!/g,'$1！').replace(/([\u3400-\u9fff])\s*;\s*/g,'$1；').replace(/([\u3400-\u9fff])\s*:\s*/g,'$1：').replace(/\s+([，。！？；：、」』）])/g,'$1').replace(/([，。！？；：、「『（])\s+/g,'$1').replace(/([\u3400-\u9fff])\s+(?=[\u3400-\u9fff])/g,'$1，');
  const r={t:out,eng:eng=='opus'?'Opus-MT':eng=='nllb'?'NLLB-200':eng=='m2m'?'M2M100':MTE[eng].n.split('（')[0],src};TRC.set(ck,r);if(TRC.size>300)TRC.delete(TRC.keys().next().value);return r}
 
 /* ================= 錄音 + 語音偵測(VAD) ================= */
@@ -580,21 +681,32 @@ $('#ltgt').onchange=e=>{if(S.set.tsub=='live'&&S.set.lvm=='duo')S.set.lvB=e.targ
 $('#lsw').onclick=()=>{const s=S.set;if(s.tsub=='live'&&s.lvm=='duo'){[s.lvA,s.lvB]=[s.lvB,s.lvA]}else{let a=s.src;if(a=='auto')a=LAST_SRC||(s.tgt=='en'?'zh-TW':'en');s.src=s.tgt;s.tgt=a;
  if(s.tsub=='text'&&TOUT){$('#tin').value=TOUT;tcnt();doTr()}}save();langBar()};
 function tsub(k,first){S.set.tsub=k;save();$$('#tsg b').forEach(b=>b.classList.toggle('on',b.dataset.s==k));['text','img','cam','live'].forEach(x=>$('#t-'+x).style.display=x==k?'':'none');
- if(k!='cam')camStop();if(k!='live'&&LV.on)lvStop();langBar();if(k=='text')renderTH();if(k=='cam')camStart();if(k=='live'){$('#lvone').style.display=S.set.lvm=='one'?'':'none';$('#lvduo').style.display=S.set.lvm=='duo'?'':'none';$$('#lvm b').forEach(b=>b.classList.toggle('on',b.dataset.m==S.set.lvm));$('#lvtts').classList.toggle('on',!!S.set.lvtts)}}
+ if(k!='cam')camStop();if(k!='live'&&LV.on)lvStop();langBar();if(k=='text')renderTH();if(k=='cam'){requestAnimationFrame(camFit);camStart()}if(k=='live'){$('#lvone').style.display=S.set.lvm=='one'?'':'none';$('#lvduo').style.display=S.set.lvm=='duo'?'':'none';$$('#lvm b').forEach(b=>b.classList.toggle('on',b.dataset.m==S.set.lvm));$('#lvtts').classList.toggle('on',!!S.set.lvtts)}}
 $('#tsg').onclick=e=>{const b=e.target.closest('b');b&&tsub(b.dataset.s)};
 /* ---- 文字翻譯 ---- */
 let TOUT='',LAST_SRC='',tBusy=0;
 const tcnt=()=>$('#tcnt').textContent=$('#tin').value.length+' 字';
 $('#tin').oninput=tcnt;$('#tin').onkeydown=e=>{if(e.key=='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();doTr()}};
-$('#tclr').onclick=()=>{$('#tin').value='';tcnt();TOUT='';$('#tout').textContent='翻譯結果會顯示在這裡';$('#tout').classList.add('ph');$('#teng').textContent=''};
+$('#tclr').onclick=()=>{$('#tin').value='';tcnt();$('#tdict').style.display='none';TOUT='';$('#tout').textContent='翻譯結果會顯示在這裡';$('#tout').classList.add('ph');$('#teng').textContent=''};
 $('#tpaste').onclick=async()=>{try{const t=IS_APP&&NB.paste?NB.paste():await navigator.clipboard.readText();if(t){$('#tin').value=t;tcnt();doTr()}}catch(e){toast('無法讀取剪貼簿，請長按輸入框貼上')}};
 $('#tgo').onclick=()=>doTr();
+/* 輸入的是單一英文單字或片語、而且字典裡有：直接用字典的解釋（翻譯模型對單字常常翻錯，例如 Major → 師傅） */
+async function dictTr(t){if(!isZh(S.set.tgt)||(S.set.src!='auto'&&S.set.src!='en')||!/^[a-z][a-z'\-]*( [a-z'\-]+){0,4}$/i.test(t))return null;
+ try{await words();await phrases()}catch(e){return null}const q=t.toLowerCase();let i=WI.get(q);if(i==null&&WF[q])i=WI.get(WF[q]);
+ let out='';if(i!=null&&!t.includes(' ')){out=senses(WD[i][2]).filter(s=>s.p).map(s=>s.p+'. '+s.m.slice(0,6).join('、')).join('\n')}else if(PI.has(q))out=PD[PI.get(q)][1];
+ if(!out)return null;return{t:S.set.tgt=='zh-CN'?await toCN(out):out,eng:'📖 字典',src:'en'}}
 async function doTr(){const t=$('#tin').value.trim();if(!t||tBusy)return;tBusy=1;const b=$('#tgo');b.disabled=true;b.textContent='⏳ 翻譯中…';$('#tout').classList.add('ph');$('#tout').textContent='AI 翻譯中…（第一次使用會先下載模型）';const t0=performance.now();
- try{const r=await translate(t,S.set.src,S.set.tgt);TOUT=r.t;LAST_SRC=r.src;$('#tout').classList.remove('ph');$('#tout').textContent=r.t||'（沒有結果）';
+ try{const r=(await dictTr(t))||await translate(t,S.set.src,S.set.tgt);TOUT=r.t;LAST_SRC=r.src;$('#tout').classList.remove('ph');$('#tout').textContent=r.t||'（沒有結果）';
   $('#teng').textContent=(S.set.src=='auto'&&r.src?'偵測：'+LANG[r.src].n.split(' ')[0]+'・':'')+r.eng+'・'+((performance.now()-t0)/1000).toFixed(1)+' 秒';
-  addHist({a:t,b:r.t,s:r.src||S.set.src,g:S.set.tgt,k:'text'})}
+  addHist({a:t,b:r.t,s:r.src||S.set.src,g:S.set.tgt,k:'text'});if(isZh(S.set.tgt))trDict(t,r.src)}
  catch(e){$('#tout').textContent='❌ 翻譯失敗：'+e.message+'\n請確認網路（第一次需下載模型），或到「設定」換翻譯引擎。'}
  finally{tBusy=0;b.disabled=false;b.textContent='🌐 翻譯'}}
+/* ✨ 用 LLM（Qwen）重新翻譯：比較像人寫的句子，但比較慢、需要下載較大的模型 */
+$('#tnat').onclick=async()=>{const t=$('#tin').value.trim();if(!t||tBusy)return;const e=String(S.set.eng||'').startsWith('q')?S.set.eng:'q05',m=MTE[e];
+ if(!S.set.llmOk){const k=await menu(`用 ${m.n} 重新翻譯`,[['go',`✅ 下載並使用（${m.s.split('・')[0]}）`],['no','取消']]);if(k!='go')return;S.set.llmOk=1;save()}
+ tBusy=1;const b=$('#tnat');b.disabled=true;$('#tout').classList.add('ph');$('#tout').textContent='✨ AI 語言模型翻譯中…（比較慢，請稍候）';const t0=performance.now();
+ try{const r=await translate(t,S.set.src,S.set.tgt,{eng:e});TOUT=r.t;$('#tout').classList.remove('ph');$('#tout').textContent=r.t||'（沒有結果）';$('#teng').textContent='✨ '+r.eng+'・'+((performance.now()-t0)/1000).toFixed(1)+' 秒'}
+ catch(x){$('#tout').textContent='❌ '+x.message}finally{tBusy=0;b.disabled=false}};
 $('#tcp').onclick=()=>copy(TOUT);$('#tsp').onclick=()=>speak(TOUT,S.set.tgt);$('#tsh').onclick=()=>share(TOUT,'翻譯');
 function addHist(h){h.ts=Date.now();h.id=uid();S.hist=[h].concat(S.hist.filter(x=>!(x.a==h.a&&x.g==h.g))).slice(0,300);save();if(S.set.tsub=='text')renderTH()}
 function renderTH(){const L=S.hist.filter(h=>h.k=='text').slice(0,8);$('#thist').innerHTML=L.map(h=>`<div class="hl" data-h="${h.id}"><b>${esc(h.b)}</b><small>${esc(h.a)}</small></div>`).join('')||'<div class="hl"><small>還沒有翻譯紀錄</small></div>'}
@@ -665,6 +777,12 @@ let CAM=null,camFace='environment';
 async function camStart(){if(CAM)return;$('#cst').textContent='開啟相機中…';if(!await needPerm('cam')){$('#cst').textContent='沒有相機權限';return}
  try{CAM=await navigator.mediaDevices.getUserMedia({video:{facingMode:camFace,width:{ideal:1920},height:{ideal:1440}},audio:false});const v=$('#cvid');v.srcObject=CAM;await v.play().catch(()=>{});$('#cst').textContent='對準要翻譯的文字，按下快門'}
  catch(e){$('#cst').textContent='無法開啟相機：'+(e.name=='NotAllowedError'?'請允許相機權限':e.message);CAM=null}}
+/* 相機畫面高度：填滿語言列到底部導覽列之間的空間，快門疊在畫面下緣，不用再往下滑 */
+function camFit(){const w=$('#camw'),c=$('#t-cam');if(!w||c.style.display=='none'||cur!='tr')return;const v=$('#v-tr');v.scrollTop=0;
+ const top=w.getBoundingClientRect().top,nav=$('#nav').getBoundingClientRect(),rail=document.documentElement.dataset.rail=='1';
+ const bottom=rail?innerHeight-Math.max(12,parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sab'))||0)-8:nav.top-10;
+ w.style.height=Math.max(240,Math.round(bottom-top))+'px'}
+addEventListener('resize',()=>setTimeout(camFit,180));
 function camStop(){if(CAM){CAM.getTracks().forEach(t=>t.stop());CAM=null;$('#cvid').srcObject=null}}
 $('#cflip').onclick=()=>{camFace=camFace=='environment'?'user':'environment';camStop();camStart()};
 $('#cgal').onclick=()=>{tsub('img');$('#ifile').click()};
@@ -1003,7 +1121,7 @@ function renderSet(){const s=S.set,sg=(id,a,v)=>`<div class="seg glass" id="${id
  h+=sec('質感與文字',`<div class="grp glass">${sg('sf',[['paper','紙張質感'],['glass','液態玻璃']],s.surf||'paper')}${s.surf=='glass'?`<div class="sl"><label>模糊強度<span id="o_blur">${s.blur}px</span></label><input type="range" min="0" max="40" value="${s.blur}" data-r="blur"></div><div class="sl"><label>玻璃透明度<span id="o_glass">${Math.round(s.glass*100)}%</span></label><input type="range" min="10" max="70" value="${s.glass*100}" data-r="glass"></div>`:''}<div class="sl"><label>字體大小<span id="o_font">${s.font}px</span></label><input type="range" min="13" max="22" value="${s.font}" data-r="font"></div></div>`);
  if(P)h+=sec('權限',`<div class="grp glass"><div class="row" data-p="mic"><span>🎙</span><b>麥克風<small>會議錄音、即時語音翻譯、語音輸入</small></b>${pst(P.mic)}</div><div class="row" data-p="cam"><span>📷</span><b>相機<small>拍照翻譯</small></b>${pst(P.cam)}</div><div class="row" data-p="notif"><span>🔔</span><b>通知<small>背景錄音時顯示「錄音中」通知，避免被系統關掉</small></b>${pst(P.notif)}</div><div class="row" data-p="bat"><span>🔋</span><b>不限制電池最佳化<small>長時間錄音時建議開啟，螢幕關掉也能持續錄</small></b>${pst(P.bat)}</div><div class="row" data-p="app"><span>⚙️</span><b>開啟 App 設定<small>之前選了「不再詢問」時，從這裡手動開啟</small></b>›</div></div>`);
  h+=sec('資料',`<div class="grp glass"><div class="row" data-a="ej"><b>匯出全部會議記錄<small>JSON 檔${IS_APP?'，存到「下載/AI翻譯會議」':''}</small></b>›</div><div class="row" data-a="clr"><b style="color:#c0392b">清除所有會議與翻譯紀錄</b>›</div></div>`);
- h+=sec('關於（使用的開源專案）',`<div class="grp glass"><div class="sl"><small>Whisper（OpenAI，MIT）・Opus-MT（Helsinki-NLP，CC-BY 4.0）・NLLB-200（Meta，CC-BY-NC 4.0，限非商業）・M2M100（Meta，MIT）・Qwen2.5（Alibaba，Apache 2.0）・pyannote segmentation 3.0（MIT）・WavLM（Microsoft，MIT）・Tesseract OCR（Apache 2.0）・Transformers.js（Hugging Face，Apache 2.0）・ONNX Runtime Web（Microsoft，MIT）・OpenCC（Apache 2.0）</small></div></div>`);
+ h+=sec('關於（使用的開源專案）',`<div class="grp glass"><div class="sl"><small>Whisper（OpenAI，MIT）・Opus-MT（Helsinki-NLP，CC-BY 4.0）・NLLB-200（Meta，CC-BY-NC 4.0，限非商業）・M2M100（Meta，MIT）・Qwen2.5（Alibaba，Apache 2.0）・pyannote segmentation 3.0（MIT）・WavLM（Microsoft，MIT）・Tesseract OCR（Apache 2.0）・Transformers.js（Hugging Face，Apache 2.0）・ONNX Runtime Web（Microsoft，MIT）・OpenCC（Apache 2.0）<br>學習詞庫：ECDICT 英漢詞典（skywind3000，MIT）・CMU Pronouncing Dictionary（Carnegie Mellon，BSD；換算成 KK 音標）・WordNet 3.1（Princeton University，WordNet License）</small></div></div>`);
  ghInfo();
  $('#se').innerHTML=G+h+`<p style="grid-column:1/-1;text-align:center;color:var(--sub);font-size:.8em;margin-top:20px">AI 翻譯會議 v${APP_VER}${I?'（APK '+I.ver+'）':''} · 所有 AI 都在這台裝置上運算</p>`;
  AI.call('info',{}).then(r=>{const g=$('#gpuinfo');g&&(g.textContent=(r.gpu?'✅ 這台裝置支援 WebGPU（GPU 加速）':'⚠️ 這台裝置不支援 WebGPU，會用 CPU 運算（較慢，建議用 Base 以下的語音模型）')+'・Transformers.js '+r.ver+'（'+(r.lib=='jsdelivr'?'jsDelivr':IS_APP?'App 內建':'GitHub')+'）'+(r.thr>1?'・多執行緒 '+r.thr:''))}).catch(e=>{const g=$('#gpuinfo');g&&(g.textContent='⚠️ AI 模組無法載入：'+e.message+'（請確認網路）')})}
@@ -1074,16 +1192,348 @@ async function checkUpd(manual){try{const r=await fetch(GH.pages+'version.json?t
 /* GitHub Pages 網頁版:用 service worker 開啟多執行緒(加快 AI 運算) */
 if(ON_PAGES&&'serviceWorker' in navigator){if(!window.crossOriginIsolated){navigator.serviceWorker.register('sw.js').then(r=>{try{if(!sessionStorage.getItem('coi')){sessionStorage.setItem('coi',1);if(r.active||navigator.serviceWorker.controller)location.reload();else navigator.serviceWorker.addEventListener('controllerchange',()=>location.reload())}}catch(e){}}).catch(()=>{})}}
 
+/* ================= 學習：單字／片語／文法／專有名詞／收藏 ================= */
+/* 詞庫放在 GitHub Pages 的 data/ 資料夾，第一次用到時下載並存在手機（之後可離線） */
+const DV='1';
+const DATAB=IS_APP?GH.pages+'data/':new URL('data/',location.href).href;
+const LDP={};
+function ldata(n){return LDP[n]||(LDP[n]=(async()=>{let c=null;try{c=await caches.open('aitm-data')}catch(e){}const key='https://aitm.data/'+n+'?v='+DV;
+ if(c){try{const r=await c.match(key);if(r)return await r.json()}catch(e){}}
+ let err;for(const u of [...new Set([DATAB+n,GH.pages+'data/'+n])]){try{const r=await fetch(u+'?v='+DV);if(!r.ok)throw new Error('HTTP '+r.status);const t=await r.text();const j=JSON.parse(t);
+  if(c)c.put(key,new Response(t,{headers:{'content-type':'application/json'}})).catch(()=>{});return j}catch(e){err=e}}
+ throw new Error('無法下載詞庫（第一次使用需要網路）'+(err?'：'+err.message:''))})().catch(e=>{delete LDP[n];throw e}))}
+/* 單字詞庫：[字, 音標, 中文, 詞形變化, 等級, 字頻, 音標是否為KK] */
+let WD=null,WI=null,WF=null;
+async function words(){if(WD)return WD;const d=await ldata('words.json');WD=d.w;WF=d.f||{};WI=new Map();WD.forEach((r,i)=>{const k=r[0].toLowerCase();if(!WI.has(k))WI.set(k,i)});return WD}
+let PD=null,PI=null;async function phrases(){if(PD)return PD;PD=await ldata('phrases.json');PI=new Map(PD.map((r,i)=>[r[0],i]));return PD}
+const XS={};async function extra(w){const k=/^[a-z]/i.test(w)?w[0].toLowerCase():'_';if(!XS[k])XS[k]=await ldata('x/'+k+'.json').catch(()=>({}));return XS[k][w]||XS[k][w.toLowerCase()]||null}
+let RSD=null;async function resem(){return RSD||(RSD=await ldata('resemble.json'))}
+let TMD=null;async function terms(){return TMD||(TMD=await ldata('terms.json'))}
+let GRD=null;async function gram(){return GRD||(GRD=await ldata('grammar.json'))}
+
+const LVN={'國':'國中','高':'高中','4':'大學四級','6':'大學六級','k':'考研','T':'托福','I':'雅思','G':'GRE','O':'牛津 3000'};
+const LVF=[['','全部'],['O','牛津 3000 核心'],['國','國中'],['高','高中'],['4','大學四級'],['6','大學六級'],['T','托福'],['I','雅思'],['G','GRE']];
+const POSN={'n':'名詞','v':'動詞','vt':'及物動詞','vi':'不及物動詞','a':'形容詞','adj':'形容詞','ad':'副詞','adv':'副詞','prep':'介系詞','conj':'連接詞','pron':'代名詞','num':'數詞','int':'感嘆詞','interj':'感嘆詞','art':'冠詞','aux':'助動詞','abbr':'縮寫','pl':'複數','suf':'字尾','pref':'字首','det':'限定詞'};
+const WNP={n:['n'],v:['v','vt','vi'],a:['a','adj'],r:['ad','adv']};
+const EXN={p:'過去式',d:'過去分詞',i:'現在分詞',3:'第三人稱單數',s:'複數',r:'比較級',t:'最高級'};
+function exch(e){const o={};String(e||'').split('/').forEach(x=>{const i=x.indexOf(':');if(i>0)o[x.slice(0,i)]=x.slice(i+1)});return o}
+/* 把中文解釋依詞性分組：n. 主修課, 少校 → {p:'n',m:['主修課','少校']} */
+function senses(tr){return String(tr||'').split('\n').map(l=>{l=l.trim();let m=l.match(/^([a-z]+)\.\s*(.*)$/i),p='',t=l,dom='';
+  if(m&&POSN[m[1].toLowerCase()]){p=m[1].toLowerCase();t=m[2]}else{const d=l.match(/^\[([^\]]+)\]\s*(.*)$/);if(d){dom=d[1];t=d[2]}}
+  const ms=t.split(/\s*[;；]\s*|,\s+|，/).map(x=>x.trim()).filter(Boolean);return{p,dom,m:[...new Set(ms)]}}).filter(x=>x.m.length)}
+const short=tr=>{const S0=senses(tr),P=S0.filter(s=>s.p||!s.dom);return(P.length?P:S0).slice(0,2).map(s=>(s.p?s.p+'. ':'')+s.m.slice(0,3).join('、')).join('；')};
+const kkOf=r=>r&&r[1]?(r[6]?'/'+r[1]+'/':'['+r[1]+']'):'';
+
+/* ---- 搜尋：完全相同 → 詞形變化 → 開頭相同 → 中文意思 → 拼字相近 ---- */
+function lev(a,b,max){if(Math.abs(a.length-b.length)>max)return max+1;const m=a.length,n=b.length;let p=new Array(n+1),c=new Array(n+1),pp=null;for(let j=0;j<=n;j++)p[j]=j;
+ for(let i=1;i<=m;i++){c[0]=i;let best=c[0];for(let j=1;j<=n;j++){let v=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]==b[j-1]?0:1));if(pp&&i>1&&j>1&&a[i-1]==b[j-2]&&a[i-2]==b[j-1])v=Math.min(v,pp[j-2]+1);c[j]=v;if(v<best)best=v}
+  if(best>max)return max+1;pp=p.slice();[p,c]=[c,p]}return p[n]}
+function wsearch(q,lim=120){q=q.trim().toLowerCase();if(!q||!WD)return[];const out=[],seen=new Set(),add=(i,how)=>{if(i==null||seen.has(i))return;seen.add(i);out.push([i,how])};
+ if(/[\u3400-\u9fff]/.test(q)){WD.forEach((r,i)=>{if(out.length<lim&&r[2].includes(q))add(i,'zh')});return out}
+ add(WI.get(q),'eq');const b=WF[q];if(b)add(WI.get(b),'form');
+ for(let i=0;i<WD.length&&out.length<lim;i++)if(WD[i][0].toLowerCase().startsWith(q))add(i,'pre');
+ if(out.length<8&&q.length>=3){const max=q.length<=4?1:2,f=[];for(let i=0;i<WD.length;i++){const w=WD[i][0].toLowerCase();if(Math.abs(w.length-q.length)>max)continue;const d=lev(q,w,max);if(d<=max)f.push([d,i])}
+  f.sort((a,b)=>a[0]-b[0]||a[1]-b[1]).slice(0,20).forEach(([d,i])=>add(i,'near'))}
+ return out}
+function psearch(q,lim=120){q=q.trim().toLowerCase();if(!q||!PD)return[];const zh=/[\u3400-\u9fff]/.test(q),out=[];
+ const qs=q.split(/\s+/);
+ PD.forEach((r,i)=>{if(out.length>=lim*3)return;let sc=-1;if(zh){if(r[1].includes(q))sc=1}else if(r[0]==q)sc=0;else if(r[0].startsWith(q))sc=1;else if(qs.every(t=>r[0].split(' ').some(w=>w.startsWith(t))))sc=2;else if(r[0].includes(q))sc=3;if(sc>=0)out.push([sc,i])});
+ out.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);let res=out.slice(0,lim).map(x=>[x[1],x[0]==0?'eq':'pre']);
+ if(!res.length&&!zh&&q.length>=4){const f=[];PD.forEach((r,i)=>{const d=lev(q,r[0],2);if(d<=2)f.push([d,i])});f.sort((a,b)=>a[0]-b[0]).slice(0,15).forEach(([d,i])=>res.push([i,'near']))}
+ return res}
+
+/* ---- 收藏 ---- */
+const favKey=(k,id)=>k+':'+id;
+const isFav=(k,id)=>(S.fav||[]).some(f=>f.k==k&&f.id==id);
+function togFav(k,id,z,kk){S.fav=S.fav||[];const i=S.fav.findIndex(f=>f.k==k&&f.id==id);if(i>=0){S.fav.splice(i,1);toast('已取消收藏')}else{S.fav.unshift({k,id,z:z||'',kk:kk||'',ts:Date.now(),n:0});toast('⭐ 已加入收藏')}save();return i<0}
+function favBtn(k,id,z,kk){return`<button class="ib fav ${isFav(k,id)?'on':''}" data-fav="${esc(k)}" data-id="${esc(id)}" data-z="${esc(z)}" data-kk="${esc(kk||'')}" title="收藏">⭐</button>`}
+
+/* ---- 學習頁 ---- */
+const LS={sub:'word',q:{word:'',phr:'',term:''},lv:'',pc:'',tc:'',n:60,stack:[]};
+function lsub(k){LS.sub=k;S.set.lsub=k;save();$$('#lsg b').forEach(b=>b.classList.toggle('on',b.dataset.s==k));LS.n=60;renderLearn()}
+$('#lsg').onclick=e=>{const b=e.target.closest('b');b&&lsub(b.dataset.s)};
+const lsbar=(ph,v)=>`<div class="lsb glass"><input id="lq" placeholder="${ph}" value="${esc(v)}" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn on" id="lgo">🔍 搜尋</button></div>`;
+const loadingH='<p class="emp">📥 載入詞庫中…<br><small>第一次需要下載，之後可離線使用</small></p>';
+function lerr(e){$('#lbody').innerHTML=`<p class="emp">⚠️ ${esc(e.message)}<br><button class="btn on" style="margin-top:12px" onclick="renderLearn()">重試</button></p>`}
+function renderLearn(){const k=LS.sub;({word:rWord,phr:rPhr,gram:rGram,term:rTerm,fav:rFav})[k]()}
+function bindSearch(fn){const i=$('#lq');let t;i.oninput=()=>{clearTimeout(t);t=setTimeout(()=>fn(i.value,0),220)};i.onkeydown=e=>{if(e.key=='Enter'){e.preventDefault();i.blur();fn(i.value,1)}};$('#lgo').onclick=()=>{i.blur();fn(i.value,1)}}
+
+/* 單字頁 */
+async function rWord(){const B=$('#lbody');B.innerHTML=lsbar('輸入英文單字或中文意思…',LS.q.word)+`<div class="chips" id="llv">${LVF.map(([k,n])=>`<span class="chip ${LS.lv==k?'on':''}" data-k="${k}">${n}</span>`).join('')}</div><div id="lres">${loadingH}</div>`;
+ $('#llv').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;LS.lv=c.dataset.k;LS.n=60;$$('#llv .chip').forEach(x=>x.classList.toggle('on',x==c));wList()};
+ bindSearch((v,go)=>{LS.q.word=v.trim();LS.n=60;wList(go)});
+ try{await words();wList()}catch(e){$('#lres').innerHTML=`<p class="emp">⚠️ ${esc(e.message)}<br><button class="btn on" style="margin-top:12px" onclick="renderLearn()">重試</button></p>`}}
+function wRow(i,how){const r=WD[i];return`<div class="wl ${how=='eq'||how=='form'?'hit':''}" data-w="${i}"${how=='form'?` data-from="${esc(LS.q.word)}"`:''}><b>${esc(r[0])}</b><i>${esc(kkOf(r))}</i><span>${esc(short(r[2]))}</span></div>`}
+function wList(go){const R=$('#lres');if(!R||!WD)return;const q=LS.q.word;
+ if(!q){const L=[];for(let i=0;i<WD.length;i++)if(!LS.lv||WD[i][4].includes(LS.lv))L.push(i);
+  R.innerHTML=`<div class="lhint">共 ${L.length.toLocaleString()} 個單字・依常用程度排列</div><div class="grp glass">${L.slice(0,LS.n).map(i=>wRow(i)).join('')}</div>`+(L.length>LS.n?`<button class="btn lmore" id="lmore">顯示更多（還有 ${(L.length-LS.n).toLocaleString()} 個）</button>`:'');
+  const m=$('#lmore');if(m)m.onclick=()=>{LS.n+=120;wList()};return}
+ let res=wsearch(q);if(LS.lv)res=res.filter(([i])=>WD[i][4].includes(LS.lv));
+ const ex=res.find(x=>x[1]=='eq'||x[1]=='form'),near=res.every(x=>x[1]=='near');
+ let h='';if(res.length&&near)h+=`<div class="lhint">詞庫裡沒有「${esc(q)}」，以下是拼字最相近的單字：</div>`;
+ if(res.length)h+=`<div class="grp glass">${res.map(([i,how])=>wRow(i,how)).join('')}</div>`;
+ if(!ex&&/^[a-z][a-z' \-]*$/i.test(q))h+=`<div class="ps glass" style="margin-top:10px"><b>${res.length?'都不是你要找的？':'詞庫裡找不到「'+esc(q)+'」'}</b><p class="lhint" style="margin:4px 0 8px">可以用手機上的 AI 翻譯模型查詢這個字</p><button class="btn on" id="lai">🤖 用 AI 模型查「${esc(q)}」</button></div>`;
+ if(!res.length&&/[\u3400-\u9fff]/.test(q))h+=`<p class="emp">找不到意思包含「${esc(q)}」的單字</p>`;
+ R.innerHTML=h;const a=$('#lai');if(a)a.onclick=()=>openAIWord(q);
+ if(go&&ex)openWord(ex[1]=='form'?q:WD[ex[0]][0])}
+$('#lbody').addEventListener('click',e=>{const w=e.target.closest('[data-w]');if(w){openWord(w.dataset.from||WD[+w.dataset.w][0]);return}const p=e.target.closest('[data-p]');if(p){openPhrase(PD[+p.dataset.p][0]);return}
+ const t=e.target.closest('[data-t]');if(t){const [c,i]=t.dataset.t.split('|');openTerm(c,+i);return}const g=e.target.closest('[data-g]');if(g){openTense(g.dataset.g);return}});
+
+/* 片語頁 */
+const PCN={v:'動詞片語',p:'介系詞・副詞片語',i:'慣用語・其他'};
+async function rPhr(){const B=$('#lbody');B.innerHTML=lsbar('輸入片語（例：look forward）或中文意思…',LS.q.phr)+`<div class="chips" id="lpc">${[['','全部'],['v','動詞片語'],['p','介系詞・副詞片語'],['i','慣用語・其他']].map(([k,n])=>`<span class="chip ${LS.pc==k?'on':''}" data-k="${k}">${n}</span>`).join('')}</div><div id="lres">${loadingH}</div>`;
+ $('#lpc').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;LS.pc=c.dataset.k;LS.n=60;$$('#lpc .chip').forEach(x=>x.classList.toggle('on',x==c));pList()};
+ bindSearch((v,go)=>{LS.q.phr=v.trim();LS.n=60;pList(go)});
+ try{await Promise.all([phrases(),words()]);pList()}catch(e){$('#lres').innerHTML=`<p class="emp">⚠️ ${esc(e.message)}</p>`}}
+function pRow(i,how){const r=PD[i];return`<div class="wl ${how=='eq'?'hit':''}" data-p="${i}"><b>${esc(r[0])}</b><span>${esc(r[1].split(/[；;]/)[0])}</span></div>`}
+function pList(go){const R=$('#lres');if(!R||!PD)return;const q=LS.q.phr;
+ if(!q){const L=[];PD.forEach((r,i)=>{if(!LS.pc||r[2]==LS.pc)L.push(i)});
+  R.innerHTML=`<div class="lhint">共 ${L.length.toLocaleString()} 個片語・常見的排前面</div><div class="grp glass">${L.slice(0,LS.n).map(i=>pRow(i)).join('')}</div>`+(L.length>LS.n?`<button class="btn lmore" id="lmore">顯示更多（還有 ${(L.length-LS.n).toLocaleString()} 個）</button>`:'');
+  const m=$('#lmore');if(m)m.onclick=()=>{LS.n+=120;pList()};return}
+ let res=psearch(q);if(LS.pc)res=res.filter(([i])=>PD[i][2]==LS.pc);const near=res.length&&res.every(x=>x[1]=='near');
+ let h='';if(near)h+=`<div class="lhint">片語庫裡沒有「${esc(q)}」，以下是最相近的：</div>`;
+ if(res.length)h+=`<div class="grp glass">${res.map(([i,how])=>pRow(i,how)).join('')}</div>`;
+ if(!res.some(x=>x[1]=='eq')&&!/[\u3400-\u9fff]/.test(q))h+=`<div class="ps glass" style="margin-top:10px"><b>${res.length&&!near?'都不是你要找的？':'片語庫裡找不到「'+esc(q)+'」'}</b><p class="lhint" style="margin:4px 0 8px">可以用手機上的 AI 翻譯模型查詢</p><button class="btn on" id="lai">🤖 用 AI 模型查「${esc(q)}」</button></div>`;
+ else if(!res.length)h+=`<p class="emp">找不到意思包含「${esc(q)}」的片語</p>`;
+ R.innerHTML=h;const a=$('#lai');if(a)a.onclick=()=>openAIWord(q,'p');
+ if(go&&res[0]&&res[0][1]=='eq')openPhrase(PD[res[0][0]][0])}
+
+/* ---- 卡片面板 ---- */
+function lcOpen(title,html,push,me){const s=$('#lc');if(!s.classList.contains('on'))LS.stack=[];else if(push!==false&&LS.cur&&me)LS.stack.push(LS.cur);if(me)LS.cur=me;
+ $('#lct').textContent=title;$('#lcb2').innerHTML=html;$('#lcb2').scrollTop=0;$('#lcb').style.visibility=LS.stack.length?'visible':'hidden';s.classList.add('on')}
+function lcClose(){$('#lc').classList.remove('on');LS.stack=[];LS.cur=null;if(cur=='learn'&&LS.sub=='fav')rFav()}
+$('#lcx').onclick=lcClose;$('#lc').onclick=e=>{if(e.target.id=='lc')lcClose()};
+$('#lcb').onclick=()=>{const p=LS.stack.pop();if(p)p(false)};
+$('#lcb2').addEventListener('click',async e=>{const f=e.target.closest('[data-fav]');if(f){f.classList.toggle('on',togFav(f.dataset.fav,f.dataset.id,f.dataset.z,f.dataset.kk));return}
+ const sp=e.target.closest('[data-say]');if(sp){speak(sp.dataset.say,'en');return}
+ const w=e.target.closest('[data-ow]');if(w){const v=w.dataset.ow;if(v.includes(' ')){await phrases();if(PI.has(v))return openPhrase(v)}await words();if(WI.has(v.toLowerCase())||WF[v.toLowerCase()])return openWord(v);if(PI&&PI.has(v))return openPhrase(v);return openAIWord(v)}
+ const g=e.target.closest('[data-g]');if(g){openTense(g.dataset.g);return}
+ const a=e.target.closest('[data-act]');if(a)LACT[a.dataset.act]&&LACT[a.dataset.act](a)});
+const hl=(s,forms)=>{let h=esc(s);if(forms&&forms.length){const re=new RegExp('\\b('+forms.map(f=>f.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).sort((a,b)=>b.length-a.length).join('|')+')\\b','gi');h=h.replace(re,'<mark>$1</mark>')}return h};
+const exH=(e,forms)=>`<div class="ex"><button class="sp" data-say="${esc(e[0])}" title="朗讀">🔊</button><p class="e">${hl(e[0],forms)}</p><p class="z" data-exz="${esc(e[0])}">${e[1]?esc(e[1]):'<i>（中文翻譯待補）</i>'}</p></div>`;
+/* 例句沒有中文時，用手機上的翻譯模型補上 */
+async function fillEx(){const L=$$('#lcb2 [data-exz]').filter(p=>/待補/.test(p.textContent));if(!L.length)return;
+ for(const p of L){p.innerHTML='<i>翻譯中…</i>';try{const r=await translate(p.dataset.exz,'en','zh-TW',{eng:'opus'});p.textContent=r.t+'（AI 翻譯）'}catch(e){p.innerHTML='<i>（無法翻譯：'+esc(e.message)+'）</i>'}}}
+const LACT={fillex:fillEx,
+ ai:async b=>{const box=b.parentElement;b.disabled=true;const q=b.dataset.q,kind=b.dataset.k;box.querySelector('.ai').textContent='🤖 AI 思考中…（第一次使用會下載語言模型，約 0.5–1.2 GB）';
+  try{const t=await llmExplain(q,kind);box.querySelector('.ai').textContent=t;b.remove()}catch(e){box.querySelector('.ai').textContent='❌ '+e.message;b.disabled=false}},
+ more:b=>{b.nextElementSibling.style.display='';b.remove()}};
+
+/* 單字卡 */
+async function openWord(w,push){await words();let i=WI.get(String(w).toLowerCase());let from='';if(i==null){const b=WF[String(w).toLowerCase()];if(b!=null){i=WI.get(b);from=w}}
+ if(i==null)return openAIWord(w);const r=WD[i],word=r[0];
+ lcOpen(word,'<p class="emp">載入中…</p>',push,p=>openWord(w,p));const x=await extra(word),ex=exch(r[3]),wn=(x&&x.wn)||{};
+ const forms=[word,...Object.entries(ex).filter(([k])=>k in EXN).map(([k,v])=>v)];
+ let fromNote='';if(from){const k=Object.entries(ex).find(([k,v])=>v.toLowerCase()==from.toLowerCase());fromNote=`<div class="lhint" style="margin:6px 0 0">「${esc(from)}」是 ${esc(word)} 的${k?EXN[k[0]]||'變化形':'變化形'}</div>`}
+ const lv=[...r[4]].filter(c=>LVN[c]).map(c=>`<span class="lv ${c=='O'?'hi':''}">${LVN[c]}</span>`).join('')+(/[1-5]$/.test(r[4])?`<span class="lv">柯林斯 ${'★'.repeat(+r[4].slice(-1))}</span>`:'')+(r[5]&&r[5]<=20000?`<span class="lv">常用度 第 ${r[5].toLocaleString()} 名</span>`:'');
+ const ss=senses(r[2]);const used=new Set();
+ let body='';ss.forEach(s=>{const wp=Object.keys(WNP).find(k=>WNP[k].includes(s.p));let exs='',gl='';
+  if(wp&&wn[wp]&&!used.has(wp)){used.add(wp);exs=(wn[wp].e||[]).map(e=>exH(Array.isArray(e)?e:[e,''],forms)).join('');gl=(wn[wp].g||[]).length?`<div class="gl">英英：${wn[wp].g.map(esc).join('<br>英英：')}</div>`:''}
+  body+=`<div class="ps glass"><h5>${s.p?`<em>${esc(s.p)}.</em> ${POSN[s.p]||''}`:s.dom?`<em>${esc(s.dom)}</em> 專業用語`:'<em>其他</em>'}</h5><ol class="mn">${s.m.map(m=>`<li>${esc(m)}</li>`).join('')}</ol>${exs}${gl}</div>`});
+ /* WordNet 有、但中文解釋沒列出的詞性 */
+ for(const wp of Object.keys(wn))if(!used.has(wp)&&wn[wp].e&&wn[wp].e.length){body+=`<div class="ps glass"><h5><em>${wp=='r'?'ad':wp}.</em> ${POSN[wp=='r'?'ad':wp]||''} <small>英文例句</small></h5>${wn[wp].e.map(e=>exH(Array.isArray(e)?e:[e,''],forms)).join('')}${wn[wp].g?`<div class="gl">英英：${esc(wn[wp].g[0])}</div>`:''}</div>`}
+ /* 詞形／時態變化 */
+ const fx=Object.entries(EXN).filter(([k])=>ex[k]).map(([k,n])=>`<span>${n}</span><b>${esc(ex[k])}</b>`).join('');
+ if(fx)body+=`<div class="stl">🔁 詞形・時態變化</div><div class="ps glass"><div class="fx">${fx}</div>${ex.p||ex.d?`<div class="lhint" style="margin:8px 0 0">例：現在式 ${esc(word)}／${esc(ex['3']||word+'s')} → 過去式 ${esc(ex.p||'-')} → 完成式 have ${esc(ex.d||'-')} → 進行式 be ${esc(ex.i||'-')} <a href="#" data-g="present-simple" style="color:var(--ac)">看時態圖卡 →</a></div>`:''}</div>`;
+ /* 同義、反義 */
+ const syn=[...new Set(Object.values(wn).flatMap(v=>v.s||[]))].slice(0,12),ant=[...new Set(Object.values(wn).flatMap(v=>v.a||[]))].slice(0,8);
+ if(syn.length)body+=`<div class="stl">🟰 相似詞（同義詞）</div><div class="wchips">${syn.map(s=>`<span class="chip" data-ow="${esc(s)}">${esc(s)}</span>`).join('')}</div>`;
+ if(ant.length)body+=`<div class="stl">↔️ 相反詞</div><div class="wchips">${ant.map(s=>`<span class="chip" data-ow="${esc(s)}">${esc(s)}</span>`).join('')}</div>`;
+ /* 用法・注意 */
+ const nt=[];const ps=new Set(ss.map(s=>s.p));
+ if(ps.has('vt')&&ps.has('vi'))nt.push('可當<b>及物動詞（vt.）</b>：後面直接接受詞；也可當<b>不及物動詞（vi.）</b>：後面不直接接受詞，要接受詞時通常加介系詞。');
+ else if(ps.has('vt'))nt.push('<b>及物動詞（vt.）</b>：後面要直接接受詞（名詞或代名詞）。');
+ else if(ps.has('vi'))nt.push('<b>不及物動詞（vi.）</b>：後面不能直接接受詞，要接受詞時通常加介系詞。');
+ if(ex.p&&!/ed$/.test(ex.p))nt.push(`⚠️ <b>不規則動詞</b>：過去式是 <b>${esc(ex.p)}</b>，過去分詞是 <b>${esc(ex.d||ex.p)}</b>，不是加 -ed。`);
+ if(ex.i&&ex.i.length==word.length+4&&ex.i[word.length-1]==ex.i[word.length])nt.push(`加 -ing／-ed 時要<b>重複字尾子音</b>：${esc(ex.i)}、${esc(ex.p||'')}。`);
+ else if(ex.i&&/e$/.test(word)&&!ex.i.includes(word))nt.push(`加 -ing 時要<b>去掉字尾的 e</b>：${esc(ex.i)}。`);
+ if(ex.p&&/ied$/.test(ex.p))nt.push(`子音 + y 結尾，過去式要<b>改 y 為 i 再加 -ed</b>：${esc(ex.p)}。`);
+ if(ex.s&&!/s$/.test(ex.s))nt.push(`⚠️ <b>不規則複數</b>：${esc(word)} → ${esc(ex.s)}。`);
+ if(ex.s&&/ies$/.test(ex.s)&&!/ies$/.test(word))nt.push(`複數要<b>改 y 為 i 再加 -es</b>：${esc(ex.s)}。`);
+ if(ex.r&&!/er$/.test(ex.r))nt.push(`比較級、最高級<b>不規則</b>：${esc(ex.r)}、${esc(ex.t||'')}。`);
+ else if(ex.r&&/^more /.test(ex.r))nt.push(`比較級用 <b>more ${esc(word)}</b>，最高級用 <b>most ${esc(word)}</b>（不加 -er／-est）。`);
+ if(ss.some(s=>s.m.some(m=>/^\(?複數\)?|只用複數|用作單/.test(m))))nt.push('注意單複數用法，請看上面解釋中的說明。');
+ const npos=new Set(ss.filter(s=>s.p).map(s=>s.p.replace(/^v[ti]$/,'v'))).size;if(npos>2)nt.push(`這個字有 ${npos} 種詞性，要看句子中的位置判斷意思：主詞／受詞位置多半是名詞，接在主詞後面多半是動詞，放在名詞前面多半是形容詞。`);
+ let rs='';if(x&&x.rs){const R=await resem().catch(()=>null);if(R)rs=x.rs.map(id=>R[id]).filter(Boolean).map(g=>`<div class="rsg"><b>易混淆字辨析：${g.w.map(z=>`<span data-ow="${esc(z)}" style="cursor:pointer;text-decoration:underline dotted">${esc(z)}</span>`).join('、')}</b>${g.t.map(t=>{const m=t.match(/^-\s*([^:：]+)[:：]\s*(.*)$/);return m?`<p><strong>${esc(m[1])}</strong>：${esc(m[2])}</p>`:`<p>${esc(t)}</p>`}).join('')}</div>`).join('')}
+ if(nt.length||rs)body+=`<div class="stl">💡 用法・使用時要注意</div><div class="ps glass">${nt.length?`<ul class="nt">${nt.map(n=>`<li>${n}</li>`).join('')}</ul>`:''}${rs}</div>`;
+ if(x&&x.rt)body+=`<div class="stl">🌱 字根・字首字尾</div><div class="ps glass">${x.rt.map(t=>`<div><b>${esc(t[0])}</b> <small style="color:var(--sub)">${esc(t[2])}</small>：${esc(t[1])}</div>`).join('')}</div>`;
+ body+=`<div class="stl">🤖 AI 詳細解說</div><div class="ps glass"><div class="ai lhint" style="margin:0 0 8px">讓手機上的 AI 語言模型（Qwen）補充搭配用法、語氣差別和更多例句。</div><button class="btn" data-act="ai" data-q="${esc(word)}" data-k="w">✨ 產生 AI 解說</button></div>`;
+ const kk=kkOf(r);
+ const head=`<div class="wc glass"><h2>${esc(word)}</h2><div class="kk">${esc(kk)}${kk?`<small>${r[6]?'KK 音標':'音標'}</small>`:''}</div>${fromNote}<div class="wca"><button class="ib" data-say="${esc(word)}" title="朗讀">🔊</button>${favBtn('w',word,short(r[2]),kk)}<span style="flex:1"></span></div><div style="margin-top:8px">${lv}</div></div>`;
+ lcOpen(word,head+body+(body.includes('待補')?`<button class="btn" data-act="fillex" style="margin:10px 0">🌐 用 AI 翻譯例句的中文</button>`:''),false)}
+
+/* 片語卡 */
+async function openPhrase(p,push){await Promise.all([phrases(),words()]);const i=PI.get(p);if(i==null)return openAIWord(p,'p');const r=PD[i];
+ lcOpen(r[0],'<p class="emp">載入中…</p>',push,z=>openPhrase(p,z));const x=await extra(r[0]),wn=(x&&x.wn)||{};
+ const toks=r[0].split(' ');const kk=toks.map(t=>{const j=WI.get(t.replace(/[^a-z'\-]/gi,'').toLowerCase());return j!=null&&WD[j][6]?WD[j][1]:''});
+ const kkS=kk.every(Boolean)?'/'+kk.join(' ')+'/':'';
+ const ms=r[1].split(/\s*[;；]\s*|,\s+/).filter(Boolean);
+ let body=`<div class="ps glass"><h5><em>${PCN[r[2]]||'片語'}</em></h5><ol class="mn">${ms.map(m=>`<li>${esc(m)}</li>`).join('')}</ol></div>`;
+ const fv=[...new Set(Object.values(wn).flatMap(v=>v.e||[]))];
+ const forms=[r[0]];const w0=WI.get(toks[0]);if(w0!=null){const e=exch(WD[w0][3]);Object.keys(EXN).forEach(k=>{if(e[k])forms.push([e[k],...toks.slice(1)].join(' '))})}
+ if(fv.length)body+=`<div class="stl">📝 例句</div>${fv.map(e=>exH(Array.isArray(e)?e:[e,''],forms)).join('')}`;
+ const gl=Object.values(wn).flatMap(v=>v.g||[]);if(gl.length)body+=`<div class="gl" style="margin:6px 4px">英英：${esc(gl[0])}</div>`;
+ const syn=[...new Set(Object.values(wn).flatMap(v=>v.s||[]))].slice(0,10),ant=[...new Set(Object.values(wn).flatMap(v=>v.a||[]))].slice(0,6);
+ if(syn.length)body+=`<div class="stl">🟰 相似說法</div><div class="wchips">${syn.map(s=>`<span class="chip" data-ow="${esc(s)}">${esc(s)}</span>`).join('')}</div>`;
+ if(ant.length)body+=`<div class="stl">↔️ 相反說法</div><div class="wchips">${ant.map(s=>`<span class="chip" data-ow="${esc(s)}">${esc(s)}</span>`).join('')}</div>`;
+ const nt=[];if(r[2]=='v'){nt.push('動詞片語的時態變化在<b>第一個動詞</b>上：'+esc(forms.slice(0,4).join('、')));if(/\bto$/.test(r[0])&&/V-ing|名詞/.test(r[1]))nt.push('這裡的 <b>to 是介系詞</b>，後面接名詞或 V-ing，不是接原形動詞。')}
+ if(/one's|oneself|someone|something|sb|sth/.test(r[0]))nt.push('one\'s／oneself／someone／something 要換成實際的人或事物（例如 my、himself、him、it）。');
+ if(/\.\.\./.test(r[0]))nt.push('「...」的地方要填入對應的詞語或子句。');
+ const mid=r[1].match(/（([^）]+)）/g);if(mid)nt.push('補充：'+mid.map(m=>esc(m.slice(1,-1))).join('；'));
+ if(nt.length)body+=`<div class="stl">💡 用法・注意</div><div class="ps glass"><ul class="nt">${nt.map(n=>`<li>${n}</li>`).join('')}</ul></div>`;
+ body+=`<div class="stl">🔤 拆開來看</div><div class="wchips">${toks.filter(t=>WI.has(t.toLowerCase())).map(t=>`<span class="chip" data-ow="${esc(t)}">${esc(t)}</span>`).join('')}</div>`;
+ body+=`<div class="stl">🤖 AI 詳細解說</div><div class="ps glass"><div class="ai lhint" style="margin:0 0 8px">讓 AI 語言模型補充這個片語的語氣、使用場合和更多例句。</div><button class="btn" data-act="ai" data-q="${esc(r[0])}" data-k="p">✨ 產生 AI 解說</button></div>`;
+ const head=`<div class="wc glass"><h2>${esc(r[0])}</h2><div class="kk">${esc(kkS)}${kkS?'<small>KK 音標</small>':''}</div><div class="wca"><button class="ib" data-say="${esc(r[0])}" title="朗讀">🔊</button>${favBtn('p',r[0],ms.slice(0,2).join('、'),kkS)}</div></div>`;
+ lcOpen(r[0],head+body+(body.includes('待補')?`<button class="btn" data-act="fillex" style="margin:10px 0">🌐 用 AI 翻譯例句的中文</button>`:''),false)}
+
+/* 詞庫沒有的字：用手機上的翻譯模型查 */
+async function openAIWord(q,kind,push){q=String(q).trim();const me=z=>openAIWord(q,kind,z);
+ lcOpen(q,`<div class="wc glass"><h2>${esc(q)}</h2><div class="wca"><button class="ib" data-say="${esc(q)}">🔊</button></div></div><div class="ps glass"><h5><em>AI 翻譯</em><small>詞庫沒有收錄，以下由手機上的翻譯模型產生</small></h5><div id="aiw" class="ai">🤖 翻譯中…（第一次使用會下載翻譯模型）</div></div>
+ <div class="stl">🤖 AI 詳細解說</div><div class="ps glass"><div class="ai lhint" style="margin:0 0 8px">讓 AI 語言模型（Qwen）解釋意思、用法並舉例。</div><button class="btn" data-act="ai" data-q="${esc(q)}" data-k="${kind||'w'}">✨ 產生 AI 解說</button></div>`,push,me);
+ try{const r=await translate(q,'en','zh-TW',{eng:'opus'});const o=$('#aiw');if(o){o.innerHTML=esc(r.t||'（沒有結果）')+'<div class="lhint" style="margin:6px 0 0">單一個字的機器翻譯可能不準，建議看「AI 詳細解說」</div>'+favBtn(kind=='p'?'p':'w',q,r.t,'')}}
+ catch(e){const o=$('#aiw');if(o)o.textContent='❌ '+e.message}}
+
+/* AI 語言模型解說（Qwen，在手機上執行） */
+const LLMC=new Map();
+async function llmExplain(q,kind){const ck=kind+'|'+q;if(LLMC.has(ck))return LLMC.get(ck);
+ const e=String(S.set.eng||'').startsWith('q')?S.set.eng:'q05',m=MTE[e];
+ if(!S.set.llmOk){const k=await menu(`使用 ${m.n}`,[['go',`✅ 下載並使用（${m.s.split('・')[0]}）`],['no','取消']]);if(k!='go')throw new Error('已取消');S.set.llmOk=1;save()}
+ const what=kind=='p'?'片語':kind=='t'?'專有名詞':kind=='g'?'句子':'單字';
+ const sys='你是台灣的英文老師，用繁體中文（台灣用語）回答，條列清楚、精簡。';
+ const user=kind=='g'?`請分析這個英文句子使用的時態和文法重點，說明為什麼用這個時態，並翻譯成中文：\n${q}`:
+  `請解釋英文${what}「${q}」：\n1. 主要意思（若有多個意思請分別列出）\n2. 每個意思各一個英文例句和中文翻譯\n3. 常見搭配用法\n4. 使用時要注意的地方\n5. 相似詞與相反詞`;
+ const t=await AI.call('llm',{repo:m.r,sys,user,max:420});const out=String(t||'').trim()||'（沒有結果）';const z=await toTW(out);LLMC.set(ck,z);return z}
+
+/* 文法頁 */
+const TLC={past:'#8a7f72',present:'var(--ac)',future:'var(--ac2)'};
+async function rGram(){const B=$('#lbody');B.innerHTML=loadingH;let G;try{G=await gram()}catch(e){return lerr(e)}
+ const by=(t,a)=>G.tenses.find(x=>x.t==t&&x.a==a);
+ let h=`<div class="ps glass"><b>📐 時態的邏輯</b><p style="margin:6px 0 0;line-height:1.65">${esc(G.intro)}</p></div>`;
+ h+=`<div class="tg"><span></span>${G.grid.map(([k,n])=>`<span class="h">${n}</span>`).join('')}`;
+ G.aspects.forEach(([a,n,d])=>{h+=`<div class="a"><b>${n}</b>${d}</div>`+G.grid.map(([t])=>{const x=by(t,a);return`<button class="${t}" data-g="${x.id}">${esc(x.sf)}<small>${esc(x.sx)}</small></button>`}).join('')});
+ h+='</div>';
+ h+=`<div class="stl">🔎 句子時態分析</div><div class="lsb glass"><input id="lgs" placeholder="輸入英文句子，看它用了什麼時態…" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn on" id="lgsg">分析</button></div><div id="lgr"></div>`;
+ h+=`<div class="stl">📚 更多文法</div><div class="grp glass">${G.extra.map(x=>`<div class="row" data-g="${x.id}"><b>${esc(x.zh)}<small>${esc(x.en)}</small></b><span>›</span></div>`).join('')}<div class="row" data-g="irr"><b>不規則動詞表<small>常用 ${G.irr.length} 個動詞的三態變化</small></b><span>›</span></div></div>`;
+ B.innerHTML=h;const go=()=>tenseAnalyze($('#lgs').value);$('#lgsg').onclick=go;$('#lgs').onkeydown=e=>{if(e.key=='Enter'){e.preventDefault();go()}}}
+/* 時間軸圖：過去・現在・未來 */
+function tlSVG(tl,col){const X=u=>160+u*50,Y=58;let g='';const ac=col||'var(--ac)';
+ const wave=(a,b)=>{let d=`M${a},${Y}`,k=0;for(let x=a;x+10<=b;x+=10)d+=` q5,${k++%2?8:-8} 10,0`;return`<path d="${d}" fill="none" stroke="${ac}" stroke-width="3" stroke-linecap="round"/>`};
+ const xm=(x,c)=>`<g stroke="${c||ac}" stroke-width="3.5" stroke-linecap="round"><path d="M${x-7},${Y-7}L${x+7},${Y+7}M${x+7},${Y-7}L${x-7},${Y+7}"/></g>`;
+ const arr=(a,b,y)=>`<path d="M${a},${y}L${b-2},${y}" stroke="${ac}" stroke-width="2.5" marker-end="url(#ah)"/>`;
+ const ref=(u,t)=>`<path d="M${X(u)},${Y-30}V${Y+16}" stroke="var(--sub)" stroke-width="1.5" stroke-dasharray="4 3"/><text x="${X(u)}" y="${Y-34}" text-anchor="middle" font-size="10" fill="var(--sub)">${t}</text>`;
+ if(tl.ev=='rep'){for(let u=-2.4;u<=2.41;u+=.8)g+=xm(X(u));g+=`<text x="160" y="${Y-22}" text-anchor="middle" font-size="11" fill="var(--sub)">一直如此・反覆發生</text>`}
+ if(tl.ev=='pt')g+=xm(X(tl.at));
+ if(tl.ev=='prog'){g+=wave(X(tl.at)-40,X(tl.at)+40);if(tl.cut)g+=`<path d="M${X(tl.at)},${Y-18}V${Y+18}" stroke="var(--ink)" stroke-width="2.5"/><text x="${X(tl.at)}" y="${Y-22}" text-anchor="middle" font-size="10" fill="var(--sub)">另一個動作插入</text>`;else g+=`<text x="${X(tl.at)}" y="${Y-20}" text-anchor="middle" font-size="10" fill="var(--sub)">正在進行</text>`}
+ if(tl.ev=='toNow'){g+=xm(X(-1.6))+`<path d="M${X(-1.6)},${Y-12}Q${X(-.8)},${Y-36} ${X(0)-4},${Y-12}" fill="none" stroke="${ac}" stroke-width="2.2" stroke-dasharray="5 4" marker-end="url(#ah)"/><text x="${X(-.8)}" y="${Y-34}" text-anchor="middle" font-size="10" fill="var(--sub)">影響、延續到現在</text>`}
+ if(tl.ev=='progToNow'){g+=wave(X(-1.6),X(0)-6)+arr(X(0)-8,X(0)+10,Y)+`<text x="${X(-.8)}" y="${Y-20}" text-anchor="middle" font-size="10" fill="var(--sub)">一直持續到現在</text>`}
+ if(tl.ev=='before'){const r=X(tl.ref);g+=ref(tl.ref,'參考時間點')+xm(r-55)+`<path d="M${r-46},${Y+14}Q${r-26},${Y+28} ${r-4},${Y+14}" fill="none" stroke="${ac}" stroke-width="2" marker-end="url(#ah)"/><text x="${r-55}" y="${Y+40}" text-anchor="middle" font-size="10" fill="var(--sub)">更早已完成</text>`}
+ if(tl.ev=='progBefore'){const r=X(tl.ref);g+=ref(tl.ref,'參考時間點')+wave(r-90,r-4)+`<text x="${r-48}" y="${Y+30}" text-anchor="middle" font-size="10" fill="var(--sub)">一直持續到那時</text>`}
+ return`<svg class="tls" viewBox="0 0 320 112" role="img"><defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0L10,5L0,10z" fill="${ac}"/></marker></defs>
+ <path d="M8,${Y}H306" stroke="var(--sub)" stroke-width="1.5"/><path d="M300,${Y-5}L310,${Y}L300,${Y+5}" fill="var(--sub)"/>
+ <path d="M160,${Y-10}V${Y+10}" stroke="var(--ink)" stroke-width="2.5"/>
+ <text x="60" y="${Y+28}" text-anchor="middle" font-size="12" fill="var(--sub)">過去</text><text x="160" y="${Y+28}" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">現在</text><text x="260" y="${Y+28}" text-anchor="middle" font-size="12" fill="var(--sub)">未來</text>${g}</svg>`}
+async function openTense(id,push){const G=await gram();const me=z=>openTense(id,z);
+ if(id=='irr'){lcOpen('不規則動詞表',`<div class="lhint">點單字可以看完整單字卡</div><div class="ps glass"><table class="irr"><tr><th>原形</th><th>過去式</th><th>過去分詞</th><th>意思</th></tr>${G.irr.map(r=>`<tr><td><b data-ow="${esc(r[0])}" style="cursor:pointer">${esc(r[0])}</b></td><td>${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td></tr>`).join('')}</table></div>`,push,me);return}
+ const x=G.tenses.find(t=>t.id==id)||G.extra.find(t=>t.id==id);if(!x)return;
+ let h=`<div class="wc glass"><h2 style="font-size:1.55em">${esc(x.zh)}</h2><div class="kk">${esc(x.en)}</div><div class="wca">${favBtn('g',x.id,x.zh+'｜'+x.en,'')}</div></div>`;
+ if(x.tl)h+=`<div class="ps glass">${tlSVG(x.tl,TLC[x.t])}</div>`;
+ h+=`<div class="ps glass"><h5>🧠 邏輯</h5><p style="margin:0;line-height:1.7">${esc(x.logic)}</p></div>`;
+ h+=`<div class="stl">🧩 句型公式</div><div class="ps glass"><div class="fm">${x.f.map(f=>`<span>${esc(f[0])}</span><div><b>${esc(f[1])}</b><i data-say="${esc(f[2])}" style="cursor:pointer">${esc(f[2])} 🔊</i></div>`).join('')}</div></div>`;
+ h+=`<div class="stl">🎯 什麼時候用</div>${x.use.map(u=>`<div class="ps glass" style="padding:10px 14px"><b style="font-size:.92em">${esc(u[0])}</b>${exH([u[1],u[2]])}</div>`).join('')}`;
+ if(x.sig&&x.sig.length)h+=`<div class="stl">⏱ 常搭配的時間詞（看到就想到這個時態）</div><div class="wchips">${x.sig.map(s=>`<span class="chip">${esc(s)}</span>`).join('')}</div>`;
+ if(x.err&&x.err.length)h+=`<div class="stl">⚠️ 常見錯誤</div><div class="ps glass">${x.err.map(e=>`<div class="er"><span class="x">✗ ${esc(e[0])}</span><span class="o">✓ ${esc(e[1])}</span><small>${esc(e[2])}</small></div>`).join('')}</div>`;
+ if(x.tip)h+=`<div class="stl">📌 小提醒</div><div class="ps glass"><p style="margin:0;line-height:1.65">${esc(x.tip)}</p></div>`;
+ if(x.t){const sib=G.tenses.filter(t=>t.id!=x.id&&(t.t==x.t||t.a==x.a));h+=`<div class="stl">🔗 比較相關時態</div><div class="wchips">${sib.map(t=>`<span class="chip" data-g="${t.id}">${esc(t.zh)}</span>`).join('')}</div>`}
+ lcOpen(x.zh,h,push,me)}
+/* 句子時態分析（規則判斷） */
+const IRRP=new Set('been done gone seen taken given written eaten known shown broken chosen driven forgotten spoken stolen thrown worn woken begun drunk rung sung swum flown grown drawn fallen hidden ridden risen become come run made said told found thought bought brought caught taught sold sent spent built kept left lost met paid read heard held felt led lent meant put set shut cut let hit hurt cost understood stood sat slept won got gotten had'.split(' '));
+const IRRS=new Set('was were went saw took gave wrote ate knew showed broke chose drove forgot spoke stole threw wore woke began drank rang sang swam flew grew drew fell hid rode rose became came ran made said told found thought bought brought caught taught sold sent spent built kept left lost met paid read heard held felt led lent meant put set shut cut let hit hurt cost understood stood sat slept won got had did'.split(' '));
+const isPP=w=>/^[a-z]+ed$/.test(w)||IRRP.has(w);
+function tenseOf(s){const t=' '+s.toLowerCase().replace(/[’]/g,"'").replace(/[^a-z' ]/g,' ').replace(/\s+/g,' ')+' ';const W=t.trim().split(' ');const R=[];const has=re=>re.test(t);
+ const nx=(re)=>{const m=t.match(re);return m?m[1]:''};
+ if(has(/ will have been \w+ing /))R.push('future-perfprog');
+ else if(has(/ will have \w+ /)&&isPP(nx(/ will have (\w+) /)))R.push('future-perf');
+ else if(has(/ (will|'ll) be \w+ing /))R.push('future-prog');
+ else if(has(/ (will|'ll|shall) \w+ /)||has(/ (am|is|are|'m|'re|'s) going to \w+ /))R.push('future-simple');
+ if(has(/ had been \w+ing /))R.push('past-perfprog');else if(has(/ (had|'d) (\w+) /)&&isPP(nx(/ (?:had|'d) (?:not |never |already |just )?(\w+) /)))R.push('past-perf');
+ if(has(/ (have|has|'ve) been \w+ing /))R.push('present-perfprog');else if(/ (have|has|'ve|haven't|hasn't) (not |never |ever |already |just |been )?(\w+) /.test(t)&&isPP(nx(/ (?:have|has|'ve|haven't|hasn't) (?:not |never |ever |already |just )?(\w+) /)))R.push('present-perf');
+ if(has(/ (was|were|wasn't|weren't) \w+ing /))R.push('past-prog');
+ if(has(/ (am|is|are|'m|'re|isn't|aren't) (not )?\w+ing /)&&!has(/ going to /))R.push('present-prog');
+ if(has(/ (am|is|are|was|were|be|been|being) (\w+ )?(\w+ed|been|done|made|built|written|sent|known|given|taken|seen|sold|told|found|held|kept|paid|stolen|spoken|broken|chosen) /)&&!has(/ (am|is|are|was|were) (very|so|too|quite|really)/))R.push('passive');
+ if(has(/ (if|unless|wish) /))R.push('conditional');
+ if(has(/ (can|could|should|must|may|might|would|ought to|have to|has to|had better) /))R.push('modal');
+ if(!R.some(r=>/past|present|future/.test(r))){if(has(/ (did|didn't) /)||W.some(w=>IRRS.has(w))||W.slice(1).some(w=>/^[a-z]{3,}ed$/.test(w)))R.push('past-simple');else R.push('present-simple')}
+ return[...new Set(R)]}
+async function tenseAnalyze(s){s=s.trim();const o=$('#lgr');if(!s){o.innerHTML='';return}const G=await gram();const ids=[...new Set(s.split(/[,;:]|\b(?:but|because|when|before|after|while|although|though|unless|until|whereas|so that)\b/i).filter(c=>c&&c.trim().split(/\s+/).length>1).flatMap(c=>tenseOf(c)))];const all=[...G.tenses,...G.extra];
+ o.innerHTML=`<div class="ps glass"><p style="margin:0 0 8px;font-weight:600">${esc(s)}</p><div class="lhint" style="margin:0 0 6px">這句用到：</div><div class="wchips">${ids.map(id=>{const x=all.find(a=>a.id==id);return x?`<span class="chip on" data-g="${id}">${esc(x.zh)} ›</span>`:''}).join('')}</div><div class="lhint" id="lgtr" style="margin:10px 0 0">🌐 翻譯中…</div><div class="lhint" style="margin:6px 0 0;font-size:.78em">時態判斷是依句型規則自動分析，複雜句子可能不完全準確；點「AI 解說」可請語言模型詳細分析</div><div style="margin-top:8px"><div class="ai"></div><button class="btn sm" id="lgai">✨ AI 解說這句</button></div></div>`;
+ $('#lgai').onclick=async()=>{const b=$('#lgai'),a=b.previousElementSibling;b.disabled=true;a.textContent='🤖 分析中…';try{a.textContent=await llmExplain(s,'g');b.remove()}catch(e){a.textContent='❌ '+e.message;b.disabled=false}};
+ o.querySelectorAll('[data-g]').forEach(c=>c.onclick=()=>openTense(c.dataset.g));
+ try{const r=await translate(s,'en','zh-TW');const z=$('#lgtr');if(z)z.textContent='中文：'+r.t}catch(e){const z=$('#lgtr');if(z)z.textContent='（翻譯失敗：'+e.message+'）'}}
+
+/* 專有名詞頁 */
+async function rTerm(){const B=$('#lbody');B.innerHTML=loadingH;let D;try{D=await terms()}catch(e){return lerr(e)}
+ const c=LS.tc;let h=lsbar(c?'在「'+D.cats.find(x=>x[0]==c)[2]+'」裡搜尋…':'搜尋所有行業的專有名詞（英文或中文）…',LS.q.term);
+ if(!c&&!LS.q.term){h+=`<div class="lhint">選一個行業類別，或直接搜尋　★ = 精選常用詞（含說明）</div><div class="cg">${D.cats.map(([k,i,n])=>`<button data-tc="${k}"><span>${i}</span><div><b>${esc(n)}</b><small>${D.t[k].length.toLocaleString()} 個詞・★${D.t[k].filter(x=>x[3]).length}</small></div></button>`).join('')}</div>`}
+ else h+=(c?`<div class="chips"><span class="chip" data-tc="">‹ 全部類別</span>${D.cats.map(([k,i,n])=>`<span class="chip ${k==c?'on':''}" data-tc="${k}">${i} ${esc(n)}</span>`).join('')}</div>`:'')+'<div id="lres"></div>';
+ B.innerHTML=h;B.querySelectorAll('[data-tc]').forEach(b=>b.onclick=()=>{LS.tc=b.dataset.tc;LS.n=80;rTerm()});
+ bindSearch((v,go)=>{const was=!!LS.q.term;LS.q.term=v.trim();LS.n=80;if(!LS.tc&&was!=!!LS.q.term){rTerm();setTimeout(()=>{const i=$('#lq');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}},0)}else tList()});
+ if($('#lres'))tList()}
+function tList(){const R=$('#lres');if(!R)return;const D=TMD,q=LS.q.term.toLowerCase(),c=LS.tc;const zh=/[\u3400-\u9fff]/.test(q);let L=[];
+ for(const [k] of D.cats){if(c&&k!=c)continue;D.t[k].forEach((t,i)=>{if(!q)return L.push([k,i,t[3]?0:2]);const en=t[0].toLowerCase();let sc=-1;
+  if(zh){if(t[1].includes(q))sc=t[1]==q?0:1}else if(en==q||en.split(' (')[0]==q)sc=0;else if(en.startsWith(q))sc=1;else if(en.includes(q))sc=2;else if(t[2]&&t[2].toLowerCase().includes(q))sc=3;if(sc>=0)L.push([k,i,sc+(t[3]?0:.5)])})}
+ L.sort((a,b)=>a[2]-b[2]||(q?0:D.t[a[0]][a[1]][0].localeCompare(D.t[b[0]][b[1]][0])));const n=L.length;L=L.slice(0,LS.n);
+ const ci=Object.fromEntries(D.cats.map(x=>[x[0],x]));
+ let h=n?`<div class="lhint">${q?'找到':'共'} ${n.toLocaleString()} 個詞</div><div class="grp glass">${L.map(([k,i])=>{const t=D.t[k][i];return`<div class="wl" data-t="${k}|${i}"><b>${esc(t[0].split(' (')[0])}${t[3]?'<span class="star">★</span>':''}</b>${c?'':`<i>${ci[k][1]}</i>`}<span>${esc(t[1])}</span></div>`}).join('')}</div>`:'';
+ if(n>LS.n)h+=`<button class="btn lmore" id="lmore">顯示更多（還有 ${(n-LS.n).toLocaleString()} 個）</button>`;
+ if(q&&!L.some(x=>x[2]<1)&&!zh)h+=`<div class="ps glass" style="margin-top:10px"><b>${n?'沒有完全符合的？':'專有名詞庫裡找不到「'+esc(LS.q.term)+'」'}</b><p class="lhint" style="margin:4px 0 8px">可以用手機上的 AI 翻譯模型查詢</p><button class="btn on" id="lai">🤖 用 AI 模型查「${esc(LS.q.term)}」</button></div>`;
+ else if(!n)h+=`<p class="emp">找不到「${esc(LS.q.term)}」</p>`;
+ R.innerHTML=h;const m=$('#lmore');if(m)m.onclick=()=>{LS.n+=200;tList()};const a=$('#lai');if(a)a.onclick=()=>openAIWord(LS.q.term,'t')}
+async function openTerm(c,i,push){const D=await terms();const t=D.t[c][i];if(!t)return;const me=z=>openTerm(c,i,z);const cat=D.cats.find(x=>x[0]==c);
+ const name=t[0].split(' (')[0],full=t[0].match(/\((.+)\)$/);await words().catch(()=>{});const wi=WI&&WI.get(name.toLowerCase());
+ const kk=wi!=null?kkOf(WD[wi]):'';
+ let h=`<div class="wc glass"><h2 style="font-size:1.6em">${esc(name)}</h2>${full?`<div class="kk">${esc(full[1])}</div>`:''}${kk?`<div class="kk">${esc(kk)}<small>KK 音標</small></div>`:''}<div class="wca"><button class="ib" data-say="${esc(full?full[1]:name)}">🔊</button>${favBtn('t',c+'|'+t[0],t[1],kk)}</div><div style="margin-top:8px"><span class="lv hi">${cat[1]} ${esc(cat[2])}</span>${t[3]?'<span class="lv">★ 精選</span>':''}</div></div>`;
+ h+=`<div class="ps glass"><h5><em>中文</em></h5><ol class="mn">${t[1].split(/\s*[;；]\s*|,\s+|、(?=[^）]*$)/).filter(Boolean).map(m=>`<li>${esc(m)}</li>`).join('')}</ol>${t[2]?`<p style="margin:10px 0 0;line-height:1.65">💡 ${esc(t[2])}</p>`:''}</div>`;
+ const ws=name.split(/[\s\-\/]+/).filter(w=>WI&&WI.has(w.toLowerCase()));
+ if(ws.length)h+=`<div class="stl">🔤 相關單字</div><div class="wchips">${ws.map(w=>`<span class="chip" data-ow="${esc(w.toLowerCase())}">${esc(w)}</span>`).join('')}</div>`;
+ const rel=D.t[c].filter(x=>x!==t&&x[3]==t[3]).slice(Math.max(0,i-3),i+5).filter(x=>x!==t).slice(0,6);
+ h+=`<div class="stl">🤖 AI 詳細解說</div><div class="ps glass"><div class="ai lhint" style="margin:0 0 8px">讓 AI 語言模型說明這個名詞在${esc(cat[2])}領域的意思與用法。</div><button class="btn" data-act="ai" data-q="${esc(t[0]+'（'+cat[2]+'）')}" data-k="t">✨ 產生 AI 解說</button></div>`;
+ lcOpen(name,h,push,me)}
+
+/* 收藏頁 */
+const FKN={w:'🔤 單字',p:'💬 片語',g:'📐 文法',t:'🏷 專有名詞'};
+function rFav(){const B=$('#lbody');const F=S.fav||[];const k=LS.fk||'';const L=F.filter(f=>!k||f.k==k);
+ let h=`<div class="chips">${[['','全部'],...Object.entries(FKN)].map(([x,n])=>`<span class="chip ${k==x?'on':''}" data-fk="${x}">${n}${x?' '+F.filter(f=>f.k==x).length:' '+F.length}</span>`).join('')}</div>`;
+ if(!L.length){h+=`<p class="emp">還沒有收藏<br><small>在單字卡、片語卡、時態圖卡上按 ⭐ 就會加到這裡</small></p>`;B.innerHTML=h;bindFk();return}
+ h+=`<div class="pr" style="margin-bottom:10px"><button class="btn on" id="frev" style="flex:1">🃏 用字卡複習（${L.filter(f=>f.k!='g').length}）</button></div>`;
+ h+=`<div class="grp glass">${L.map(f=>`<div class="wl" data-fv="${esc(f.k)}|${esc(f.id)}"><b>${esc(f.k=='t'?f.id.split('|')[1].split(' (')[0]:f.k=='g'?f.z.split('｜')[0]:f.id)}</b><i>${f.k=='g'?'📐':esc(f.kk||'')}</i><span>${esc(f.k=='g'?f.z.split('｜')[1]||'':f.z)}</span></div>`).join('')}</div>`;
+ B.innerHTML=h;bindFk();$('#frev').onclick=()=>review(L.filter(f=>f.k!='g'));
+ B.querySelectorAll('[data-fv]').forEach(r=>r.onclick=async()=>{const [kk,...rest]=r.dataset.fv.split('|'),id=rest.join('|');if(kk=='w')openWord(id);else if(kk=='p')openPhrase(id);else if(kk=='g')openTense(id);else if(kk=='t'){const D=await terms();const [c,en]=[rest[0],rest.slice(1).join('|')];const i=D.t[c].findIndex(x=>x[0]==en);if(i>=0)openTerm(c,i)}})}
+function bindFk(){$$('#lbody [data-fk]').forEach(c=>c.onclick=()=>{LS.fk=c.dataset.fk;rFav()})}
+/* 字卡複習：正面英文、翻面看中文；記住的往後排 */
+function review(L){if(!L.length)return toast('沒有可以複習的收藏');const Q=L.slice().sort((a,b)=>(a.n||0)-(b.n||0)||Math.random()-.5);let i=0;LS.cur=null;
+ const draw=()=>{const f=Q[i];const name=f.k=='t'?f.id.split('|')[1].split(' (')[0]:f.id;
+  lcOpen(`字卡複習 ${i+1} / ${Q.length}`,`<div class="fc" id="fc"><div class="fci"><div class="fcf wc glass"><h2>${esc(name)}</h2><p>${esc(f.kk||'')}</p><p style="margin-top:24px;font-size:.85em">點一下翻面</p></div><div class="fcb wc glass"><h2 style="font-size:1.4em">${esc(name)}</h2><p style="font-size:1.05em;line-height:1.7;margin:10px 0 0">${esc(f.z)}</p><button class="btn sm" id="fco" style="margin-top:auto;align-self:flex-start">看完整卡片 ›</button></div></div></div>
+  <div class="pr"><button class="ib glass" data-say="${esc(name)}" style="width:46px;height:46px">🔊</button><button class="btn" id="fcn" style="flex:1">😵 還不熟</button><button class="btn on" id="fcy" style="flex:1">😀 記住了</button></div><div class="lhint" style="text-align:center;margin-top:10px">記住的字之後會比較晚才出現</div>`,false);
+  $('#fc').onclick=e=>{if(e.target.id=='fco'){if(f.k=='w')openWord(f.id);else if(f.k=='p')openPhrase(f.id);return}$('#fc').classList.toggle('flip')};
+  const next=d=>{f.n=Math.max(0,(f.n||0)+d);save();i++;if(i>=Q.length){lcOpen('複習完成','<p class="emp">🎉 全部複習完了！<br><small>共 '+Q.length+' 張字卡</small></p>',false)}else draw()};
+  $('#fcy').onclick=()=>next(1);$('#fcn').onclick=()=>next(-1)};LS.stack=[];draw()}
+
+/* 翻譯頁：輸入的是英文單字或片語時，順便顯示字典 */
+async function trDict(t,src){const box=$('#tdict');box.style.display='none';const q=t.trim();if(!q||q.split(/\s+/).length>5||(src&&src!='en')||!/^[a-z][a-z' \-]*$/i.test(q))return;
+ try{await words();await phrases()}catch(e){return}const lq=q.toLowerCase();let i=WI.get(lq),b=null;if(i==null&&WF[lq]){b=WF[lq];i=WI.get(b)}
+ if(i!=null){const r=WD[i],dm=$('#teng').textContent.includes('字典');box.innerHTML=`<h5 style="margin:0 0 6px">📖 ${esc(r[0])} <small style="font-weight:400">${esc(kkOf(r))}</small> <button class="ib" data-say2="${esc(r[0])}" style="width:30px;height:30px;font-size:.9em">🔊</button></h5>${dm?'':senses(r[2]).slice(0,4).map(s=>`<div style="font-size:.92em;margin:2px 0">${s.p?`<b>${esc(s.p)}.</b> `:''}${esc(s.m.slice(0,6).join('、'))}</div>`).join('')}<button class="btn sm" id="tdo" style="margin-top:8px">看完整單字卡（例句、時態、同反義詞）›</button>`;box.style.display='block';$('#tdo').onclick=()=>openWord(r[0]);box.querySelector('[data-say2]').onclick=()=>speak(r[0],'en');return}
+ if(PI.has(lq)){const r=PD[PI.get(lq)];box.innerHTML=`<h5 style="margin:0 0 6px">📖 片語　<span style="font-weight:700">${esc(r[0])}</span></h5><div style="font-size:.92em">${esc(r[1])}</div><button class="btn sm" id="tdo" style="margin-top:8px">看完整片語卡 ›</button>`;box.style.display='block';$('#tdo').onclick=()=>openPhrase(r[0])}}
+
 /* ================= 返回鍵、歡迎、啟動 ================= */
 window.onAppBack=()=>{const on=id=>$(id).classList.contains('on');
  if(on('#act')){menu.close&&menu.close();return true}if(on('#pm')){S.set.onb=1;save();$('#pm').classList.remove('on');return true}
- if(on('#mm')){$('#mm').classList.remove('on');return true}if(on('#md')){closeMD();return true}
+ if(on('#mm')){$('#mm').classList.remove('on');return true}if(on('#lc')){if(LS.stack.length)$('#lcb').click();else lcClose();return true}if(on('#md')){closeMD();return true}
  if(cur!='tr'){show('tr');return true}if(S.set.tsub!='text'){tsub('text');return true}
  if(R.on){toast('會議錄音中：可以按主畫面鍵讓它在背景繼續錄',3000);return true}return false};
 $('#pmG').onclick=()=>{S.set.onb=1;save();$('#pm').classList.remove('on');if(IS_APP&&NB.requestPerms)NB.requestPerms('all');else navigator.mediaDevices?.getUserMedia({audio:true}).then(s=>s.getTracks().forEach(t=>t.stop())).catch(()=>{})};
 $('#pmL').onclick=()=>{S.set.onb=1;save();$('#pm').classList.remove('on')};
 addEventListener('beforeunload',e=>{if(R.on){e.preventDefault();e.returnValue=''}});
-(async()=>{const d=await iget('k','s');if(d){S.set={...DEF,...d.set};S.hist=d.hist||[];S.meets=d.meets||[]}if(!TH[S.set.theme])S.set.theme='sea';
+(async()=>{const d=await iget('k','s');if(d){S.set={...DEF,...d.set};S.hist=d.hist||[];S.meets=d.meets||[];S.fav=d.fav||[]}if(['word','phr','gram','term','fav'].includes(S.set.lsub))LS.sub=S.set.lsub;if(!TH[S.set.theme])S.set.theme='sea';
  /* v1.3:手機預設改用 CPU(GPU 容易發燙、當機);開 App 時不自動開相機/麥克風 */
  if(!S.set.v13){S.set.dev='wasm';S.set.v13=1;save()}if(S.set.tsub=='cam'||S.set.tsub=='live')S.set.tsub='text';
  layout();apply();show('tr');
