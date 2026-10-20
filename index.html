@@ -9,7 +9,7 @@ html,body{margin:0;height:100%}
 body{font:var(--fs)/1.55 -apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;color:var(--ink);background:var(--bg);overflow:hidden}
 button,input,textarea,select{font:inherit;color:inherit}
 #bgx{position:fixed;inset:0;z-index:0;overflow:hidden;background:linear-gradient(160deg,var(--bg),var(--bg2))}
-.blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:.42;animation:fl 22s ease-in-out infinite alternate}
+.blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.42;will-change:auto}
 .blob:nth-child(1){width:60vmax;height:60vmax;left:-20vmax;top:-18vmax;background:var(--ac)}
 .blob:nth-child(2){width:55vmax;height:55vmax;right:-22vmax;bottom:-18vmax;background:var(--ac2);animation-delay:-8s}
 .blob:nth-child(3){width:35vmax;height:35vmax;left:30%;top:45%;background:var(--bg2);opacity:.6;animation-delay:-14s}
@@ -282,13 +282,17 @@ async function lib(c){if(!T){
   /* 函式庫:先用 GitHub(或 App 內建),失敗才用 jsDelivr */
   if(c&&c.lib){try{T=await import(c.lib+'transformers.min.js');LIBSRC=c.lib;T.env.backends.onnx.wasm.wasmPaths={mjs:c.lib+'ort/ort-wasm-simd-threaded.asyncify.mjs',wasm:c.lib+'ort/ort-wasm-simd-threaded.asyncify.wasm'}}catch(e){T=null}}
   if(!T){T=await import(TJS);LIBSRC='jsdelivr'}
-  T.env.allowLocalModels=false;if(c&&c.gh)T.env.fetch=ghFetch(c.gh);T.env.useBrowserCache=true;try{T.env.logLevel=40}catch(e){}}
+  T.env.allowLocalModels=false;if(c&&c.gh)T.env.fetch=ghFetch(c.gh);
+  try{if(c&&c.thr)T.env.backends.onnx.wasm.numThreads=c.thr}catch(e){}T.env.useBrowserCache=true;try{T.env.logLevel=40}catch(e){}}
  if(c&&c.hf)T.env.remoteHost=c.hf.replace(/\/*$/,'/');return T}
 async function gpu(){if(GPU!==null)return GPU;GPU=false;try{if(self.navigator&&navigator.gpu){const a=await navigator.gpu.requestAdapter();if(a){GPU=true;F16=a.features.has('shader-f16')}}}catch(e){}return GPU}
 function pcb(id,key){const files={};let last=0;return x=>{if(!x)return;
  if(x.status==='progress'&&x.file){files[x.file]=[x.loaded||0,x.total||0];const now=Date.now();if(now-last<300&&x.progress<100)return;last=now;let l=0,t=0;for(const k in files){l+=files[k][0];t+=files[k][1]}post({id,prog:{key,l,t,file:x.file}})}
  else if(x.status==='ready')post({id,prog:{key,ready:1}})}}
-async function get(key,id,make){if(M.has(key))return M.get(key);const p=make(pcb(id,key));M.set(key,p);try{const r=await p;post({id,prog:{key,ready:1}});return r}catch(e){M.delete(key);throw e}}
+const USE=new Map();
+async function get(key,id,make){USE.set(key,Date.now());if(M.has(key))return M.get(key);const p=make(pcb(id,key));M.set(key,p);try{const r=await p;post({id,prog:{key,ready:1}});return r}catch(e){M.delete(key);throw e}}
+/* 閒置 4 分鐘的模型自動從記憶體移除(降低耗電、發燙;檔案仍保存在手機裡) */
+setInterval(()=>{const now=Date.now();for(const [k,v] of [...M]){if(now-(USE.get(k)||0)>240000){M.delete(k);USE.delete(k);Promise.resolve(v).then(dispose,()=>{});post({idle:k})}}},60000);
 function dispose(o){try{if(!o)return;if(o.dispose)o.dispose();else if(o.model&&o.model.dispose)o.model.dispose()}catch(e){}}
 function drop(prefix,keep){for(const [k,v] of [...M]){if(k.startsWith(prefix)&&k!==keep){M.delete(k);Promise.resolve(v).then(dispose,()=>{})}}}
 async function tryAll(list){let err;for(const f of list){try{return await f()}catch(e){err=e}}throw err}
@@ -339,6 +343,17 @@ const H={
   const pipe=await get(key,id,cb=>tryAll([()=>T.pipeline('translation',p.repo,{device:'wasm',dtype:'q8',progress_callback:cb}),()=>T.pipeline('translation',p.repo,{device:'wasm',dtype:'fp32',progress_callback:cb})]));
   if(p.load)return 1;const opt={max_new_tokens:512};if(p.sl)opt.src_lang=p.sl;if(p.tl)opt.tgt_lang=p.tl;const out=[];
   for(const t of p.texts){const r=await pipe(t,opt);out.push((Array.isArray(r)?r[0]:r).translation_text||'')}return out},
+ /* 只把模型檔下載存到手機,不載入記憶體、不用 GPU */
+ async prefetch(p,id,c){await lib(c);const host=T.env.remoteHost.replace(/\/*$/,'/'),cache=await caches.open(T.env.cacheKey||'transformers-cache');
+  const man=c.gh?await manifest(c.gh):{files:{}},pre=p.repo+'/';let files=Object.keys(man.files||{}).filter(k=>k.startsWith(pre)).map(k=>k.slice(pre.length));
+  if(!files.length)return {fallback:1};
+  files=files.filter(f=>{const m=f.match(/^onnx\/(.+?)\.onnx(_data.*)?$/);return m?p.onnx.includes(m[1]):!f.startsWith('onnx/')});
+  const need=[];let total=0,done=0;for(const f of files){const key=host+p.repo+'/resolve/main/'+f;if(await cache.match(key))continue;const sz=man.files[pre+f].size||0;need.push([f,key,sz]);total+=sz}
+  const f0=T.env.fetch;let last=0;
+  for(const [f,key,sz] of need){const r=await f0(key,{headers:new Headers()});if(!r.ok)throw new Error('下載失敗 '+f+'（'+r.status+'）');let got=0;
+   const counted=r.body.pipeThrough(new TransformStream({transform(ch,ctl){got+=ch.byteLength;const now=Date.now();if(now-last>400){last=now;post({id,prog:{key:'pre:'+p.repo,l:done+got,t:total,file:f}})}ctl.enqueue(ch)}}));
+   await cache.put(key,new Response(counted,{headers:{'content-length':String(sz),'content-type':'application/octet-stream'}}));done+=sz}
+  post({id,prog:{key:'pre:'+p.repo,ready:1}});return {n:need.length,total}},
  async free(p){for(const [k,v] of [...M]){if(!p||!p.prefix||k.startsWith(p.prefix)){M.delete(k);Promise.resolve(v).then(dispose,()=>{})}}return 1}
 };
 let chain=Promise.resolve();
@@ -379,13 +394,13 @@ const isZh=k=>k=='zh-TW'||k=='zh-CN';
 const ASRM={tiny:{r:'onnx-community/whisper-tiny',n:'Whisper Tiny',s:'約 40 MB・最快、準確度較低'},base:{r:'onnx-community/whisper-base',n:'Whisper Base',s:'約 80 MB・手機建議'},small:{r:'onnx-community/whisper-small',n:'Whisper Small',s:'約 250 MB・較準、較慢'},turbo:{r:'onnx-community/whisper-large-v3-turbo',n:'Whisper Large v3 Turbo',s:'約 600 MB+・最準，需要 WebGPU（電腦／高階手機）'}};
 const MTE={auto:{n:'自動選擇',s:'中↔英用 Opus-MT，其他語言用 NLLB-200'},opus:{n:'Opus-MT（中↔英）',s:'Helsinki-NLP・各約 100 MB・最快'},nllb:{n:'NLLB-200（200 種語言）',s:'Meta・約 900 MB・非商業授權'},m2m:{n:'M2M100（100 種語言）',s:'Meta・約 1 GB・MIT 授權'},q05:{n:'Qwen2.5 0.5B（LLM 翻譯）',s:'阿里巴巴・約 500 MB・語氣較自然，建議 WebGPU',r:'onnx-community/Qwen2.5-0.5B-Instruct'},q15:{n:'Qwen2.5 1.5B（LLM 翻譯）',s:'約 1.2 GB・品質最好，需要 WebGPU',r:'onnx-community/Qwen2.5-1.5B-Instruct'}};
 const HFS=[['https://huggingface.co/','Hugging Face 官方'],['https://hf-mirror.com/','hf-mirror 鏡像（官方連不上時）']];
-const DEF={theme:'sea',mode:'auto',font:16,blur:18,glass:.4,ui:'auto',surf:'paper',onb:0,src:'auto',tgt:'zh-TW',eng:'auto',asr:'base',asrc:'',dev:'auto',hf:'https://huggingface.co/',
- mlang:'zh',mtr:'',thr:.8,maxSpk:0,fine:1,hall:1,keepAud:1,tw:1,lvtts:1,lvm:'one',lvA:'zh-TW',lvB:'en',lvSil:.7,tsub:'text',msrc:'gh',autoUpd:1,mcloud:'gh',cmodel:'large-v3-turbo',ghTok:''};
+const DEF={theme:'sea',mode:'auto',font:16,blur:18,glass:.4,ui:'auto',surf:'paper',onb:0,src:'auto',tgt:'zh-TW',eng:'auto',asr:'base',asrc:'',dev:'wasm',hf:'https://huggingface.co/',
+ mlang:'zh',mtr:'',thr:.8,maxSpk:0,fine:1,hall:1,keepAud:1,tw:1,lvtts:1,lvm:'one',lvA:'zh-TW',lvB:'en',lvSil:.7,tsub:'text',msrc:'gh',autoUpd:1,mcloud:'gh',cmodel:'large-v3-turbo',ghTok:'',thr2:3,v13:0};
 let S={set:{...DEF},hist:[],meets:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.2.0';
+const APP_VER='1.3.0';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -455,17 +470,19 @@ $('#hr').onclick=()=>{if(cur=='tr'){show('rec');rsub('t')}else if(cur=='meet')$(
 /* ================= AI 運算管理(Web Worker) ================= */
 const AI={w:null,n:0,cb:{},
  init(){const u=URL.createObjectURL(new Blob([$('#wsrc').textContent],{type:'text/javascript'}));this.w=new Worker(u,{type:'module'});
-  this.w.onmessage=e=>{const d=e.data,c=this.cb[d.id];if(d.prog){loadUI(d.prog);c&&c.prog&&c.prog(d.prog);return}if(!c)return;delete this.cb[d.id];d.ok?c.res(d.r):c.rej(new Error(d.err))};
+  this.w.onmessage=e=>{const d=e.data,c=this.cb[d.id];if(d.idle){delete LOADS[d.idle];return}if(d.prog){loadUI(d.prog);c&&c.prog&&c.prog(d.prog);return}if(!c)return;delete this.cb[d.id];d.ok?c.res(d.r):c.rej(new Error(d.err))};
   this.w.onerror=e=>{const m='AI 模組載入失敗：'+(e.message||'請確認網路');Object.values(this.cb).forEach(c=>c.rej(new Error(m)));this.cb={};this.w=null;loadUI({done:1})}},
- call(type,p,tr,prog){if(!this.w)this.init();const id=++this.n;return new Promise((res,rej)=>{this.cb[id]={res,rej,prog};this.w.postMessage({id,type,p,cfg:{hf:S.set.hf,dev:S.set.dev,lib:LIBB,gh:S.set.msrc=='gh'?GH.models:null}},tr||[])})}};
+ call(type,p,tr,prog){if(!this.w)this.init();const id=++this.n;return new Promise((res,rej)=>{this.cb[id]={res,rej,prog};this.w.postMessage({id,type,p,cfg:{hf:S.set.hf,dev:S.set.dev,lib:LIBB,gh:S.set.msrc=='gh'?GH.models:null,thr:Math.max(1,Math.min(S.set.thr2||3,(navigator.hardwareConcurrency||4)>>1))}},tr||[])})}};
 /* 模型下載進度膠囊 */
 const LOADS={};let lpT;
-const MNAME=k=>{if(k.startsWith('asr:'))return'語音辨識 '+k.split(':')[1].split('/')[1];if(k=='sv')return'講者聲紋 WavLM';if(k=='seg')return'講者分段 pyannote';if(k.startsWith('mt:')||k.startsWith('llm:'))return'翻譯 '+k.split(':')[1].split('/')[1];return k};
+const MNAME=k=>{if(k.startsWith('pre:'))return k.split('/')[1];if(k.startsWith('asr:'))return'語音辨識 '+k.split(':')[1].split('/')[1];if(k=='sv')return'講者聲紋 WavLM';if(k=='seg')return'講者分段 pyannote';if(k.startsWith('mt:')||k.startsWith('llm:'))return'翻譯 '+k.split(':')[1].split('/')[1];return k};
 const fmtMB=b=>b>1073741824?(b/1073741824).toFixed(2)+' GB':(b/1048576).toFixed(b>104857600?0:1)+' MB';
 function loadUI(p){if(p.key){if(p.ready)delete LOADS[p.key];else if(p.t)LOADS[p.key]=p}
  const L=Object.values(LOADS);clearTimeout(lpT);
  if(!L.length){lpT=setTimeout(()=>$('#mpill').classList.remove('on'),400);return}
- let l=0,t=0;L.forEach(x=>{l+=x.l;t+=x.t});$('#mpt').textContent=`⬇ 下載 ${L.map(x=>MNAME(x.key)).join('、')}　${fmtMB(l)} / ${fmtMB(t)}`;$('#mpb').style.width=(t?l/t*100:0)+'%';$('#mpill').classList.add('on')}
+ let l=0,t=0;L.forEach(x=>{l+=x.l;t+=x.t});
+ /* 下載完、正在載入記憶體時,顯示「準備中」而不是卡在 100% */
+ $('#mpt').textContent=l>=t&&t>0?`⚙️ 準備 ${L.map(x=>MNAME(x.key)).join('、')} 中…（第一次比較久）`:`⬇ 下載 ${L.map(x=>MNAME(x.key)).join('、')}　${fmtMB(l)} / ${fmtMB(t)}`;$('#mpb').style.width=(t?l/t*100:0)+'%';$('#mpill').classList.add('on')}
 $('#mpill').onclick=()=>openMM();
 const asrRepo=()=>S.set.asrc.trim()||(ASRM[S.set.asr]||ASRM.base).r;
 
@@ -690,13 +707,13 @@ const mTitle=m=>m.title||'會議 '+fmtD(m.ts);
 function spkOf(m,id){return m.spk.find(s=>s.id==id)||{id,name:'講者 ?',c:'#888'}}
 function renderMeet(){
  langOptsM();const m=R.m;$('#mtitle').value=m?m.title:'';
- $('#mbtn').innerHTML=R.on?`<button class="btn" id="mpause">${R.paused?'▶ 繼續':'⏸ 暫停'}</button><button class="btn rec" id="mstop">■ 結束</button>`:`<button class="btn rec" id="mstart">● 開始錄音</button>`+(m?`<button class="btn" id="mopen">📄 完整記錄</button>`:'');
+ $('#mbtn').innerHTML=R.on?`<button class="btn" id="mpause">${R.paused?'▶ 繼續':'⏸ 暫停'}</button><button class="btn rec" id="mstop">■ 結束</button>`:`<button class="btn rec" id="mstart">● 開始錄音</button>`+(m?`<button class="btn" id="mopen">📄 完整記錄</button>`:'')+(MQ.length&&!mBusy?`<button class="btn" id="mresume">▶ 繼續辨識 ${MQ.length} 段</button>`:'');
  mStatus();mSpk();if(!R.on&&!m){$('#mlist').innerHTML='<p class="emp">按「● 開始錄音」後，逐字稿會即時出現在這裡<br><small>自動分辨不同講者・中英夾雜也能辨識・不限錄音時間</small></p>'}else if(m)mList(m)}
 function langOptsM(){$('#mlang').innerHTML=MLANG.map(([k,n])=>`<option value="${k}">🗣 ${n}</option>`).join('');$('#mlang').value=S.set.mlang;
  $('#mtrl').innerHTML='<option value="">🌐 不同步翻譯</option>'+Object.entries(LANG).map(([k,l])=>`<option value="${k}">🌐 同步翻成 ${l.n.split(' ')[0]}</option>`).join('');$('#mtrl').value=S.set.mtr}
 $('#mlang').onchange=e=>{S.set.mlang=e.target.value;save()};$('#mtrl').onchange=e=>{S.set.mtr=e.target.value;save();if(R.m){R.m.tr=S.set.mtr;saveM(R.m)}};
 $('#mtitle').onchange=e=>{if(R.m){R.m.title=e.target.value.trim();saveM(R.m)}};
-$('#mbtn').onclick=e=>{const b=e.target.closest('button');if(!b)return;({mstart:mStart,mstop:mStop,mpause:mPause,mopen:()=>R.m&&openMD(R.m.id)})[b.id]?.()};
+$('#mbtn').onclick=e=>{const b=e.target.closest('button');if(!b)return;({mstart:mStart,mstop:mStop,mpause:mPause,mopen:()=>R.m&&openMD(R.m.id),mresume:()=>{mPump();renderMeet()}})[b.id]?.()};
 function mStatus(){const n=MQ.length+(mBusy?1:0);if(R.m&&R.m.cloud&&(R.on||R.m.st=='cloud'||R.m.st=='cloudwait')){$('#mst').textContent=R.on?(R.paused?'⏸ 已暫停':'● 錄音中')+'・結束後上傳到 GitHub 轉文字':'☁️ '+(R.m.cs||'GitHub 處理中');$('#mclock').textContent=fmtT(R.on&&R.cap?R.m.off+R.cap.time:R.m.dur);return}
  $('#mst').textContent=R.on?(R.paused?'⏸ 已暫停':'● 錄音中')+(n?`・待辨識 ${n} 段`:'・即時辨識中'):n?`辨識剩下的 ${n} 段語音…`:R.m?`已完成・${R.m.u.length} 句・${R.m.spk.length} 位講者`:'準備就緒・可以錄很久，不限時間';
  const t=R.on&&R.cap?R.m.off+R.cap.time:R.m?R.m.dur:0;$('#mclock').textContent=fmtT(t)}
@@ -970,7 +987,7 @@ function renderSet(){const s=S.set,sg=(id,a,v)=>`<div class="seg glass" id="${id
   ${IS_APP?'<div class="row" data-a="rst"><span>↩️</span><b>還原為 APK 內建版本<small>更新後有問題時使用</small></b>›</div>':''}
   <div class="row" data-a="ghweb"><span>🌐</span><b>網頁版<small>${GH.pages.replace('https://','')}</small></b>›</div>
   <div class="row" data-a="ghrepo"><span>📦</span><b>GitHub 儲存庫<small>下載最新 APK、查看模型</small></b>›</div></div>`);
- h+=sec('⚡ AI 運算',`<div class="grp glass">${sg('sdev',[['auto','自動（優先 GPU）'],['wasm','只用 CPU']],s.dev)}<div class="sl"><small id="gpuinfo">偵測中…</small></div><div class="sl"><label>模型下載來源</label>${sg('shf',HFS.map(x=>[x[0],x[1].split(' ')[0]]),HFS.some(x=>x[0]==s.hf)?s.hf:'')}<small>官方連不上或很慢時可以改用鏡像站</small></div><div class="row" data-a="mm"><span>🧠</span><b>管理已下載的模型<small>預先下載、查看空間、清除</small></b>›</div></div>`);
+ h+=sec('⚡ AI 運算',`<div class="grp glass">${sg('sdev',[['wasm','CPU（省電、不燙）'],['auto','GPU 加速（較快、較燙）']],s.dev)}<div class="sl"><small id="gpuinfo">偵測中…</small></div><div class="sl"><label>模型下載來源</label>${sg('shf',HFS.map(x=>[x[0],x[1].split(' ')[0]]),HFS.some(x=>x[0]==s.hf)?s.hf:'')}<small>官方連不上或很慢時可以改用鏡像站</small></div><div class="row" data-a="mm"><span>🧠</span><b>管理已下載的模型<small>預先下載、查看空間、清除</small></b>›</div></div>`);
  h+=sec('外觀',`<div class="grp glass">${sg('sm',[['auto','跟隨系統'],['light','淺色'],['dark','深色']],s.mode)}</div>`);
  h+=sec('版面（自動偵測手機／平板）',`<div class="grp glass">${sg('su',[['auto','自動偵測'],['phone','手機版'],['tablet','平板版']],s.ui||'auto')}<div class="sl"><small>目前使用：<b id="uinow">${UI_NAME[UI]}　${innerWidth}×${innerHeight}</b></small></div></div>`);
  h+=sec('主題配色（每個主題都有對應深色）',`<div class="grp glass">${Object.entries(TH).map(([k,t])=>`<div class="row${s.theme==k?' on':''}" data-th="${k}"><span class="sw"><i style="background:${t.l[2]}"></i><i style="background:${t.l[4]}"></i><i style="background:${t.l[1]}"></i></span><b>${t.n}<small>${t.s}</small></b><span class="ck">✔</span></div>`).join('')}</div>`);
@@ -1005,20 +1022,24 @@ function openMM(){$('#mm').classList.add('on');renderMM()}
 $('#mmx').onclick=()=>$('#mm').classList.remove('on');
 async function renderMM(){const s=S.set,eng=engFor(s.src=='auto'?'en':s.src,s.tgt);
  let est='';try{const q=await navigator.storage.estimate();est=`已使用 ${fmtMB(q.usage||0)}${q.quota?' / 可用 '+fmtMB(q.quota):''}`}catch(e){}
- const L=[['asr','🎙 語音辨識',(ASRM[s.asr]||{n:s.asrc}).n||s.asrc,()=>AI.call('asr',{repo:asrRepo(),load:1})],['emb','👥 講者聲紋','WavLM Base Plus SV・約 100 MB',()=>AI.call('emb',{load:1})],['seg','✂️ 講者分段','pyannote segmentation 3.0・約 6 MB',()=>AI.call('seg',{load:1})],
-  ['mt','🌐 翻譯',MTE[s.eng].n+(s.eng=='auto'?'（目前：'+(eng=='opus'?'Opus-MT':'NLLB-200')+'）':''),()=>mtLoad(s.tgt)],['ocr','🖼 文字辨識',LIBB?'Tesseract・中英語言包已內建，其他語言需下載':'Tesseract・中英語言包約 5 MB',async()=>{if(!window.Tesseract)await loadScript(CDN.tess);const w=await withTO(Tesseract.createWorker(['chi_tra','eng'],1,{...TOPT(),...(LIBB?{langPath:LIBB+'tessdata'}:{})}),120000,'下載逾時');await w.terminate()}],['cc','🀄 繁簡轉換','OpenCC・約 1 MB',occ]];
+ const Q8=['encoder_model_quantized','decoder_model_merged_quantized'];
+ const mtList=()=>{const e=s.eng;if(e=='auto')return[['Xenova/opus-mt-zh-en',Q8],['Xenova/opus-mt-en-zh',Q8],['Xenova/nllb-200-distilled-600M',Q8]];if(e=='opus')return[['Xenova/opus-mt-zh-en',Q8],['Xenova/opus-mt-en-zh',Q8]];if(e=='nllb')return[['Xenova/nllb-200-distilled-600M',Q8]];if(e=='m2m')return[['Xenova/m2m100_418M',Q8]];return[[MTE[e].r,['model_q4']]]};
+ const L=[['asr','🎙 語音辨識',(ASRM[s.asr]||{n:s.asrc}).n||s.asrc,()=>AI.call('asr',{repo:asrRepo(),load:1}),()=>preDl([[asrRepo(),Q8]],()=>AI.call('asr',{repo:asrRepo(),load:1}))],['emb','👥 講者聲紋','WavLM Base Plus SV・約 100 MB',()=>AI.call('emb',{load:1}),()=>preDl([['Xenova/wavlm-base-plus-sv',['model_quantized']]],()=>AI.call('emb',{load:1}))],['seg','✂️ 講者分段','pyannote segmentation 3.0・約 6 MB',()=>AI.call('seg',{load:1}),()=>preDl([['onnx-community/pyannote-segmentation-3.0',['model']]],()=>AI.call('seg',{load:1}))],
+  ['mt','🌐 翻譯',MTE[s.eng].n+(s.eng=='auto'?'（中英 Opus-MT＋其他語言 NLLB-200）':''),()=>mtLoad(s.tgt),()=>preDl(mtList(),()=>mtLoad(s.tgt))],['ocr','🖼 文字辨識',LIBB?'Tesseract・中英語言包已內建，其他語言需下載':'Tesseract・中英語言包約 5 MB',async()=>{if(!window.Tesseract)await loadScript(CDN.tess);const w=await withTO(Tesseract.createWorker(['chi_tra','eng'],1,{...TOPT(),...(LIBB?{langPath:LIBB+'tessdata'}:{})}),120000,'下載逾時');await w.terminate()}],['cc','🀄 繁簡轉換','OpenCC・約 1 MB',occ]];
  MM_L=L;setTimeout(mmSizes,50);const gi=await ghMan();$('#mmb').innerHTML=`<p style="color:var(--sub);font-size:.9em;margin:0 4px 10px">模型第一次使用時會自動下載並保存在手機裡，之後可離線使用。建議先在 Wi-Fi 下按「全部預先下載」。<br>下載來源：<b>${s.msrc=='gh'?(gi&&gi.n?'GitHub（已鏡像 '+gi.n+' 個模型，沒鏡像的改用 Hugging Face）':'GitHub（鏡像尚未就緒，暫用 Hugging Face）'):'Hugging Face'}</b></p>
  <div class="grp glass">${L.map((x,i)=>`<div class="row" data-dl="${i}"><span>${x[1].split(' ')[0]}</span><b>${x[1].split(' ').slice(1).join(' ')}<small>${esc(x[2])}${MMQ[x[0]]?`・<span id="mmz${i}">計算中</span>`:''}</small></b><span class="pst" id="mms${i}">下載 ›</span>${MMQ[x[0]]?`<button class="ib" data-del="${i}" title="刪除">🗑</button>`:''}</div>`).join('')}</div>
  ${s.mcloud=='gh'?'<button class="btn bigb" id="mmclean" style="margin-top:10px">🧹 刪除雲端模式用不到的模型</button><p style="color:var(--sub);font-size:.82em;margin:-4px 6px 10px">會議轉文字已改在 GitHub 運算：刪除講者辨識模型和多餘的語音模型，只保留即時語音翻譯用的。</p>':''}
  <button class="btn on bigb" id="mmall" style="margin-top:10px">⬇ 全部預先下載</button>
  <div class="grp glass"><div class="sl"><small>💾 ${est||'無法取得空間資訊'}</small></div><div class="row" data-a="free"><b>釋放記憶體<small>把載入中的模型從記憶體移除（不刪除檔案）</small></b>›</div><div class="row" data-a="del"><b style="color:#c0392b">刪除所有已下載的模型<small>需要時會重新下載</small></b>›</div></div>`}
 let MM_L=[];
+/* 只下載模型檔存到手機(不載入記憶體);GitHub 沒有鏡像時才改用「載入一次後立即釋放」 */
+async function preDl(list,fallback){for(const [repo,onnx] of list){const r=await AI.call('prefetch',{repo,onnx});if(r&&r.fallback){await fallback();await AI.call('free',{})}}}
 /* 每種模型在快取裡的網址特徵 */
 const MMQ={asr:u=>/whisper/i.test(u),emb:u=>/wavlm/i.test(u),seg:u=>/pyannote/i.test(u),mt:u=>/opus-mt|nllb|m2m100|qwen/i.test(u),ocr:'tess'};
-async function cacheWalk(match,del){let n=0,sz=0;try{for(const k of await caches.keys()){const c=await caches.open(k);for(const r of await c.keys()){if(!match(r.url))continue;if(del){await c.delete(r);n++}else{const res=await c.match(r);const l=+(res&&res.headers.get('content-length')||0);sz+=l||(res?(await res.clone().blob()).size:0);n++}}}}catch(e){}return{n,sz}}
-async function mmSizes(){for(let i=0;i<MM_L.length;i++){const q=MMQ[MM_L[i][0]],el=$('#mmz'+i);if(!el||!q)continue;if(q=='tess'){el.textContent='語言包';continue}const r=await cacheWalk(q);el.textContent=r.n?'已下載 '+fmtMB(r.sz):'未下載'}}
+async function cacheWalk(match,del){let n=0,sz=0;try{for(const k of await caches.keys()){const c=await caches.open(k);for(const r of await c.keys()){if(!match(r.url))continue;if(del){await c.delete(r);n++}else{const res=await c.match(r);sz+=+(res&&res.headers.get('content-length')||0);n++}}}}catch(e){}return{n,sz}}
+async function mmSizes(){for(let i=0;i<MM_L.length;i++){const q=MMQ[MM_L[i][0]],el=$('#mmz'+i);if(!el||!q)continue;if(q=='tess'){el.textContent='語言包';continue}const r=await cacheWalk(q);el.textContent=r.n?'已下載 '+fmtMB(r.sz):'未下載';const st=$('#mms'+i);if(st&&r.n&&st.textContent.startsWith('下載')){st.textContent='✅ 已下載';st.className='pst ok'}}}
 async function mmDel(key){const q=MMQ[key];await AI.call('free',{}).catch(()=>{});if(q=='tess'){try{if(TW){await TW.terminate();TW=null;TWL=''}indexedDB.deleteDatabase('keyval-store')}catch(e){}return}await cacheWalk(q,1)}
-async function mmDl(i){const x=MM_L[i],st=$('#mms'+i);if(!x)return;st&&(st.textContent='下載中…',st.className='pst wn');try{await x[3]();st&&(st.textContent='✅ 已就緒',st.className='pst ok')}catch(e){st&&(st.textContent='❌ 失敗',st.className='pst no');toast(x[1]+' 下載失敗：'+e.message,4000)}}
+async function mmDl(i){const x=MM_L[i],st=$('#mms'+i);if(!x)return;st&&(st.textContent='下載中…',st.className='pst wn');try{await (x[4]?x[4]():x[3]());st&&(st.textContent='✅ 已就緒',st.className='pst ok')}catch(e){st&&(st.textContent='❌ 失敗',st.className='pst no');toast(x[1]+' 下載失敗：'+e.message,4000)}}
 $('#mmb').onclick=async e=>{const del=e.target.closest('[data-del]');if(del){const x=MM_L[+del.dataset.del];if(confirm('刪除手機裡的「'+x[1].split(' ').slice(1).join(' ')+'」模型？需要時會重新下載')){await mmDel(x[0]);toast('已刪除');renderMM()}return}
  if(e.target.closest('#mmclean')){if(!confirm('刪除講者辨識模型（WavLM、pyannote）和即時翻譯用不到的語音模型？'))return;await mmDel('emb');await mmDel('seg');const keep=asrRepo().split('/')[1];await cacheWalk(u=>/whisper/i.test(u)&&!u.includes('/'+keep+'/'),1);toast('已清理，只保留即時語音用的 '+keep,3000);renderMM();return}
  const d=e.target.closest('[data-dl]');if(d)return mmDl(+d.dataset.dl);if(e.target.id=='mmall'){for(let i=0;i<MM_L.length;i++){if(S.set.mcloud=='gh'&&/emb|seg/.test(MM_L[i][0]))continue;await mmDl(i)}return}
@@ -1054,10 +1075,13 @@ $('#pmG').onclick=()=>{S.set.onb=1;save();$('#pm').classList.remove('on');if(IS_
 $('#pmL').onclick=()=>{S.set.onb=1;save();$('#pm').classList.remove('on')};
 addEventListener('beforeunload',e=>{if(R.on){e.preventDefault();e.returnValue=''}});
 (async()=>{const d=await iget('k','s');if(d){S.set={...DEF,...d.set};S.hist=d.hist||[];S.meets=d.meets||[]}if(!TH[S.set.theme])S.set.theme='sea';
+ /* v1.3:手機預設改用 CPU(GPU 容易發燙、當機);開 App 時不自動開相機/麥克風 */
+ if(!S.set.v13){S.set.dev='wasm';S.set.v13=1;save()}if(S.set.tsub=='cam'||S.set.tsub=='live')S.set.tsub='text';
  layout();apply();show('tr');
  /* 上次沒處理完的語音片段 → 繼續辨識;錄音中被關掉的會議 → 標記完成 */
  const ks=((await ikeys('q'))||[]).map(String).sort();for(const x of S.meets){if(x.st=='rec'){const m=await getM(x.id);if(m){m.st=ks.some(k=>k.startsWith(m.id))?'proc':'done';saveM(m)}}}
- if(ks.length){MQ=ks;toast(`繼續辨識上次剩下的 ${ks.length} 段語音`,3000);setTimeout(mPump,1500)}
+ if(ks.length){MQ=ks;setTimeout(async()=>{const k=await menu(`有 ${ks.length} 段之前的語音還沒辨識`,[['go','📱 現在在手機上辨識'],['later','稍後（到會議記錄頁再處理）'],['drop','🗑 捨棄這些片段']]);
+  if(k=='go')mPump();else if(k=='drop'){for(const x of ks)await idel('q',x);MQ=[];for(const x of S.meets)if(x.st=='proc'){const m=await getM(x.id);if(m){m.st='done';saveM(m)}}toast('已捨棄')}else toast('可以到「會議記錄」頁按「繼續辨識」',3000)},1500)}
  if(IS_APP){try{NB.ready()}catch(e){}}if(IS_APP&&S.set.autoUpd)setTimeout(()=>checkUpd(0),3000);
  setTimeout(async()=>{for(const x of S.meets)if(x.st=='cloud'){const m=await getM(x.id);if(m)cloudRun(m)}},2000);if(!S.set.onb)setTimeout(()=>$('#pm').classList.add('on'),700)})();
 </script></body></html>
