@@ -70,32 +70,40 @@ def nme_sc(E, max_k=15, k=None):
     return _kmeans(X, kk)
 
 
-def cluster(X, dur, k=None, thr=0.6, min_s=None):
-    """平均連結階層分群 → 零碎小群併入最像的群 → 依群中心重新分配（反覆數次）"""
+def cluster(X, dur, k=None, thr=0.7, min_frac=0.03):
+    """平均連結階層分群 → 零碎小群併入最像的群 → 依群中心反覆修正
+    指定人數 k 時：先自動分群，再把最像的群兩兩合併到剩 k 群（不讓雜訊片段占掉名額）"""
     from scipy.cluster.hierarchy import linkage, fcluster
     n = len(X)
     if n < 2:
         return np.zeros(n, int)
     X = _norm(X)
     Z = linkage(X, "average", metric="cosine")
-    lab = fcluster(Z, k, "maxclust") if k else fcluster(Z, thr, "distance")
-    lab = np.unique(lab, return_inverse=True)[1]
+    # 指定人數時先細分（門檻較低），之後再合併到指定人數
+    lab = np.unique(fcluster(Z, min(thr, 0.5) if k else thr, "distance"), return_inverse=True)[1]
     tot = float(dur.sum())
-    if min_s is None:
-        min_s = min(10.0, max(3.0, tot * 0.015))
-    for _ in range(6):
-        ks = np.unique(lab)
-        C = {j: _norm(X[lab == j].mean(0)) for j in ks}
-        if not k:
-            while len(ks) > 1:
-                T = {j: dur[lab == j].sum() for j in ks}
-                s = min(ks, key=lambda j: T[j])
-                if T[s] >= min_s:
-                    break
-                t = max((j for j in ks if j != s), key=lambda j: float(C[s] @ C[j]))
-                lab[lab == s] = t
-                ks = np.unique(lab)
-                C = {j: _norm(X[lab == j].mean(0)) for j in ks}
+    min_s = min(30.0, max(3.0, tot * min_frac)) if not k else min(5.0, max(1.0, tot * 0.005))
+
+    def cent(lab):
+        return {j: _norm((X[lab == j] * dur[lab == j, None]).sum(0)) for j in np.unique(lab)}
+
+    for _ in range(8):
+        C = cent(lab)
+        # 零碎小群 → 最像的群
+        while len(C) > 1:
+            T = {j: dur[lab == j].sum() for j in C}
+            s = min(T, key=T.get)
+            if T[s] >= min_s:
+                break
+            t = max((j for j in C if j != s), key=lambda j: float(C[s] @ C[j]))
+            lab[lab == s] = t
+            C = cent(lab)
+        # 指定人數：合併最像的兩群
+        while k and len(C) > k:
+            ks = list(C)
+            best = max(((a, b) for i, a in enumerate(ks) for b in ks[i + 1:]), key=lambda p: float(C[p[0]] @ C[p[1]]))
+            lab[lab == best[1]] = best[0]
+            C = cent(lab)
         K = list(C)
         new = np.array(K)[np.argmax(X @ np.stack([C[j] for j in K]).T, 1)]
         if (new == lab).all():
@@ -138,13 +146,13 @@ def segments_and_embeddings(audio, models, progress=None, threads=4, max_piece=6
     return pieces, embs
 
 
-def label(pieces, embs, num_speakers=0, thr=0.6, min_s=None):
+def label(pieces, embs, num_speakers=0, thr=0.7, min_frac=0.03):
     good = [i for i, x in enumerate(embs) if x is not None]
     if not good:
         return [0] * len(pieces)
     E = np.stack([embs[i] for i in good])
     dur = np.array([pieces[i][1] - pieces[i][0] for i in good])
-    lab = cluster(E, dur, k=num_speakers or None, thr=thr, min_s=min_s)
+    lab = cluster(E, dur, k=num_speakers or None, thr=thr, min_frac=min_frac)
     labels = [None] * len(pieces)
     for j, i in enumerate(good):
         labels[i] = int(lab[j])
@@ -159,7 +167,7 @@ def label(pieces, embs, num_speakers=0, thr=0.6, min_s=None):
     return [order[l] for l in labels]
 
 
-def diarize(audio, models, num_speakers=0, thr=0.6, progress=None, threads=4):
+def diarize(audio, models, num_speakers=0, thr=0.7, progress=None, threads=4):
     pieces, embs = segments_and_embeddings(audio, models, progress, threads)
     if not pieces:
         return []

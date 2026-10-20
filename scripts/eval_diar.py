@@ -72,15 +72,17 @@ def main():
             pieces, embs = D.segments_and_embeddings(a, MODELS)
             te = time.time() - t0
             line = []
-            for thr in [0.5, 0.55, 0.6, 0.65, 0.7, 0.75]:
-                labs = D.label(pieces, embs, 0, thr)
+            for thr in [0.65, 0.7, 0.75]:
+                for mf in [0.015, 0.03, 0.05]:
+                    labs = D.label(pieces, embs, 0, thr, mf)
+                    d, k = der([(s, e, l) for (s, e), l in zip(pieces, labs)], gt, T)
+                    results.setdefault(f"auto thr={thr} min={mf}", []).append((d, k, nspk))
+                    line.append(f"{thr}/{mf}:{d*100:.1f}%/{k}人")
+            for thr in [0.6, 0.7]:
+                labs = D.label(pieces, embs, nspk, thr)
                 d, k = der([(s, e, l) for (s, e), l in zip(pieces, labs)], gt, T)
-                results.setdefault(f"auto thr={thr}", []).append((d, k, nspk))
-                line.append(f"thr{thr}:{d*100:.1f}%/{k}人")
-            labs = D.label(pieces, embs, nspk, 0.6)
-            d, k = der([(s, e, l) for (s, e), l in zip(pieces, labs)], gt, T)
-            results.setdefault("given N", []).append((d, k, nspk))
-            line.append(f"指定:{d*100:.1f}%")
+                results.setdefault(f"指定人數 thr={thr}", []).append((d, k, nspk))
+                line.append(f"指定{thr}:{d*100:.1f}%")
             note(f"會議{done+1} {T/60:.0f}分 實際{nspk}人 ({te:.0f}s)", " ".join(line))
             done += 1
     for k, v in results.items():

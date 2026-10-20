@@ -1011,7 +1011,7 @@ async function cloudRun(m){if(CLOUD[m.id])return;CLOUD[m.id]=1;
    if(m.cj.up[name])continue;const b=await iget('a',m.id+':'+a.n);if(!b)continue;
    cloudSt(m,`上傳錄音 ${k}/${m.aud.length}`,0);await ghUpload(rel,name,b,(s,t)=>cloudSt(m,`上傳錄音 ${k}/${m.aud.length}（${fmtMB(s)}/${fmtMB(t)}）`,s/t*100));m.cj.up[name]=1;saveM(m)}
   if(!parts.length)throw new Error('沒有錄音檔可以上傳');
-  if(!m.cj.job){const spk=+S.set.maxSpk||0,sens=Math.max(.4,Math.min(.85,1.4-(+S.set.thr||.8)));
+  if(!m.cj.job){const spk=+S.set.maxSpk||0,sens=Math.max(.5,Math.min(.85,1.5-(+S.set.thr||.8)));
    const job=new Blob([JSON.stringify({parts,lang:m.lang=='auto'?'auto':m.lang,model:S.set.cmodel||'sensevoice',speakers:spk,sens,tw:S.set.tw?1:0})],{type:'application/json'});
    await ghUpload(rel,'job.json',job);m.cj.job=1;saveM(m)}
   if(!m.cj.disp){cloudSt(m,'啟動 GitHub 轉文字');await ghApi('POST','/actions/workflows/transcribe.yml/dispatches',{ref:'main',inputs:{release:String(rel)}});m.cj.disp=Date.now();saveM(m)}
