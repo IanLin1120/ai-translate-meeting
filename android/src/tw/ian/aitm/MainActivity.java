@@ -422,7 +422,7 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public int upBegin() {
             try {
-                File f = File.createTempFile("up", ".bin", getCacheDir());
+                File f = File.createTempFile("upload", ".bin", getCacheDir());
                 int id = ++saveSeq;
                 saves.put(id, new Object[]{new FileOutputStream(f), f.getAbsolutePath()});
                 return id;

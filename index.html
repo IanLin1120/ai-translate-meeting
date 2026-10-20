@@ -121,12 +121,19 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 /* ===== 會議 ===== */
 .mtop{border-radius:24px;padding:14px 16px;margin-bottom:10px}
 .mtt{width:100%;border:0;background:transparent;outline:0;font-size:1.12em;font-weight:700;padding:2px 0}
-.mrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
-.mrow .slc{flex:1 1 130px;height:36px;font-size:.88em}
+.mrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.mfld{display:flex;flex-direction:column;gap:3px;min-width:0}
+.mfld small{color:var(--sub);font-size:.74em;padding-left:12px}
+.mfld .slc{width:100%;height:38px;font-size:.88em;padding:0 10px;text-align:left;text-align-last:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mmode{display:inline-flex;align-items:center;gap:5px;font-size:.76em;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--glass);border:1px solid var(--edge);color:var(--sub);cursor:pointer;white-space:nowrap}
+.mmode.gh{color:var(--ac)}
+.mhead{display:flex;align-items:center;gap:8px}
+.mhead .mtt{flex:1;min-width:0}
+.mst.err{color:#c0392b}[data-dk="1"] .mst.err{color:#ff8a7a}
 .mclock{font-size:2.4em;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:.03em;text-align:center;margin:8px 0 2px}
 .mst{text-align:center;color:var(--sub);font-size:.86em;min-height:1.4em}
-.mbtn{display:flex;gap:10px;justify-content:center;margin-top:10px}
-.mbtn .btn{min-height:48px;padding:0 22px;font-weight:700}
+.mbtn{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.mbtn .btn{min-height:46px;padding:0 16px;font-weight:700;flex:1 1 0;min-width:0;max-width:200px}
 .rec{background:#d9433a!important;color:#fff!important;border-color:transparent!important}
 .lvb{height:6px;border-radius:9px;background:var(--edge);overflow:hidden;margin-top:10px}.lvb i{display:block;height:100%;width:0;background:#3c9d5d;transition:width .08s}
 .spks{display:flex;gap:6px;flex-wrap:wrap;margin:0 2px 10px}
@@ -238,8 +245,8 @@ html[data-surf="paper"] .seg.glass,html[data-surf="paper"] .lbar.glass{backgroun
 <!-- 會議 -->
 <section class="view" id="v-meet"><div class="in"><div id="mwrap">
  <div id="mside"><div class="mtop glass">
-  <input class="mtt" id="mtitle" placeholder="會議名稱（可留白）">
-  <div class="mrow"><select class="slc" id="mlang"></select><select class="slc" id="mtrl"></select></div>
+  <div class="mhead"><input class="mtt" id="mtitle" placeholder="會議名稱（可留白）"><span class="mmode" id="mmode"></span></div>
+  <div class="mrow"><label class="mfld"><small>辨識語言</small><select class="slc" id="mlang"></select></label><label class="mfld"><small>同步翻譯</small><select class="slc" id="mtrl"></select></label></div>
   <div class="mclock" id="mclock">00:00:00</div>
   <div class="mst" id="mst">準備就緒・可以錄很久，不限時間</div>
   <div class="lvb"><i id="mlv"></i></div>
@@ -400,7 +407,7 @@ let S={set:{...DEF},hist:[],meets:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.3.0';
+const APP_VER='1.3.1';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -697,7 +704,7 @@ $('#lvlist').onclick=e=>{const u=e.target.closest('[data-sp]');if(u)speak(u.clos
 const fmtT=s=>{s=Math.max(0,Math.floor(s||0));return pad(Math.floor(s/3600))+':'+pad(Math.floor(s%3600/60))+':'+pad(s%60)};
 const fmtS=s=>{s=Math.max(0,Math.floor(s||0));return s>=3600?fmtT(s):pad(Math.floor(s/60))+':'+pad(s%60)};
 const fmtD=t=>{const d=new Date(t);return d.getFullYear()+'/'+pad(d.getMonth()+1)+'/'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes())};
-const MLANG=[['zh','中文（中英夾雜）'],['auto','自動偵測語言'],['en','English'],['ja','日本語'],['ko','한국어'],['vi','Tiếng Việt'],['th','ไทย'],['id','Indonesia'],['fr','Français'],['de','Deutsch'],['es','Español']];
+const MLANG=[['zh','中文＋英文'],['auto','自動偵測'],['en','English'],['ja','日本語'],['ko','한국어'],['vi','Tiếng Việt'],['th','ไทย'],['id','Indonesia'],['fr','Français'],['de','Deutsch'],['es','Español']];
 const R={on:0,paused:0,m:null,cap:null,mr:null,mrN:0,mrT0:0,mrChunks:[],timer:0,lock:null};
 let MQ=[],mBusy=0;  /* 待處理語音片段的 key */
 const MS={}; /* 載入中的會議 */
@@ -707,20 +714,22 @@ const mTitle=m=>m.title||'會議 '+fmtD(m.ts);
 function spkOf(m,id){return m.spk.find(s=>s.id==id)||{id,name:'講者 ?',c:'#888'}}
 function renderMeet(){
  langOptsM();const m=R.m;$('#mtitle').value=m?m.title:'';
- $('#mbtn').innerHTML=R.on?`<button class="btn" id="mpause">${R.paused?'▶ 繼續':'⏸ 暫停'}</button><button class="btn rec" id="mstop">■ 結束</button>`:`<button class="btn rec" id="mstart">● 開始錄音</button>`+(m?`<button class="btn" id="mopen">📄 完整記錄</button>`:'')+(MQ.length&&!mBusy?`<button class="btn" id="mresume">▶ 繼續辨識 ${MQ.length} 段</button>`:'');
+ $('#mbtn').innerHTML=R.on?`<button class="btn" id="mpause">${R.paused?'▶ 繼續':'⏸ 暫停'}</button><button class="btn rec" id="mstop">■ 結束</button>`:`<button class="btn rec" id="mstart">● 開始錄音</button>`+(m?`<button class="btn" id="mopen">📄 完整記錄</button>`:'')+(MQ.length&&!mBusy?`<button class="btn" id="mresume">▶ 繼續辨識 ${MQ.length} 段</button>`:'')+(m&&!R.on&&(m.st=='cloudfail'||m.st=='cloudwait')?`<button class="btn on" id="mretry">↻ 重新上傳</button>`:'');
  mStatus();mSpk();if(!R.on&&!m){$('#mlist').innerHTML='<p class="emp">按「● 開始錄音」後，逐字稿會即時出現在這裡<br><small>自動分辨不同講者・中英夾雜也能辨識・不限錄音時間</small></p>'}else if(m)mList(m)}
 function langOptsM(){$('#mlang').innerHTML=MLANG.map(([k,n])=>`<option value="${k}">🗣 ${n}</option>`).join('');$('#mlang').value=S.set.mlang;
- $('#mtrl').innerHTML='<option value="">🌐 不同步翻譯</option>'+Object.entries(LANG).map(([k,l])=>`<option value="${k}">🌐 同步翻成 ${l.n.split(' ')[0]}</option>`).join('');$('#mtrl').value=S.set.mtr}
+ $('#mtrl').innerHTML='<option value="">不翻譯</option>'+Object.entries(LANG).map(([k,l])=>`<option value="${k}">🌐 ${l.n.split(/[ （]/)[0]}</option>`).join('');$('#mtrl').value=S.set.mtr;
+ const md=$('#mmode'),gh=R.m&&(R.on||R.m.st!='done')?!!R.m.cloud:cloudOn();md.className='mmode'+(gh?' gh':'');md.textContent=gh?'☁️ GitHub 轉文字':'📱 手機轉文字'}
+$('#mmode').onclick=()=>{if(R.on)return toast('錄音中無法切換');show('set')};
 $('#mlang').onchange=e=>{S.set.mlang=e.target.value;save()};$('#mtrl').onchange=e=>{S.set.mtr=e.target.value;save();if(R.m){R.m.tr=S.set.mtr;saveM(R.m)}};
 $('#mtitle').onchange=e=>{if(R.m){R.m.title=e.target.value.trim();saveM(R.m)}};
-$('#mbtn').onclick=e=>{const b=e.target.closest('button');if(!b)return;({mstart:mStart,mstop:mStop,mpause:mPause,mopen:()=>R.m&&openMD(R.m.id),mresume:()=>{mPump();renderMeet()}})[b.id]?.()};
-function mStatus(){const n=MQ.length+(mBusy?1:0);if(R.m&&R.m.cloud&&(R.on||R.m.st=='cloud'||R.m.st=='cloudwait')){$('#mst').textContent=R.on?(R.paused?'⏸ 已暫停':'● 錄音中')+'・結束後上傳到 GitHub 轉文字':'☁️ '+(R.m.cs||'GitHub 處理中');$('#mclock').textContent=fmtT(R.on&&R.cap?R.m.off+R.cap.time:R.m.dur);return}
+$('#mbtn').onclick=e=>{const b=e.target.closest('button');if(!b)return;({mstart:mStart,mstop:mStop,mpause:mPause,mopen:()=>R.m&&openMD(R.m.id),mresume:()=>{mPump();renderMeet()},mretry:()=>{if(!S.set.ghTok)return toast('請先到「設定 → ☁️ GitHub 雲端轉文字」填入 GitHub 權杖',3500);R.m.st='cloud';cloudRun(R.m);renderMeet()}})[b.id]?.()};
+function mStatus(){const n=MQ.length+(mBusy?1:0);$('#mst').classList.toggle('err',!!(R.m&&R.m.st=='cloudfail'));if(R.m&&R.m.cloud&&(R.on||R.m.st=='cloud'||R.m.st=='cloudwait'||R.m.st=='cloudfail')){$('#mst').textContent=R.on?(R.paused?'⏸ 已暫停':'● 錄音中')+'・結束後上傳到 GitHub 轉文字':(R.m.st=='cloudfail'?'':'☁️ ')+(R.m.cs||'GitHub 處理中');$('#mclock').textContent=fmtT(R.on&&R.cap?R.m.off+R.cap.time:R.m.dur);return}
  $('#mst').textContent=R.on?(R.paused?'⏸ 已暫停':'● 錄音中')+(n?`・待辨識 ${n} 段`:'・即時辨識中'):n?`辨識剩下的 ${n} 段語音…`:R.m?`已完成・${R.m.u.length} 句・${R.m.spk.length} 位講者`:'準備就緒・可以錄很久，不限時間';
  const t=R.on&&R.cap?R.m.off+R.cap.time:R.m?R.m.dur:0;$('#mclock').textContent=fmtT(t)}
 function mSpk(){const m=R.m;$('#mspk').innerHTML=m?m.spk.map(s=>`<span class="spk" data-sid="${s.id}"><i style="background:${s.c}">${esc(s.name.slice(-1))}</i>${esc(s.name)}</span>`).join(''):''}
 $('#mspk').onclick=e=>{const x=e.target.closest('[data-sid]');if(x&&R.m)spkMenu(R.m,+x.dataset.sid)};
 function utHTML(m,u,i){const s=spkOf(m,u.s);return`<div class="ut" data-i="${i}"><div class="av" style="background:${s.c}" data-av="${i}">${esc(s.name.slice(-1))}</div><div class="bd"><div class="hd"><b data-av="${i}">${esc(s.name)}</b><span>${fmtS(u.t0)}</span></div><div class="tx">${esc(u.text)}</div>${u.tr?`<div class="tr">${esc(u.tr)}</div>`:''}</div></div>`}
-function mList(m){const box=$('#mlist');const n=m.u.length;box.innerHTML=n?m.u.map((u,i)=>utHTML(m,u,i)).join(''):'<p class="emp">'+(R.on?'🎙 聆聽中…有人說話就會出現逐字稿':'這場會議沒有辨識到內容')+'</p>';if(R.on||MQ.length)mPend()}
+function mList(m){const box=$('#mlist');const n=m.u.length;box.innerHTML=n?m.u.map((u,i)=>utHTML(m,u,i)).join(''):'<p class="emp">'+(R.on?(m.cloud?'🎙 錄音中…結束後會上傳到你的 GitHub 轉成逐字稿':'🎙 聆聽中…有人說話就會出現逐字稿'):m.st=='cloud'?'☁️ GitHub 處理中，完成後逐字稿會出現在這裡<br><small>可以先關掉 App，下次打開會自動取回結果</small>':m.st=='cloudfail'?'⚠️ 還沒轉成文字<br><small>'+esc(m.cs||'')+'</small><br><small>錄音仍保存在手機裡，按上方「↻ 重新上傳」再試一次</small>':m.st=='cloudwait'?'🔑 需要先設定 GitHub 權杖才能上傳<br><small>設定 → ☁️ GitHub 雲端轉文字</small>':'這場會議沒有辨識到內容')+'</p>';if(R.on||MQ.length)mPend()}
 function mPend(){const box=$('#mlist');box.querySelector('.ut.pend')?.remove();const n=MQ.length+(mBusy?1:0);if(n&&R.m){box.querySelector('.emp')?.remove();box.insertAdjacentHTML('beforeend',`<div class="ut pend"><div class="av" style="background:var(--sub)">…</div><div class="bd"><div class="tx">辨識中（${n} 段）…</div></div></div>`)}}
 function mAppend(m,from){if(R.m!==m||cur!='meet')return;const box=$('#mlist'),v=$('#v-meet'),near=v.scrollHeight-v.scrollTop-v.clientHeight<200||UI!='phone';box.querySelector('.emp')?.remove();box.querySelector('.ut.pend')?.remove();
  for(let i=from;i<m.u.length;i++)box.insertAdjacentHTML('beforeend',utHTML(m,m.u[i],i));mPend();mSpk();if(near){const last=box.lastElementChild;last&&last.scrollIntoView({block:'end',behavior:'smooth'})}}
@@ -838,7 +847,7 @@ async function ghApi(method,path,body,hx){const url=path.startsWith('http')?path
  if(code>=400){const msg=j&&j.message||txt.slice(0,120);throw Object.assign(new Error(code==401?'GitHub 權杖無效或已過期':code==403||code==404?'GitHub 權杖沒有這個儲存庫的權限（需要 Contents 與 Actions 讀寫）':'GitHub 錯誤 '+code+'：'+msg),{code})}
  return j??txt}
 async function ghUpload(rel,name,blob,onp){const url=`https://uploads.github.com/repos/${GH.user}/${GH.repo}/releases/${rel}/assets?name=${encodeURIComponent(name)}`,h=ghHeaders({'Content-Type':blob.type||'application/octet-stream'});
- if(IS_APP&&NB.upBegin){const id=NB.upBegin();if(!id)throw new Error('無法建立暫存檔');const bin=new Uint8Array(await blob.arrayBuffer()),C=196608;
+ if(IS_APP&&NB.upBegin){const id=NB.upBegin();if(!id)throw new Error('手機無法準備上傳檔案（請更新到最新版 APK）');const bin=new Uint8Array(await blob.arrayBuffer()),C=196608;
   for(let i=0;i<bin.length;i+=C){const s=bin.subarray(i,i+C);let b='';for(let j=0;j<s.length;j+=8192)b+=String.fromCharCode.apply(null,s.subarray(j,j+8192));NB.upB64(id,btoa(b));if(i%(C*20)==0)await sleep(0)}
   const [code,txt]=await new Promise(ok=>{const cb='u'+(++httpN);HTTPCB[cb]=(c,b)=>{delete HTTPCB[cb+':p'];ok([c,b])};HTTPCB[cb+':p']=onp||(()=>{});NB.upSend(id,cb,'POST',url,JSON.stringify(h))});
   if(code<200||code>=300)throw new Error('上傳失敗（'+code+'）'+String(txt).slice(0,100));return JSON.parse(txt)}
@@ -847,7 +856,7 @@ async function ghUpload(rel,name,blob,onp){const url=`https://uploads.github.com
 async function ghAssetText(id){if(IS_APP&&NB.req)return await ghApi('GET','/releases/assets/'+id,null,{Accept:'application/octet-stream'});
  const r=await fetch(GHA.api+'/releases/assets/'+id,{headers:ghHeaders({Accept:'application/octet-stream'})});if(!r.ok)throw new Error('下載結果失敗（'+r.status+'）');return r.text()}
 const CLOUD={};
-function cloudSt(m,t,p){m.cs=t+(p!=null?` ${Math.round(p)}%`:'');saveM(m);if(R.m==m&&cur=='meet')mStatus();if(MD.id==m.id)renderMD();if(cur=='rec')renderRec()}
+function cloudSt(m,t,p){m.cs=t+(p!=null?` ${Math.round(p)}%`:'');saveM(m);if(R.m==m&&cur=='meet'){mStatus();if(!m.u.length&&!R.on)mList(m)}if(MD.id==m.id)renderMD();if(cur=='rec')renderRec()}
 async function cloudRun(m){if(CLOUD[m.id])return;CLOUD[m.id]=1;
  try{if(!S.set.ghTok){m.st='cloudwait';cloudSt(m,'等待設定 GitHub 權杖（設定 → ☁️ GitHub 雲端）');return}
   m.st='cloud';m.cj=m.cj||{up:{}};
