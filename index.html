@@ -1194,7 +1194,7 @@ if(ON_PAGES&&'serviceWorker' in navigator){if(!window.crossOriginIsolated){navig
 
 /* ================= 學習：單字／片語／文法／專有名詞／收藏 ================= */
 /* 詞庫放在 GitHub Pages 的 data/ 資料夾，第一次用到時下載並存在手機（之後可離線） */
-const DV='1';
+const DV='2';
 const DATAB=IS_APP?GH.pages+'data/':new URL('data/',location.href).href;
 const LDP={};
 function ldata(n){return LDP[n]||(LDP[n]=(async()=>{let c=null;try{c=await caches.open('aitm-data')}catch(e){}const key='https://aitm.data/'+n+'?v='+DV;
