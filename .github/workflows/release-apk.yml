@@ -1,0 +1,29 @@
+name: 發布 APK
+
+# apk/ 資料夾的 APK 有更新時，自動建立 GitHub Release（版本號取自 version.json）
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [apk/**]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 建立 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=$(python3 -c "import json;print(json.load(open('version.json'))['apkName'])")
+          N=$(python3 -c "import json;print(json.load(open('version.json')).get('notes',''))")
+          gh release delete "v$V" -y --cleanup-tag 2>/dev/null || true
+          gh release create "v$V" apk/AI-translate-meeting.apk --title "AI翻譯會議 v$V" --latest \
+            --notes "$N
+
+          安裝：下載 AI-translate-meeting.apk，允許「安裝未知來源應用程式」（Android 8.0 以上）。
+          AI 模型會從本儲存庫的 models 分支下載；App 開啟時會自動從 GitHub 更新介面與功能。"
