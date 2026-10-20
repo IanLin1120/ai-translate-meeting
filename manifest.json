@@ -471,6 +471,36 @@
    "size": 1274342603,
    "src": "fdadc70836e6b028fd5e580417c312208dad073d2d01e509e2d127c1373399d8"
   },
+  "onnx-community/whisper-large-v3-turbo/preprocessor_config.json": {
+   "sha256": "7ccc62c6f2765af1f3b46c00c9b5894426835a05021c8b9c01eecb6dfb542711",
+   "size": 340,
+   "src": "931c77a740890c46365c7ae0c9d350ba3cca908f"
+  },
+  "onnx-community/whisper-large-v3-turbo/quantize_config.json": {
+   "sha256": "8da6e4e50ef7c210ba66a98a4256e6d60e38cef8a9a9c74d327251aaf4e78767",
+   "size": 285,
+   "src": "fe8ed8e57e96406a23399494fb536c21183ecf63"
+  },
+  "onnx-community/whisper-large-v3-turbo/special_tokens_map.json": {
+   "sha256": "baea4ea09372eb4fca86b4e4346139fd73cb807d5087e9de0948e971739c3e74",
+   "size": 2186,
+   "src": "312bc106291bb51bf2cc1648df070bef963a0639"
+  },
+  "onnx-community/whisper-large-v3-turbo/tokenizer.json": {
+   "sha256": "6d8cbd7cd0d8d5815e478dac67b85a26bbe77c1f5e0c6d76d1ce2abc0e5f21ca",
+   "size": 2480617,
+   "src": "3a5e2ba63acdcac9a19ba56cf9bd27f185bfff61"
+  },
+  "onnx-community/whisper-large-v3-turbo/tokenizer_config.json": {
+   "sha256": "844b642c73a91359722f47b35705f7174686df33d252695d8572cf9ac03a6389",
+   "size": 282843,
+   "src": "06ffdc8308eae6bb7bd1fdd81e94b0a881a539ab"
+  },
+  "onnx-community/whisper-large-v3-turbo/vocab.json": {
+   "sha256": "e2aa043ef015641d363d8288e7c241c85e36a5c761fb303598e0710233344387",
+   "size": 1036558,
+   "src": "0f3456460629e21d559c6daa23ab6ce3644e8271"
+  },
   "onnx-community/whisper-small/README.md": {
    "sha256": "32beef908082737f4f48dc6cdbbf7774667a7e48740ce6bf0f686d37e4cfab81",
    "size": 533,
@@ -706,6 +736,15 @@
    "size": 328697874,
    "use": "語音辨識（預設）"
   },
+  "onnx-community/whisper-large-v3-turbo": {
+   "onnx": [
+    "decoder_model_merged_q4",
+    "decoder_model_merged_q4f16",
+    "encoder_model_fp16"
+   ],
+   "size": 1806384634,
+   "use": "語音辨識（最準，需 WebGPU）"
+  },
   "onnx-community/whisper-small": {
    "onnx": [
     "decoder_model_merged_q4",
@@ -728,5 +767,5 @@
    "use": "語音辨識（最快）"
   }
  },
- "updated": "2026-10-20T11:51:26Z"
+ "updated": "2026-10-20T12:00:12Z"
 }
