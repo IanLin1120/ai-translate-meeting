@@ -252,6 +252,89 @@
    "size": 1036584,
    "src": "90e797dd4fd05d9dea443d702ca06be2463c5f2f"
   },
+  "onnx-community/whisper-small/README.md": {
+   "sha256": "32beef908082737f4f48dc6cdbbf7774667a7e48740ce6bf0f686d37e4cfab81",
+   "size": 533,
+   "src": "4dc6ce2168aaa7f688f0f5b17d49b1e66d89f815"
+  },
+  "onnx-community/whisper-small/added_tokens.json": {
+   "sha256": "9715fd2243b6f06a5858b5e32950d2853f73dd5bc201aafcf76f5082a2d8acd1",
+   "size": 34604,
+   "src": "e3d256c988462aa153dcabe2aa38b8e9b436c06f"
+  },
+  "onnx-community/whisper-small/config.json": {
+   "sha256": "457854d452f17661e197d74aee12b8e74fb75ba30ebfaa7426d0d61ea1e08a18",
+   "size": 2227,
+   "src": "b0447377b1ade057f991a6a0870d2a91de762f7f"
+  },
+  "onnx-community/whisper-small/generation_config.json": {
+   "sha256": "f538b28220c6a6d6f1af1458d4141cacb4ef4963df3de98a19490440c412ddf0",
+   "size": 3893,
+   "src": "703dc78ee83e87fca3ace72170253cdfe4cd2d13"
+  },
+  "onnx-community/whisper-small/merges.txt": {
+   "sha256": "2df2990a395e35e8dfbc7511e08c12d56018d8d04691e0133e5d63b21e154dc6",
+   "size": 493869,
+   "src": "6038932a2a1f09a66991b1c2adae0d14066fa29e"
+  },
+  "onnx-community/whisper-small/normalizer.json": {
+   "sha256": "bf1c507dc8724ca9cf9903640dacfb69dae2f00edee4f21ceba106a7392f26dd",
+   "size": 52666,
+   "src": "dd6ae819ad738ac1a546e9f9282ef325c33b9ea0"
+  },
+  "onnx-community/whisper-small/onnx/decoder_model_merged_q4.onnx": {
+   "parts": 3,
+   "sha256": "795c61b344576719c2b249cc9911c78b4cc552c8c6a5407be21a3380a0791b13",
+   "size": 233149327,
+   "src": "795c61b344576719c2b249cc9911c78b4cc552c8c6a5407be21a3380a0791b13"
+  },
+  "onnx-community/whisper-small/onnx/decoder_model_merged_quantized.onnx": {
+   "parts": 2,
+   "sha256": "ec07c3cbb64172c39791e26ee870a65ac22b458c36722bfe2776b3dbf741e0c9",
+   "size": 156750845,
+   "src": "ec07c3cbb64172c39791e26ee870a65ac22b458c36722bfe2776b3dbf741e0c9"
+  },
+  "onnx-community/whisper-small/onnx/encoder_model_fp16.onnx": {
+   "parts": 2,
+   "sha256": "5549cd8666ff4b694ceb128bfa48b95bdcceec29075cf2c2212f90002cc058de",
+   "size": 176607756,
+   "src": "5549cd8666ff4b694ceb128bfa48b95bdcceec29075cf2c2212f90002cc058de"
+  },
+  "onnx-community/whisper-small/onnx/encoder_model_quantized.onnx": {
+   "sha256": "a43a83f3c5361cd591cfa7c36f14b43cf7cb22f47a415cc14a8d557be800fa92",
+   "size": 92326160,
+   "src": "a43a83f3c5361cd591cfa7c36f14b43cf7cb22f47a415cc14a8d557be800fa92"
+  },
+  "onnx-community/whisper-small/preprocessor_config.json": {
+   "sha256": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d",
+   "size": 339,
+   "src": "91876762a536a746d268353c5cba57286e76b058"
+  },
+  "onnx-community/whisper-small/quantize_config.json": {
+   "sha256": "6e0e27f293a5c17ff2ca8046f06079c0120aa2ede6456faac8ec4b3203471a55",
+   "size": 10126,
+   "src": "dce20a7a4c0260823a4ee78104e723ebbe1b474b"
+  },
+  "onnx-community/whisper-small/special_tokens_map.json": {
+   "sha256": "e67ae3a0aaa99abcd9f187138e12db1f65c16a14761c50ef10eef2c174a7a691",
+   "size": 2194,
+   "src": "bf69932dca4b3719b59fdd8f6cc1978109509f6c"
+  },
+  "onnx-community/whisper-small/tokenizer.json": {
+   "sha256": "27fc476bfe7f17299480be2273fc0608e4d5a99aba2ab5dec5374b4482d1a566",
+   "size": 2480466,
+   "src": "1e95340ff836fad1b5932e800fb7b8c5e6d78a74"
+  },
+  "onnx-community/whisper-small/tokenizer_config.json": {
+   "sha256": "2a4c4281cf9f51ac6ccc406fdc711a087afe6530f671fa7b80953edc498275ce",
+   "size": 282683,
+   "src": "d13b786c04765fb1a06492b53587752cd67665ea"
+  },
+  "onnx-community/whisper-small/vocab.json": {
+   "sha256": "50d6a919f0a0601d56a04eb583c780d18553aa388254ba3158eb6a00f13e2c1a",
+   "size": 1036584,
+   "src": "90e797dd4fd05d9dea443d702ca06be2463c5f2f"
+  },
   "onnx-community/whisper-tiny/README.md": {
    "sha256": "dc9a0879b11fb43db2c220466352b235f7cdb7af791c57c0ed47f0a4028d9267",
    "size": 531,
@@ -380,6 +463,16 @@
    "size": 328697874,
    "use": "語音辨識（預設）"
   },
+  "onnx-community/whisper-small": {
+   "onnx": [
+    "decoder_model_merged_q4",
+    "decoder_model_merged_quantized",
+    "encoder_model_fp16",
+    "encoder_model_quantized"
+   ],
+   "size": 663234272,
+   "use": "語音辨識（較準）"
+  },
   "onnx-community/whisper-tiny": {
    "onnx": [
     "decoder_model_merged_q4",
@@ -392,5 +485,5 @@
    "use": "語音辨識（最快）"
   }
  },
- "updated": "2026-10-20T11:37:26Z"
+ "updated": "2026-10-20T11:38:10Z"
 }
