@@ -423,6 +423,54 @@
    "size": 1036584,
    "src": "90e797dd4fd05d9dea443d702ca06be2463c5f2f"
   },
+  "onnx-community/whisper-large-v3-turbo/README.md": {
+   "sha256": "19af35fc51ff4eab95ea53a4955af5c2b13f720b802be3191b79fd6f053e4ce7",
+   "size": 551,
+   "src": "279ee4db84ace547f4f68a8d8baedb5eae0be590"
+  },
+  "onnx-community/whisper-large-v3-turbo/added_tokens.json": {
+   "sha256": "3c51f66c4c21f9e126970078f11ae77a78c74aee8df606ee9daba86e467108e0",
+   "size": 34648,
+   "src": "1b33526d33aaa60d79f78ae8651dae50b730185a"
+  },
+  "onnx-community/whisper-large-v3-turbo/config.json": {
+   "sha256": "35cd83669f75bc2867f3b3a4461850392d5e308cd6ea951c3700539883c28df1",
+   "size": 1332,
+   "src": "075c98fd4c7f1fe14efa6004a965b3b06103fb3a"
+  },
+  "onnx-community/whisper-large-v3-turbo/generation_config.json": {
+   "sha256": "16f95291d2f47c944d3c2b19390bba7965666555c1ea2a0bdc850d1fab45612f",
+   "size": 3897,
+   "src": "570eaecb3faa7055f6c8365a7193c2e8704bc2f3"
+  },
+  "onnx-community/whisper-large-v3-turbo/merges.txt": {
+   "sha256": "2df2990a395e35e8dfbc7511e08c12d56018d8d04691e0133e5d63b21e154dc6",
+   "size": 493869,
+   "src": "6038932a2a1f09a66991b1c2adae0d14066fa29e"
+  },
+  "onnx-community/whisper-large-v3-turbo/normalizer.json": {
+   "sha256": "bf1c507dc8724ca9cf9903640dacfb69dae2f00edee4f21ceba106a7392f26dd",
+   "size": 52666,
+   "src": "dd6ae819ad738ac1a546e9f9282ef325c33b9ea0"
+  },
+  "onnx-community/whisper-large-v3-turbo/onnx/decoder_model_merged_q4.onnx": {
+   "parts": 4,
+   "sha256": "8b933ac24074a24a1635084d06a4ed37e387ef22d980f184a5fc27418e9ceeb8",
+   "size": 334147222,
+   "src": "8b933ac24074a24a1635084d06a4ed37e387ef22d980f184a5fc27418e9ceeb8"
+  },
+  "onnx-community/whisper-large-v3-turbo/onnx/decoder_model_merged_q4f16.onnx": {
+   "parts": 3,
+   "sha256": "45981cdd958a4c8e1447839850d2e6e27e30974ccbe31b4a1e5ebe9ad8965a5f",
+   "size": 193505017,
+   "src": "45981cdd958a4c8e1447839850d2e6e27e30974ccbe31b4a1e5ebe9ad8965a5f"
+  },
+  "onnx-community/whisper-large-v3-turbo/onnx/encoder_model_fp16.onnx": {
+   "parts": 14,
+   "sha256": "fdadc70836e6b028fd5e580417c312208dad073d2d01e509e2d127c1373399d8",
+   "size": 1274342603,
+   "src": "fdadc70836e6b028fd5e580417c312208dad073d2d01e509e2d127c1373399d8"
+  },
   "onnx-community/whisper-small/README.md": {
    "sha256": "32beef908082737f4f48dc6cdbbf7774667a7e48740ce6bf0f686d37e4cfab81",
    "size": 533,
@@ -680,5 +728,5 @@
    "use": "語音辨識（最快）"
   }
  },
- "updated": "2026-10-20T11:49:37Z"
+ "updated": "2026-10-20T11:51:26Z"
 }
