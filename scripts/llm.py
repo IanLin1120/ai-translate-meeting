@@ -2,10 +2,10 @@
 
 兩種引擎（都用 OpenAI 相容的 chat completions 介面）：
 - github：GitHub Models（GITHUB_TOKEN，workflow 需要 permissions: models: read）
-- local ：在 GitHub Actions 伺服器上用 llama.cpp 跑開源 Qwen3（文字不會送到其他服務）
+- local ：在 GitHub Actions 伺服器上用 llama-cpp-python 跑開源 Qwen3（文字不會送到其他服務）
 隱私：這個儲存庫是公開的，Actions 紀錄任何人都看得到，這裡不印出任何逐字稿內容。
 """
-import json, os, re, subprocess, time, urllib.request, urllib.error, zipfile, glob, shutil
+import json, os, re, subprocess, sys, time, urllib.request, urllib.error
 
 MODELS = os.path.expanduser("~/.cache/aitm")
 GH_URL = "https://models.github.ai/inference/chat/completions"
@@ -20,7 +20,6 @@ class LLM:
     def __init__(self, engine, status=None):
         self.engine = engine
         self.status = status or (lambda *a, **k: None)
-        self.proc = None
         self.model = None
         self.calls = 0
         if engine == "local":
@@ -30,52 +29,31 @@ class LLM:
     def _start_local(self):
         d = f"{MODELS}/llm"
         os.makedirs(d, exist_ok=True)
-        srv = glob.glob(f"{d}/**/llama-server", recursive=True)
-        if not srv:
-            self.status("下載開源語言模型")
-            rel = json.load(urllib.request.urlopen(urllib.request.Request(
-                "https://api.github.com/repos/ggml-org/llama.cpp/releases/latest",
-                headers={"Authorization": f"Bearer {os.environ.get('GITHUB_TOKEN', '')}"}), timeout=60))
-            asset = next(a for a in rel["assets"] if re.search(r"bin-ubuntu-x64\.(zip|tar\.gz)$", a["name"]))
-            p = f"{d}/{asset['name']}"
-            subprocess.run(["curl", "-sSL", "-o", p, asset["browser_download_url"]], check=True)
-            if p.endswith(".zip"):
-                zipfile.ZipFile(p).extractall(f"{d}/bin")
-            else:
-                os.makedirs(f"{d}/bin", exist_ok=True)
-                subprocess.run(["tar", "xzf", p, "-C", f"{d}/bin"], check=True)
-            os.remove(p)
-            srv = glob.glob(f"{d}/**/llama-server", recursive=True)
-        os.chmod(srv[0], 0o755)
+        try:
+            import llama_cpp  # noqa
+        except ImportError:
+            self.status("安裝開源語言模型執行環境")
+            subprocess.run([sys.executable, "-m", "pip", "install", "-q", "llama-cpp-python",
+                            "--extra-index-url", "https://abetlen.github.io/llama-cpp-python/whl/cpu"], check=True)
+        from llama_cpp import Llama
         gguf = None
         for repo, fn in LOCAL_GGUF:
             p = f"{d}/{fn}"
+            if not (os.path.exists(p) and os.path.getsize(p) > 1e8):
+                self.status("下載開源語言模型")
+                r = subprocess.run(["curl", "-fsSL", "-o", p, f"https://huggingface.co/{repo}/resolve/main/{fn}"])
+                if r.returncode != 0 and os.path.exists(p):
+                    os.remove(p)
             if os.path.exists(p) and os.path.getsize(p) > 1e8:
                 gguf = p
                 break
-            r = subprocess.run(["curl", "-fsSL", "-o", p, f"https://huggingface.co/{repo}/resolve/main/{fn}"])
-            if r.returncode == 0 and os.path.getsize(p) > 1e8:
-                gguf = p
-                break
-            if os.path.exists(p):
-                os.remove(p)
         if not gguf:
             raise RuntimeError("無法下載開源語言模型")
-        self.model = os.path.basename(gguf)
-        env = dict(os.environ, LD_LIBRARY_PATH=os.path.dirname(srv[0]) + ":" + os.environ.get("LD_LIBRARY_PATH", ""))
-        self.proc = subprocess.Popen([srv[0], "-m", gguf, "--port", "8089", "-c", "16384", "-t", str(os.cpu_count() or 4),
-                                      "--log-disable"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
-        for _ in range(180):
-            try:
-                urllib.request.urlopen("http://127.0.0.1:8089/health", timeout=2)
-                return
-            except Exception:
-                time.sleep(2)
-        raise RuntimeError("開源語言模型啟動失敗")
+        self.model = os.path.basename(gguf).replace(".gguf", "")
+        self.llama = Llama(model_path=gguf, n_ctx=16384, n_threads=os.cpu_count() or 4, verbose=False)
 
     def close(self):
-        if self.proc:
-            self.proc.terminate()
+        self.llama = None
 
     # ---------- 呼叫 ----------
     def chat(self, system, user, max_tokens=3000, temperature=0.2):
@@ -90,7 +68,13 @@ class LLM:
                         "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}", "Content-Type": "application/json",
                         "Accept": "application/json"})
                     try:
-                        r = json.load(urllib.request.urlopen(req, timeout=180))
+                        raw = urllib.request.urlopen(req, timeout=180).read()
+                        try:
+                            r = json.loads(raw)
+                        except Exception:
+                            last = f"回應格式錯誤：{raw[:80]!r}"
+                            time.sleep(5 * (i + 1))
+                            continue
                         self.model = m
                         self.calls += 1
                         return r["choices"][0]["message"]["content"]
@@ -109,10 +93,7 @@ class LLM:
                         last = str(e)
                         time.sleep(5 * (i + 1))
             raise RuntimeError(f"GitHub Models 無法使用（{last}）")
-        body["model"] = "local"
-        req = urllib.request.Request("http://127.0.0.1:8089/v1/chat/completions", data=json.dumps(body).encode(),
-                                     method="POST", headers={"Content-Type": "application/json"})
-        r = json.load(urllib.request.urlopen(req, timeout=3600))
+        r = self.llama.create_chat_completion(messages=body["messages"], temperature=temperature, max_tokens=max_tokens)
         self.calls += 1
         return re.sub(r"<think>[\s\S]*?</think>", "", r["choices"][0]["message"]["content"]).strip()
 

@@ -1,0 +1,37 @@
+name: 測試 AI 整理引擎
+
+on:
+  workflow_dispatch:
+    inputs:
+      engine:
+        description: github / local
+        default: github
+
+permissions:
+  contents: read
+  models: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/requirements-transcribe.txt
+      - run: pip install -q -r scripts/requirements-transcribe.txt
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/aitm
+          key: aitm-models-v1-none
+          restore-keys: aitm-models-v1-
+      - name: 測試
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ENGINE: ${{ inputs.engine }}
+        run: python3 scripts/llm_selftest.py
