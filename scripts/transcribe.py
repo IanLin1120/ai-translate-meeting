@@ -6,7 +6,7 @@
       → 結果 result.json 上傳回同一個草稿 Release，App 取回後會刪除整個 Release。
 隱私：這個儲存庫是公開的，Actions 紀錄任何人都看得到，所以這裡「絕不」印出逐字稿內容。
 """
-import json, os, re, subprocess, sys, tempfile, time, traceback, urllib.request, urllib.error
+import glob, json, os, re, shutil, subprocess, sys, tempfile, time, traceback, urllib.request, urllib.error
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -83,11 +83,11 @@ def to_tw(text, cc):
     return cc.convert(text) if cc and re.search(r"[一-鿿]", text) else text
 
 
-def main():
-    t_start = time.time()
+def load_job():
     tmp = tempfile.mkdtemp()
     if TEST:
-        job = {"parts": [{"name": os.path.basename(TEST), "t0": 0}], "lang": "auto", "model": os.environ.get("TEST_MODEL") or "sensevoice", "speakers": 0, "tw": 1}
+        job = {"parts": [{"name": os.path.basename(TEST), "t0": 0}], "lang": "auto", "model": os.environ.get("TEST_MODEL") or "firered",
+               "speakers": 0, "tw": 1, "llm": os.environ.get("TEST_LLM") or "", "fix": 1, "summ": 1}
         files = {os.path.basename(TEST): TEST}
     else:
         rel = gh("GET", f"/releases/{REL}")
@@ -98,6 +98,12 @@ def main():
         download_asset(assets["job.json"], jp)
         job = json.load(open(jp, encoding="utf-8"))
         files = {}
+        if job.get("mode") == "text":  # 只做 AI 整理（逐字稿已經在 job.json 裡）
+            try:
+                gh("DELETE", f"/releases/assets/{assets['job.json']['id']}")
+            except Exception:
+                pass
+            return job, None
         status("下載錄音", 0)
         names = [p["name"] for p in job["parts"]]
         for i, n in enumerate(names):
@@ -114,7 +120,10 @@ def main():
             except Exception as e:
                 print("delete asset failed", e, flush=True)
         print("錄音已從 GitHub 刪除", flush=True)
+    return job, files
 
+
+def asr(job, files, t_start):
     # ---- 合併各段錄音（依開始時間排好） ----
     status("解碼音訊")
     parts = []
@@ -159,13 +168,38 @@ def main():
             turns.append({"s": s, "e": e, "spk": k, "E": [x] if x is not None else []})
 
     # ---- 3. 每段發言各自轉文字 ----
-    model = job.get("model") or "sensevoice"
+    model = job.get("model") or "firered"
     lang = job.get("lang") or "auto"
-    if model == "sensevoice" and lang not in ("auto", "zh", "en", "ja", "ko", "yue"):
-        model = "large-v3-turbo"  # SenseVoice 不支援的語言改用 Whisper
+    if model == "firered" and lang in ("ja", "ko", "yue"):
+        model = "sensevoice"  # FireRedASR 只支援中文、英文
+    if model in ("firered", "sensevoice") and lang not in ("auto", "zh", "en", "ja", "ko", "yue"):
+        model = "large-v3-turbo"  # 其他語言改用 Whisper
     clip = lambda u: audio[int(max(0, u["s"] - 0.15) * SR):int(min(dur, u["e"] + 0.15) * SR)]
     status("語音轉文字", 0)
-    if model == "sensevoice":
+    if model == "firered":
+        import sherpa_onnx
+        d = fetch_model("firered", "asr-models/sherpa-onnx-fire-red-asr-large-zh_en-2025-02-16.tar.bz2",
+                        ["encoder.int8.onnx", "decoder.int8.onnx", "tokens.txt"])
+        pd = fetch_model("punct", "punctuation-models/sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12.tar.bz2", ["model.onnx"])
+        rec = sherpa_onnx.OfflineRecognizer.from_fire_red_asr(encoder=f"{d}/encoder.int8.onnx", decoder=f"{d}/decoder.int8.onnx",
+                                                              tokens=f"{d}/tokens.txt", num_threads=os.cpu_count() or 4)
+        pc = sherpa_onnx.OfflinePunctuation(sherpa_onnx.OfflinePunctuationConfig(
+            model=sherpa_onnx.OfflinePunctuationModelConfig(ct_transformer=f"{pd}/model.onnx", num_threads=2)))
+        t_asr = time.time()
+        for i, u in enumerate(turns):
+            st = rec.create_stream()
+            st.accept_waveform(SR, clip(u))
+            rec.decode_stream(st)
+            txt = st.result.text.strip()
+            # FireRedASR 的英文是全大寫 → 轉成一般寫法（縮寫保留大寫）
+            txt = re.sub(r"[A-Z][A-Z']+", lambda m: m.group(0) if len(m.group(0)) <= 3 else m.group(0).lower(), txt)
+            u["text"] = pc.add_punctuation(txt) if txt else ""
+            if time.time() - last[0] > 20:
+                last[0] = time.time()
+                el = time.time() - t_asr
+                status("語音轉文字", min(99, (i + 1) / len(turns) * 100))
+        det = lang
+    elif model == "sensevoice":
         import sherpa_onnx
         d = f"{MODELS}/sensevoice"
         rec = sherpa_onnx.OfflineRecognizer.from_sense_voice(model=f"{d}/model.int8.onnx", tokens=f"{d}/tokens.txt",
@@ -227,6 +261,66 @@ def main():
             "took": round(time.time() - t_start, 1)}
 
 
+def fetch_model(name, rel_path, files):
+    d = f"{MODELS}/{name}"
+    if all(os.path.exists(f"{d}/{f}") for f in files):
+        return d
+    status("下載語音模型")
+    os.makedirs(d, exist_ok=True)
+    tmpd = tempfile.mkdtemp()
+    subprocess.run(f"curl -sSL https://github.com/k2-fsa/sherpa-onnx/releases/download/{rel_path} | tar xj -C {tmpd}", shell=True, check=True)
+    for f in files:
+        src = glob.glob(f"{tmpd}/*/{f}")[0]
+        shutil.move(src, f"{d}/{f}")
+    shutil.rmtree(tmpd, ignore_errors=True)
+    return d
+
+
+def main():
+    t_start = time.time()
+    job, files = load_job()
+    if job.get("mode") == "text":
+        r = {"dur": job.get("dur", 0), "lang": job.get("lang"), "model": "text", "segs": job.get("segs", []), "speakers": 0}
+    else:
+        r = asr(job, files, t_start)
+    names = {int(k): v for k, v in (job.get("names") or {}).items()}
+    spk_name = lambda u: names.get(int(u.get("spk", 0)), f"講者 {u.get('spk', 0)}")
+    eng = job.get("llm") or ""
+    if eng in ("github", "local") and r["segs"] and (job.get("fix") or job.get("summ")):
+        import llm as L
+        ai = None
+        try:
+            ai = L.LLM(eng, status)
+            cc = None
+            if job.get("tw", 1):
+                import opencc
+                cc = opencc.OpenCC("s2twp")
+            if job.get("fix"):
+                status("AI 修正錯字", 0)
+                fixed = L.correct(ai, r["segs"], spk_name, lambda p: status("AI 修正錯字", p))
+                for i, txt in fixed.items():
+                    u = r["segs"][i]
+                    txt = to_tw(txt, cc)
+                    if txt != u["text"]:
+                        u["raw"] = u["text"]
+                        u["text"] = txt
+                print(f"AI 修正 {len(fixed)} 句", flush=True)
+            if job.get("summ"):
+                status("AI 重點整理", 0)
+                s = L.summarize(ai, r["segs"], spk_name, lambda p: status("AI 重點整理", p))
+                r["summary"] = json.loads(to_tw(json.dumps(s, ensure_ascii=False), cc)) if cc else s
+            r["llm"] = {"engine": eng, "model": ai.model, "calls": ai.calls}
+            print(f"AI 整理完成：{ai.model}，{ai.calls} 次呼叫", flush=True)
+        except Exception as e:
+            print(f"::warning title=AI 整理失敗::{type(e).__name__}: {str(e)[:200]}", flush=True)
+            r["llm_error"] = str(e)[:300]
+        finally:
+            if ai:
+                ai.close()
+    r["took"] = round(time.time() - t_start, 1)
+    return r
+
+
 if __name__ == "__main__":
     try:
         r = main()
@@ -235,7 +329,13 @@ if __name__ == "__main__":
             print(f"::notice title=測試結果::{r['took']} 秒・{r['speakers']} 位講者・語言 {r.get('lang')}")
             for u in r["segs"]:
                 print(f"  講者{u['spk']} [{u['s']:.1f}-{u['e']:.1f}] {u['text']}")
-                print(f"::notice title=講者{u['spk']} {u['s']:.1f}s::{u['text']}")
+                print(f"::notice title=講者{u['spk']} {u['s']:.1f}s::{u['text']}" + (f"  〔原：{u['raw']}〕" if u.get("raw") else ""))
+            if r.get("summary"):
+                s = r["summary"]
+                print(f"::notice title=AI 重點整理 {r.get('llm', {}).get('model')}::{s.get('title')}｜{s.get('overview')}｜章節：" +
+                      "／".join(c.get("title", "") for c in s.get("chapters", [])) + f"｜待辦：{json.dumps(s.get('actions', []), ensure_ascii=False)[:300]}")
+            if r.get("llm_error"):
+                print(f"::notice title=AI 整理失敗::{r['llm_error']}")
             sys.exit(0)
         data = json.dumps(r, ensure_ascii=False, separators=(",", ":")).encode()
         rel = gh("GET", f"/releases/{REL}")

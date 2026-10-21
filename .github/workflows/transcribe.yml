@@ -14,11 +14,15 @@ on:
         description: 測試模式：填 tests/ 裡的音檔路徑
         required: false
       test_model:
-        description: 測試模式用的模型（sensevoice / large-v3-turbo）
+        description: 測試模式用的模型（firered / sensevoice / large-v3-turbo）
+        required: false
+      test_llm:
+        description: 測試模式的 AI 整理（github / local，空白＝不整理）
         required: false
 
 permissions:
   contents: write
+  models: read
 
 jobs:
   transcribe:
@@ -60,6 +64,8 @@ jobs:
             rm -rf /tmp/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17
           fi
           ls -la $M $M/seg $M/sensevoice
+          # 清掉快取裡用不到的大檔（llama.cpp 執行檔每次重新下載較小）
+          rm -f $M/llm/*.zip
 
       - name: 轉文字與講者辨識
         env:
@@ -67,6 +73,7 @@ jobs:
           RELEASE_ID: ${{ inputs.release }}
           TEST_FILE: ${{ inputs.test }}
           TEST_MODEL: ${{ inputs.test_model }}
+          TEST_LLM: ${{ inputs.test_llm }}
         run: python3 scripts/transcribe.py
 
       - name: 計算模型快取版本
