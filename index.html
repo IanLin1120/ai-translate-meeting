@@ -570,11 +570,11 @@ let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.8.0';
+const APP_VER='1.8.1';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
-const LIBB=IS_APP?location.origin+'/lib/':ON_PAGES?new URL('lib/',location.href).href:GH.pages+'lib/';
+const LIBB=IS_APP?location.origin+'/lib/':ON_PAGES?location.origin+location.pathname.replace(/[^/]*$/,'')+'lib/':GH.pages+'lib/';
 const TESS_LANG=IS_APP?GH.pages+'lib/tessdata':LIBB+'tessdata';
 const CDN={occ:[LIBB+'opencc-full.js','https://cdn.jsdelivr.net/npm/opencc-js@1.4.2/dist/umd/full.js'],tess:[LIBB+'tesseract/tesseract.min.js','https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js']};
 let TESS_GH=1;const TOPT=()=>TESS_GH?{workerPath:LIBB+'tesseract/worker.min.js',corePath:LIBB+'tesseract/core',workerBlobURL:!IS_APP&&!ON_PAGES}:{};
@@ -1421,7 +1421,7 @@ if(ON_PAGES&&'serviceWorker' in navigator&&MTHR()){if(!window.crossOriginIsolate
 /* ================= 學習：單字／片語／文法／專有名詞／收藏 ================= */
 /* 詞庫放在 GitHub Pages 的 data/ 資料夾，第一次用到時下載並存在手機（之後可離線） */
 const DV='2';
-const DATAB=IS_APP?GH.pages+'data/':new URL('data/',location.href).href;
+const DATAB=IS_APP?GH.pages+'data/':(()=>{try{return /^https?:/.test(location.href)?new URL('data/',location.href).href:GH.pages+'data/'}catch(e){return GH.pages+'data/'}})();
 const LDP={};
 function ldata(n){return LDP[n]||(LDP[n]=(async()=>{let c=null;try{c=await caches.open('aitm-data')}catch(e){}const key='https://aitm.data/'+n+'?v='+DV;
  if(c){try{const r=await c.match(key);if(r)return await r.json()}catch(e){}}
