@@ -298,9 +298,12 @@ public class MainActivity extends Activity {
             String path = u.getPath();
             if (path == null || path.equals("/") || path.isEmpty()) path = "/index.html";
             Map<String, String> h = new HashMap<>();
-            h.put("Cross-Origin-Opener-Policy", "same-origin");
-            h.put("Cross-Origin-Embedder-Policy", "credentialless");
-            h.put("Cross-Origin-Resource-Policy", "same-origin");
+            /* 多執行緒(COOP/COEP)預設關閉:很多手機的 WebView 在多執行緒模式下無法預留 WASM 共享記憶體,連小模型都會 bad_alloc */
+            if (getSharedPreferences("p", 0).getBoolean("iso", false)) {
+                h.put("Cross-Origin-Opener-Policy", "same-origin");
+                h.put("Cross-Origin-Embedder-Policy", "credentialless");
+                h.put("Cross-Origin-Resource-Policy", "same-origin");
+            }
             h.put("Cache-Control", "no-cache");
             try {
                 InputStream in;
@@ -395,10 +398,16 @@ public class MainActivity extends Activity {
                 PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
                 JSONObject o = new JSONObject();
                 o.put("ver", pi.versionName); o.put("code", pi.versionCode); o.put("sdk", Build.VERSION.SDK_INT); o.put("upd", new File(getFilesDir(), "www/index.html").exists()); o.put("model", Build.MODEL);
+                o.put("iso", getSharedPreferences("p", 0).getBoolean("iso", false));
+                o.put("b64", Build.VERSION.SDK_INT >= 23 && android.os.Process.is64Bit());
+                android.app.ActivityManager am = (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
+                android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo(); am.getMemoryInfo(mi);
+                o.put("ramT", mi.totalMem / 1048576); o.put("ramA", mi.availMem / 1048576); o.put("low", mi.lowMemory);
                 return o.toString();
             } catch (Exception e) { return "{}"; }
         }
         @JavascriptInterface public String perm() { return permJson(); }
+        @JavascriptInterface public void setIso(boolean on) { getSharedPreferences("p", 0).edit().putBoolean("iso", on).apply(); }
         @JavascriptInterface public void requestPerms(String k) { ui.post(() -> MainActivity.this.requestPerms(k)); }
         @JavascriptInterface public void openAppSettings() { ui.post(MainActivity.this::openAppSettings); }
         @JavascriptInterface public void openUrl(String u) { ui.post(() -> { try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(u))); } catch (Exception ignored) {} }); }
