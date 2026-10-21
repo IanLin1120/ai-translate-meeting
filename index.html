@@ -77,7 +77,8 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 .lbar .slc{width:100%;border:0;background:transparent}
 .lbar .ib{width:44px;height:40px;border-radius:50%;background:var(--glass);border:1px solid var(--edge)}
 .tbox{border-radius:22px;padding:12px 14px;margin-bottom:10px}
-.tbox textarea{width:100%;min-height:130px;border:0;background:transparent;outline:0;resize:none;line-height:1.6}
+.tbox textarea{width:100%;min-height:130px;max-height:45vh;border:0;background:transparent;outline:0;resize:vertical;line-height:1.6}
+.tout.long{max-height:60vh;overflow:auto}
 .tbox .tout{min-height:90px;white-space:pre-wrap;word-break:break-word;line-height:1.65}
 .tbox .tout.ph{color:var(--sub)}
 .tact{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px;border-top:1px solid var(--edge);padding-top:8px}
@@ -306,9 +307,9 @@ html[data-surf="paper"] .seg.glass,html[data-surf="paper"] .lbar.glass{backgroun
  <div class="seg glass" id="tsg"><b class="on" data-s="text">✍️ 文字</b><b data-s="img">🖼 圖片</b><b data-s="cam">📷 拍照</b><b data-s="live">🎤 即時</b></div>
  <div class="lbar glass"><select class="slc" id="lsrc"></select><button class="ib" id="lsw" title="交換語言">⇄</button><select class="slc" id="ltgt"></select></div>
  <div id="t-text">
-  <div class="tbox glass"><textarea id="tin" placeholder="輸入或貼上要翻譯的文字…"></textarea><div class="tact"><button class="ib" id="tpaste" title="貼上">📋</button><button class="ib" id="tmic" title="語音輸入">🎤</button><button class="ib" id="tclr" title="清除">✕</button><span class="sp"></span><small id="tcnt">0 字</small></div></div>
+  <div class="tbox glass"><textarea id="tin" placeholder="輸入或貼上要翻譯的文字…"></textarea><div class="tact"><button class="ib" id="tpaste" title="貼上">📋</button><button class="ib" id="tmic" title="語音輸入">🎤</button><button class="ib" id="tfile" title="匯入文字檔（txt、docx、srt…）">📄</button><button class="ib" id="tclr" title="清除">✕</button><input type="file" id="tfin" accept=".txt,.md,.srt,.vtt,.csv,.json,.html,.htm,.xml,.log,.docx,text/*" hidden><span class="sp"></span><small id="tcnt">0 字</small></div></div>
   <div><button class="btn on bigb" id="tgo">🌐 翻譯</button>
-  <div class="tbox glass"><div class="tout ph" id="tout">翻譯結果會顯示在這裡</div><div class="tact"><button class="ib" id="tcp" title="複製">⧉</button><button class="ib" id="tsp" title="朗讀">🔊</button><button class="ib" id="tsh" title="分享">↗</button><button class="ib" id="tnat" title="用 AI 語言模型重新翻譯（語氣較自然）">✨</button><span class="sp"></span><small id="teng"></small></div></div><div class="ps glass" id="tdict"></div></div>
+  <div class="tbox glass"><div class="tout ph" id="tout">翻譯結果會顯示在這裡</div><div class="tact"><button class="ib" id="tcp" title="複製">⧉</button><button class="ib" id="tsp" title="朗讀">🔊</button><button class="ib" id="tsh" title="分享">↗</button><button class="ib" id="tdl" title="下載譯文（txt）">⬇</button><button class="ib" id="tnat" title="用 AI 語言模型重新翻譯（語氣較自然）">✨</button><span class="sp"></span><small id="teng"></small></div></div><div class="ps glass" id="tdict"></div></div>
   <div class="full"><h4>最近翻譯</h4><div class="grp glass" id="thist"></div></div>
  </div>
  <div id="t-img" style="display:none">
@@ -570,7 +571,7 @@ let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.8.1';
+const APP_VER='1.9.0';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -693,8 +694,20 @@ function detect(t){const s=t.slice(0,400);const c=r=>(s.match(r)||[]).length;
  if(/[ñ¿¡]/i.test(s))return'es';if(/[äöüß]/i.test(s))return'de';if(/[çàèéêëîïôûù]/i.test(s)&&/\b(le|la|les|des|est|et|une)\b/i.test(s))return'fr';return'en'}
 function engFor(src,tgt){let e=S.set.eng;const zhen=(isZh(src)||src=='en')&&(isZh(tgt)||tgt=='en');if(e=='auto')e=zhen?'opus':'nllb';if(e=='opus'&&!zhen)e='nllb';return e}
 /* 依段落與句子切開,避免模型一次吃太長 */
-function splitText(t){return t.split(/\n/).map(p=>{const out=[];let cur='';for(const s of p.match(/[^。！？!?；;.]+[。！？!?；;.]*[」』"'）)]*\s*|.+$/g)||[]){if((cur+s).length>260&&cur){out.push(cur);cur=s}else cur+=s}if(cur.trim())out.push(cur);return out})}
+/* 斷句:一句一段(Opus-MT 一次給好幾句時常會漏翻),太長的句子在逗號處切開;英文縮寫、小數點不切 */
+function splitText(t){const cj=/[㐀-鿿぀-ヿ가-힯]/.test(t),LIM=cj?110:280;
+ const cut=s=>{if(s.length<=LIM)return[s];const o=[];let c='';for(const x of s.match(/[^，,、：:]+[，,、：:]?\s*/g)||[s]){if((c+x).length>LIM&&c){o.push(c);c=x}else c+=x}if(c)o.push(c);
+  return o.flatMap(x=>{if(x.length<=LIM*1.5)return[x];const r=[];for(let i=0;i<x.length;i+=LIM){let j=i+LIM;if(!cj&&j<x.length){const k=x.lastIndexOf(' ',j);if(k>i+LIM/2)j=k}r.push(x.slice(i,j));i=j-LIM}return r})};
+ return t.split(/\n/).map(p=>{const out=[];let cur='';
+  for(const s of p.match(/[^。！？!?；;.]+(?:\.(?=\d)[^。！？!?；;.]*)*[。！？!?；;.]*[」』"'）)\]]*\s*|.+$/g)||[]){cur+=s;
+   /* 英文縮寫(Mr. Dr. e.g. U.S.)、很短的片段先接到下一句 */
+   if(/\b(?:Mr|Mrs|Ms|Dr|Prof|St|No|vs|etc|e\.g|i\.e|Inc|Ltd|Co|Fig|approx)\.\s*$/i.test(cur)||/\b[A-Z]\.\s*$/.test(cur)||cur.trim().length<4)continue;
+   out.push(...cut(cur));cur=''}
+  if(cur.trim())out.push(...cut(cur));return out})}
 const TRC=new Map();
+/* 中文譯文整理:去掉中文字之間多餘的空格、半形標點改全形、修正「0. 995」這類被拆開的小數(不動換行,保留段落) */
+const cjkFix=s=>s.replace(/(\d)[ \t]*\.[ \t]+(\d)/g,'$1.$2').replace(/([㐀-鿿])[ \t]*,[ \t]*/g,'$1，').replace(/([㐀-鿿])[ \t]*\?/g,'$1？').replace(/([㐀-鿿])[ \t]*!/g,'$1！').replace(/([㐀-鿿])[ \t]*;[ \t]*/g,'$1；').replace(/([㐀-鿿])[ \t]*:[ \t]*/g,'$1：').replace(/[ \t]+([，。！？；：、」』）])/g,'$1').replace(/([，。！？；：、「『（])[ \t]+/g,'$1').replace(/([㐀-鿿])[ \t]+(?=[㐀-鿿])/g,'$1，');
+async function zhFix(s,tgt,cjk){if(isZh(tgt))s=await zhOut(s,tgt);s=s.replace(/>>\w+<<\s*/g,'');return cjk?cjkFix(s):s}
 async function translate(text,src,tgt,o={}){text=String(text||'').trim();if(!text)return{t:'',eng:''};if(src=='auto')src=detect(text);
  if(src==tgt||(isZh(src)&&isZh(tgt)))return{t:await zhOut(text,tgt),eng:'OpenCC',src};
  const eng=o.eng||engFor(src,tgt),ck=[src,tgt,eng,text].join('|');if(TRC.has(ck))return TRC.get(ck);
@@ -704,12 +717,15 @@ async function translate(text,src,tgt,o={}){text=String(text||'').trim();if(!tex
  else if(eng=='nllb'){p.repo='Xenova/nllb-200-distilled-600M';p.sl=src=='zh-TW'?'zho_Hant':LANG[src].nl;p.tl=LANG[tgt].nl}
  else if(eng=='m2m'){p.repo='Xenova/m2m100_418M';p.sl=LANG[src].m2;p.tl=LANG[tgt].m2}
  else{p.llm=1;p.repo=MTE[eng].r;p.sname=LANG[src].en;p.tname=LANG[tgt].en}
- p.texts=inp.map(s=>s.trim()).filter(Boolean);const idx=[];inp.forEach((s,i)=>{if(s.trim())idx.push(i)});
- const res=p.texts.length?await AI.call('mt',p):[];const outF=flat.map(s=>s.match(/^\s*$/)?s:'');res.forEach((r,j)=>outF[idx[j]]=r);
- const cjk=isZh(tgt)||tgt=='ja';let k=0;const lines=paras.map(pp=>pp.map(()=>outF[k++]).filter(x=>x!==undefined).join(cjk?'':' ').replace(/\s+/g,' ').trim());
- let out=lines.join('\n');if(isZh(tgt))out=await zhOut(out,tgt);out=out.replace(/>>\w+<<\s*/g,'');
+ const all=inp.map(s=>s.trim()),idx=[];all.forEach((s,i)=>{if(s)idx.push(i)});const outF=flat.map(()=>'');
+ const cjk=isZh(tgt)||tgt=='ja';const join=()=>{let k=0;return paras.map(pp=>pp.map(()=>outF[k++]).filter(x=>x!==undefined).join(cjk?'':' ').replace(/[ \t]+/g,' ').trim()).join('\n')};
+ /* 長文分批翻譯(每批幾句):可以邊翻邊顯示、顯示進度、中途停止 */
+ const B=p.llm?1:6;for(let i=0;i<idx.length;i+=B){if(o.stop&&o.stop())throw Object.assign(new Error('已停止翻譯'),{stopped:1,partial:await zhFix(join(),tgt,cjk)});
+  const ids=idx.slice(i,i+B),res=await AI.call('mt',{...p,texts:ids.map(j=>all[j])});res.forEach((r,j)=>outF[ids[j]]=r);
+  if(o.onProg)o.onProg(Math.min(i+B,idx.length),idx.length,idx.length>B?await zhFix(join(),tgt,cjk):'')}
+ let out=join();if(isZh(tgt))out=await zhOut(out,tgt);out=out.replace(/>>\w+<<\s*/g,'');
  /* 中文譯文整理:去掉中文字之間多餘的空格、半形標點改全形、修正「0. 995」這類被拆開的小數 */
- if(cjk)out=out.replace(/(\d)\s*\.\s+(\d)/g,'$1.$2').replace(/([\u3400-\u9fff])\s*,\s*/g,'$1，').replace(/([\u3400-\u9fff])\s*\?/g,'$1？').replace(/([\u3400-\u9fff])\s*!/g,'$1！').replace(/([\u3400-\u9fff])\s*;\s*/g,'$1；').replace(/([\u3400-\u9fff])\s*:\s*/g,'$1：').replace(/\s+([，。！？；：、」』）])/g,'$1').replace(/([，。！？；：、「『（])\s+/g,'$1').replace(/([\u3400-\u9fff])\s+(?=[\u3400-\u9fff])/g,'$1，');
+ if(cjk)out=cjkFix(out);
  const r={t:out,eng:eng=='opus'?'Opus-MT':eng=='nllb'?'NLLB-200':eng=='m2m'?'M2M100':MTE[eng].n.split('（')[0],src};TRC.set(ck,r);if(TRC.size>300)TRC.delete(TRC.keys().next().value);return r}
 
 /* ================= 錄音 + 語音偵測(VAD) ================= */
@@ -779,12 +795,32 @@ async function dictTr(t){if(!isZh(S.set.tgt)||(S.set.src!='auto'&&S.set.src!='en
  try{await words();await phrases()}catch(e){return null}const q=t.toLowerCase();let i=WI.get(q);if(i==null&&WF[q])i=WI.get(WF[q]);
  let out='';if(i!=null&&!t.includes(' ')){out=senses(WD[i][2]).filter(s=>s.p).map(s=>s.p+'. '+s.m.slice(0,6).join('、')).join('\n')}else if(PI.has(q))out=PD[PI.get(q)][1];
  if(!out)return null;return{t:S.set.tgt=='zh-CN'?await toCN(out):out,eng:'📖 字典',src:'en'}}
-async function doTr(){const t=$('#tin').value.trim();if(!t||tBusy)return;tBusy=1;const b=$('#tgo');b.disabled=true;b.textContent='⏳ 翻譯中…';$('#tout').classList.add('ph');$('#tout').textContent='AI 翻譯中…（第一次使用會先下載模型）';const t0=performance.now();
- try{const r=(await dictTr(t))||await translate(t,S.set.src,S.set.tgt);TOUT=r.t;LAST_SRC=r.src;$('#tout').classList.remove('ph');$('#tout').textContent=r.t||'（沒有結果）';
+let tStop=0;
+async function doTr(){const t=$('#tin').value.trim();if(!t)return;if(tBusy){tStop=1;return}tBusy=1;tStop=0;const b=$('#tgo'),o=$('#tout');b.textContent='⏹ 停止翻譯';o.classList.add('ph');o.classList.toggle('long',t.length>1500);o.textContent='AI 翻譯中…（第一次使用會先下載模型）';const t0=performance.now();
+ const prog=(d,n,part)=>{if(n<2)return;b.textContent=`⏹ 停止（${d}/${n} 句）`;$('#teng').textContent=`翻譯中 ${Math.round(d/n*100)}%・${((performance.now()-t0)/1000).toFixed(0)} 秒`;if(part){o.classList.remove('ph');o.textContent=part}};
+ try{const r=(await dictTr(t))||await translate(t,S.set.src,S.set.tgt,{onProg:prog,stop:()=>tStop});TOUT=r.t;LAST_SRC=r.src;o.classList.remove('ph');o.textContent=r.t||'（沒有結果）';
   $('#teng').textContent=(S.set.src=='auto'&&r.src?'偵測：'+LANG[r.src].n.split(' ')[0]+'・':'')+r.eng+'・'+((performance.now()-t0)/1000).toFixed(1)+' 秒';
-  addHist({a:t,b:r.t,s:r.src||S.set.src,g:S.set.tgt,k:'text'});if(isZh(S.set.tgt))trDict(t,r.src)}
- catch(e){$('#tout').textContent='❌ 翻譯失敗：'+e.message+'\n請確認網路（第一次需下載模型），或到「設定」換翻譯引擎。'}
- finally{tBusy=0;b.disabled=false;b.textContent='🌐 翻譯'}}
+  /* 太長的內容只在紀錄裡存前 3000 字,避免手機空間被塞滿 */
+  addHist({a:t.slice(0,3000),b:r.t.slice(0,3000),s:r.src||S.set.src,g:S.set.tgt,k:'text'});if(isZh(S.set.tgt)&&t.length<60)trDict(t,r.src)}
+ catch(e){if(e.stopped){TOUT=e.partial||'';o.classList.remove('ph');o.textContent=(e.partial||'')+'\n\n⏹ 已停止翻譯';$('#teng').textContent='已停止'}else o.textContent='❌ 翻譯失敗：'+e.message+'\n請確認網路（第一次需下載模型），或到「設定」換翻譯引擎。'}
+ finally{tBusy=0;tStop=0;b.disabled=false;b.textContent='🌐 翻譯'}}
+/* 匯入文字檔:txt / md / srt / csv / html / docx(Word) */
+async function unzipEntry(buf,name){const u=new Uint8Array(buf),dv=new DataView(buf);let e=u.length-22;while(e>0&&dv.getUint32(e,true)!==0x06054b50)e--;if(e<=0)throw new Error('不是有效的 Word 檔');
+ let o=dv.getUint32(e+16,true);const n=dv.getUint16(e+10,true),td=new TextDecoder();
+ for(let i=0;i<n;i++){const m=dv.getUint16(o+10,true),cs=dv.getUint32(o+20,true),fl=dv.getUint16(o+28,true),xl=dv.getUint16(o+30,true),cl=dv.getUint16(o+32,true),lo=dv.getUint32(o+42,true),fn=td.decode(u.subarray(o+46,o+46+fl));
+  if(fn===name){const d=lo+30+dv.getUint16(lo+26,true)+dv.getUint16(lo+28,true),raw=u.subarray(d,d+cs);if(m===0)return td.decode(raw);
+   const s=new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'));return await new Response(s).text()}
+  o+=46+fl+xl+cl}throw new Error('Word 檔裡找不到內文')}
+async function readTextFile(f){const n=f.name.toLowerCase();
+ if(n.endsWith('.docx')){const x=await unzipEntry(await f.arrayBuffer(),'word/document.xml');
+  return x.replace(/<w:tab\/>/g,'\t').replace(/<w:br[^>]*\/>/g,'\n').replace(/<\/w:p>/g,'\n').replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,'&').replace(/\n{3,}/g,'\n\n').trim()}
+ let s=await f.text();
+ if(/\.(srt|vtt)$/.test(n))s=s.replace(/^WEBVTT.*$/m,'').split(/\r?\n/).filter(l=>!/^\d+$/.test(l.trim())&&!/-->/.test(l)).join('\n').replace(/\n{2,}/g,'\n');
+ if(/\.html?$/.test(n)){const d=new DOMParser().parseFromString(s,'text/html');d.querySelectorAll('script,style').forEach(x=>x.remove());s=d.body.innerText||d.body.textContent}
+ return s.replace(/\r\n?/g,'\n').trim()}
+$('#tfile').onclick=()=>$('#tfin').click();
+$('#tfin').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const s=await readTextFile(f);if(!s)return toast('檔案裡沒有文字',3000);$('#tin').value=s;tcnt();toast(`已匯入「${f.name}」・${s.length} 字`,2500)}catch(x){toast('無法讀取檔案：'+x.message,4000)}};
+$('#tdl').onclick=()=>{if(!TOUT)return toast('還沒有譯文');dl('翻譯_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'')+'.txt',TOUT,'text/plain')};
 /* ✨ 用 LLM（Qwen）重新翻譯：比較像人寫的句子，但比較慢、需要下載較大的模型 */
 $('#tnat').onclick=async()=>{const t=$('#tin').value.trim();if(!t||tBusy)return;const e=String(S.set.eng||'').startsWith('q')?S.set.eng:'q05',m=MTE[e];
  if(!S.set.llmOk){const k=await menu(`用 ${m.n} 重新翻譯`,[['go',`✅ 下載並使用（${m.s.split('・')[0]}）`],['no','取消']]);if(k!='go')return;S.set.llmOk=1;save()}
