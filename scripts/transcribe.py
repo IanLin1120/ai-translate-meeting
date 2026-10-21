@@ -266,6 +266,7 @@ def fetch_model(name, rel_path, files):
     if all(os.path.exists(f"{d}/{f}") for f in files):
         return d
     status("下載語音模型")
+    print(f"::notice title=下載模型::{name}（快取裡沒有）", flush=True)
     os.makedirs(d, exist_ok=True)
     tmpd = tempfile.mkdtemp()
     subprocess.run(f"curl -sSL https://github.com/k2-fsa/sherpa-onnx/releases/download/{rel_path} | tar xj -C {tmpd}", shell=True, check=True)

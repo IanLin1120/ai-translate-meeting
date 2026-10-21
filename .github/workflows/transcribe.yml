@@ -52,9 +52,16 @@ jobs:
           key: aitm-models-v1-none
           restore-keys: aitm-models-v1-
 
+      - name: 快取內容
+        run: |
+          echo "::notice title=快取::還原 ${{ steps.mcache.outputs.cache-matched-key || '（沒有快取）' }}：$(du -sh ~/.cache/aitm 2>/dev/null | cut -f1)，$(ls ~/.cache/aitm 2>/dev/null | tr '\n' ' ')"
+
       - name: 下載講者辨識模型
         run: |
           M=~/.cache/aitm; mkdir -p $M/seg
+          [ -f $M/seg/model.onnx ] || echo "::notice title=下載模型::講者分段（快取裡沒有）"
+          [ -f $M/emb.onnx ] || echo "::notice title=下載模型::講者聲紋（快取裡沒有）"
+          [ -f $M/sensevoice/model.int8.onnx ] || echo "::notice title=下載模型::SenseVoice（快取裡沒有）"
           [ -f $M/seg/model.onnx ] || (curl -sSL https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2 | tar xj -C /tmp && cp /tmp/sherpa-onnx-pyannote-segmentation-3-0/model.onnx $M/seg/)
           [ -f $M/emb.onnx ] || curl -sSL -o $M/emb.onnx https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx
           if [ ! -f $M/sensevoice/model.int8.onnx ]; then

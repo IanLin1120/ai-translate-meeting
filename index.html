@@ -388,35 +388,91 @@ async function lib(c){if(!T){
   /* 函式庫:先用 GitHub(或 App 內建),失敗才用 jsDelivr */
   if(c&&c.lib){try{T=await import(c.lib+'transformers.min.js');LIBSRC=c.lib;T.env.backends.onnx.wasm.wasmPaths={mjs:c.lib+'ort/ort-wasm-simd-threaded.asyncify.mjs',wasm:c.lib+'ort/ort-wasm-simd-threaded.asyncify.wasm'}}catch(e){T=null}}
   if(!T){T=await import(TJS);LIBSRC='jsdelivr'}
-  T.env.allowLocalModels=false;if(c&&c.gh)T.env.fetch=ghFetch(c.gh);
-  try{if(c&&c.thr)T.env.backends.onnx.wasm.numThreads=c.thr}catch(e){}T.env.useBrowserCache=true;try{T.env.logLevel=40}catch(e){}}
- if(c&&c.hf)T.env.remoteHost=c.hf.replace(/\/*$/,'/');return T}
+  T.env.allowLocalModels=false;GHB=c&&c.gh||'';T.env.fetch=ghFetch();T.env.useBrowserCache=false;T.env.useCustomCache=true;T.env.customCache=MC;
+  try{if(c&&c.thr)T.env.backends.onnx.wasm.numThreads=c.thr}catch(e){}try{T.env.logLevel=40}catch(e){}}
+ if(c&&c.hf)T.env.remoteHost=c.hf.replace(/\/*$/,'/');if(c&&c.mem)BUDGET=c.mem*1048576;return T}
 async function gpu(){if(GPU!==null)return GPU;GPU=false;try{if(self.navigator&&navigator.gpu){const a=await navigator.gpu.requestAdapter();if(a){GPU=true;F16=a.features.has('shader-f16')}}}catch(e){}return GPU}
-function pcb(id,key){const files={};let last=0;return x=>{if(!x)return;
- if(x.status==='progress'&&x.file){files[x.file]=[x.loaded||0,x.total||0];const now=Date.now();if(now-last<300&&x.progress<100)return;last=now;let l=0,t=0;for(const k in files){l+=files[k][0];t+=files[k][1]}post({id,prog:{key,l,t,file:x.file}})}
+function pcb(id,key){const d=DL[key]=DL[key]||{files:{},last:0};return x=>{if(!x)return;
+ if(x.status==='progress'&&x.file){const o=d.files[x.file];if(o&&o[1]&&o[0]>=o[1]&&(x.loaded||0)<o[0])return;d.files[x.file]=[x.loaded||0,x.total||0];const now=Date.now();if(now-d.last<300&&x.progress<100)return;d.last=now;let l=0,t=0;for(const k in d.files){l+=d.files[k][0];t+=d.files[k][1]}post({id,prog:{key,l,t,file:x.file}})}
  else if(x.status==='ready')post({id,prog:{key,ready:1}})}}
-const USE=new Map();
-async function get(key,id,make){USE.set(key,Date.now());if(M.has(key))return M.get(key);const p=make(pcb(id,key));M.set(key,p);try{const r=await p;post({id,prog:{key,ready:1}});return r}catch(e){M.delete(key);throw e}}
+const USE=new Map(),SIZE=new Map();let BUDGET=900*1048576;
+function used(ex){let s=0;for(const k of M.keys())if(k!==ex)s+=SIZE.get(k)||150*1048576;return s}
+function freeLRU(ex,need){const ks=[...M.keys()].filter(k=>k!==ex).sort((a,b)=>(USE.get(a)||0)-(USE.get(b)||0));
+ while(ks.length&&used(ex)+need>BUDGET){const k=ks.shift(),v=M.get(k);M.delete(k);USE.delete(k);Promise.resolve(v).then(dispose,()=>{});post({idle:k})}}
+function estNeed(key){const man=MAN&&MAN.files||{},m=key.match(/^(?:asr|mt|llm):([^:]+\/[^:]+)/),repo=m?m[1]:key=='sv'?'Xenova/wavlm-base-plus-sv':key=='seg'?'onnx-community/pyannote-segmentation-3.0':null;if(!repo)return 150*1048576;
+ let s=0;for(const [k,f] of Object.entries(man))if(k.startsWith(repo+'/onnx/')&&/quantized|q4\.onnx|model\.onnx$/.test(k))s+=f.size||0;return s||150*1048576}
+async function get(key,id,make){USE.set(key,Date.now());if(M.has(key))return M.get(key);
+ for(let attempt=0;attempt<2;attempt++){freeLRU(key,estNeed(key));CUR={id,key};const p=make(pcb(id,key));M.set(key,p);
+  try{const r=await p;const d=DL[key];let b=0;if(d)for(const x in d.files)b+=d.files[x][1]||0;SIZE.set(key,b||estNeed(key));delete DL[key];post({id,prog:{key,ready:1}});return r}
+  catch(e){M.delete(key);delete DL[key];
+   if(OOM.test(String(e&&e.message||e))&&attempt==0){/* 記憶體不足:釋放全部模型再試一次 */for(const [k,v] of [...M]){M.delete(k);USE.delete(k);Promise.resolve(v).then(dispose,()=>{});post({idle:k})}await sleepW(300);continue}
+   if(OOM.test(String(e&&e.message||e))){const mb=Math.round(estNeed(key)/1048576);const x=new Error(`手機記憶體不足，無法載入這個模型（約 ${mb} MB）。請關閉其他 App 後再試，或改用較小的模型`);x.oom=1;throw x}
+   throw e}finally{if(CUR&&CUR.key==key)CUR=null}}}
 /* 閒置 4 分鐘的模型自動從記憶體移除(降低耗電、發燙;檔案仍保存在手機裡) */
 setInterval(()=>{const now=Date.now();for(const [k,v] of [...M]){if(now-(USE.get(k)||0)>240000){M.delete(k);USE.delete(k);Promise.resolve(v).then(dispose,()=>{});post({idle:k})}}},60000);
 function dispose(o){try{if(!o)return;if(o.dispose)o.dispose();else if(o.model&&o.model.dispose)o.model.dispose()}catch(e){}}
 function drop(prefix,keep){for(const [k,v] of [...M]){if(k.startsWith(prefix)&&k!==keep){M.delete(k);Promise.resolve(v).then(dispose,()=>{})}}}
-async function tryAll(list){let err;for(const f of list){try{return await f()}catch(e){err=e}}throw err}
+async function tryAll(list){let err;for(const f of list){try{return await f()}catch(e){err=e;if(OOM.test(String(e&&e.message||e)))throw e}}throw err}
 /* ===== 模型從 GitHub 下載:依 models 分支的 manifest.json,把 Hugging Face 網址換成 GitHub;大檔自動把分片接回來;GitHub 沒有的檔案才用 Hugging Face ===== */
-let MAN=null,MANP=null,GHN={gh:0,hf:0};
-function manifest(gh){if(MAN)return Promise.resolve(MAN);if(!MANP)MANP=fetch(gh+'manifest.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null).then(j=>(MAN=j||{files:{}}));return MANP}
-function ghFetch(gh){const of=self.fetch.bind(self);
- const get=async(u,tries=3)=>{let e;for(let i=0;i<tries;i++){try{const r=await of(u);if(r.ok)return r;e=new Error('HTTP '+r.status);if(r.status==404)break}catch(x){e=x}await new Promise(z=>setTimeout(z,800*(i+1)))}throw e};
- return async(url,init)=>{const u=String(url),m=u.match(/^https?:\/\/[^/]+\/(.+?)\/resolve\/[^/]+\/([^?#]+)/);if(!m)return of(url,init);
-  const man=await manifest(gh),key=m[1]+'/'+decodeURIComponent(m[2]),f=man.files&&man.files[key];if(!f){GHN.hf++;return of(url,init)}
+/* ===== 模型下載與快取(v1.7)=====
+   - 依 models 分支的 manifest.json 把 Hugging Face 網址換成 GitHub;GitHub 沒有的才用 Hugging Face
+   - 大檔(已在 GitHub 切成 90 MB 分片)每片各自存進手機:斷線只要補下載沒完成的那一片
+   - 每次下載都有「停住 30 秒就重試」與最多 6 次重試
+   - 取代 Transformers.js 預設快取(env.customCache),讀取時把分片接回完整檔案 */
+let MAN=null,MANP=null,GHN={gh:0,hf:0},GHB='';
+const TC='transformers-cache',PC='aitm-parts',DL={};let CUR=null;
+const OOM=/bad_alloc|out of memory|allocation failed|Array buffer allocation|RangeError: (Array buffer|Invalid typed array length)|memory access out of bounds|OrtRun\(\)|ERROR_CODE: 6/i;
+function manifest(gh){if(MAN)return Promise.resolve(MAN);if(!gh)return Promise.resolve({files:{}});if(!MANP)MANP=fetch(gh+'manifest.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null).then(j=>(MAN=j||{files:{}}));return MANP}
+const sleepW=ms=>new Promise(z=>setTimeout(z,ms));
+function keyInfo(u){const m=String(u).match(/^https?:\/\/[^/]+\/(.+?)\/resolve\/[^/]+\/([^?#]+)/);return m?{repo:m[1],file:decodeURIComponent(m[2]),key:m[1]+'/'+decodeURIComponent(m[2])}:null}
+function ghURL(k,f){return GHB+k.split('/').map(encodeURIComponent).join('/')+(f&&f.sha256?'?v='+f.sha256.slice(0,12):'')}
+function partURLs(k,f){const b=GHB+k.split('/').map(encodeURIComponent).join('/'),v=f.sha256?'?v='+f.sha256.slice(0,12):'';return Array.from({length:f.parts},(_,i)=>b+'.part'+String(i).padStart(3,'0')+v)}
+function dlProg(file,l,t){const k=CUR&&CUR.key;if(!k)return;const d=DL[k]=DL[k]||{files:{},last:0};d.files[file]=[l,t];const now=Date.now();if(now-d.last<350&&l<t)return;d.last=now;let a=0,b=0;for(const x in d.files){a+=d.files[x][0];b+=d.files[x][1]}post({id:CUR.id,prog:{key:k,l:a,t:b,file}})}
+/* 下載整個檔案到記憶體(≤ 90 MB):停住 30 秒就中斷重來,最多 6 次 */
+async function fetchFull(url,onBytes,tries=6){let err;
+ for(let i=0;i<tries;i++){const ac=new AbortController();let timer=null;const kick=()=>{clearTimeout(timer);timer=setTimeout(()=>ac.abort(),30000)};
+  try{kick();const r=await self.fetch(url,{signal:ac.signal});if(r.status==404){clearTimeout(timer);const e=new Error('找不到檔案（404）');e.nf=1;throw e}if(!r.ok)throw new Error('HTTP '+r.status);
+   const total=+r.headers.get('content-length')||0,rd=r.body.getReader(),chunks=[];let got=0;
+   for(;;){const {done,value}=await rd.read();if(done)break;kick();chunks.push(value);got+=value.byteLength;onBytes&&onBytes(got,total)}
+   clearTimeout(timer);if(total&&got<total)throw new Error('下載不完整');const out=new Uint8Array(got);let o=0;for(const c of chunks){out.set(c,o);o+=c.byteLength}return out}
+  catch(e){clearTimeout(timer);err=e;if(e.nf)throw e;await sleepW(1500*(i+1))}}
+ throw new Error('下載失敗（'+(err&&err.name=='AbortError'?'連線停住太久':err&&err.message)+'），請確認網路後再試')}
+async function cachePut(store,key,body,size){try{const c=await caches.open(store);await c.put(key,new Response(body,{headers:{'content-length':String(size),'content-type':'application/octet-stream'}}));return true}
+ catch(e){post({warn:'手機儲存空間不足，模型無法保存（下次要重新下載）。請到「🧠 AI 模型」刪除用不到的模型，或清出手機空間'});return false}}
+/* 確保某個分片已在手機裡;回傳該分片的 Response */
+async function ensurePart(url,file,base,total){const c=await caches.open(PC);let r=await c.match(url);if(r)return r;
+ const u8=await fetchFull(url,(g)=>dlProg(file,base+g,total));await cachePut(PC,url,u8,u8.byteLength);return new Response(u8)}
+/* Transformers.js 的自訂快取 */
+const MC={async match(key){const ki=keyInfo(key),man=await manifest(GHB),f=ki&&man.files&&man.files[ki.key];
+  if(f&&f.parts){const c=await caches.open(PC),urls=partURLs(ki.key,f),rs=[];for(const u of urls){const r=await c.match(u);if(!r){rs.length=0;break}rs.push(r)}
+   if(rs.length==urls.length){let i=0,rd=rs[0].body.getReader();return new Response(new ReadableStream({async pull(ctl){for(;;){const {done,value}=await rd.read();if(!done){ctl.enqueue(value);return}if(++i>=rs.length){ctl.close();return}rd=rs[i].body.getReader()}}}),{headers:{'content-length':String(f.size)}})}}
+  return (await caches.open(TC)).match(key)},
+ async put(key,resp){const ki=keyInfo(key),man=await manifest(GHB),f=ki&&man.files&&man.files[ki.key];if(f&&f.parts)return;
+  try{await (await caches.open(TC)).put(key,resp)}catch(e){post({warn:'手機儲存空間不足，模型無法保存（下次要重新下載）。請到「🧠 AI 模型」刪除用不到的模型，或清出手機空間'})}}};
+function ghFetch(){return async(url,init)=>{const ki=keyInfo(url);if(!ki)return self.fetch(url,init);
+  const man=await manifest(GHB),f=man.files&&man.files[ki.key];
   const h=init&&init.headers,range=h&&(h.get?h.get('Range'):h.Range);
+  if(!f){GHN.hf++;if(range)return self.fetch(url,init);
+   /* GitHub 沒有鏡像 → Hugging Face(一樣有停住重試) */
+   try{const u8=await fetchFull(url,(g,t)=>dlProg(ki.file,g,t||g));return new Response(u8,{status:200,headers:{'content-length':String(u8.byteLength)}})}catch(e){if(e.nf)return new Response('',{status:404});throw e}}
   if(range)return new Response(new Uint8Array(1),{status:206,headers:{'content-range':'bytes 0-0/'+f.size,'content-length':'1'}});
-  const base=gh+key.split('/').map(encodeURIComponent).join('/'),v=f.sha256?'?v='+f.sha256.slice(0,12):'';
-  try{if(!f.parts){const r=await get(base+v);GHN.gh++;return r}
-   const urls=Array.from({length:f.parts},(_,i)=>base+'.part'+String(i).padStart(3,'0')+v);let i=0,rd=(await get(urls[0])).body.getReader();
-   const st=new ReadableStream({async pull(ctl){for(;;){const {done,value}=await rd.read();if(!done){ctl.enqueue(value);return}if(++i>=urls.length){ctl.close();return}try{rd=(await get(urls[i])).body.getReader()}catch(e){ctl.error(e);return}}},cancel(){try{rd.cancel()}catch(e){}}});
-   GHN.gh++;return new Response(st,{status:200,headers:{'content-length':String(f.size),'content-type':'application/octet-stream'}})}
-  catch(e){GHN.hf++;return of(url,init)}}}
+  GHN.gh++;
+  if(!f.parts){const u8=await fetchFull(ghURL(ki.key,f),(g)=>dlProg(ki.file,g,f.size));return new Response(u8,{status:200,headers:{'content-length':String(u8.byteLength)}})}
+  /* 分片:逐片下載並各自存起來,再接成一個檔案交給 Transformers.js */
+  const urls=partURLs(ki.key,f),P=94371840;let i=0,rd=null;
+  return new Response(new ReadableStream({async pull(ctl){for(;;){if(!rd){if(i>=urls.length){ctl.close();return}try{rd=(await ensurePart(urls[i],ki.file,i*P,f.size)).body.getReader()}catch(e){ctl.error(e);return}}
+     const {done,value}=await rd.read();if(!done){ctl.enqueue(value);return}rd=null;i++}}}),{status:200,headers:{'content-length':String(f.size)}})}}
+/* 只把模型檔下載存到手機,不載入記憶體 */
+async function prefetchFiles(repo,onnx){const man=await manifest(GHB),pre=repo+'/';let files=Object.keys(man.files||{}).filter(k=>k.startsWith(pre)).map(k=>k.slice(pre.length));
+ if(!files.length)return {fallback:1};
+ files=files.filter(f=>{const m=f.match(/^onnx\/(.+?)\.onnx(_data.*)?$/);return m?onnx.includes(m[1]):!f.startsWith('onnx/')});
+ const host=T.env.remoteHost.replace(/\/*$/,'/');let need=0;
+ for(const f of files){const e=man.files[pre+f];if(!(await MC.match(host+repo+'/resolve/main/'+f)))need+=e.size||0}
+ try{const q=await navigator.storage.estimate();if(q.quota&&q.quota-q.usage<need*1.05)throw new Error(`手機儲存空間不足：需要 ${(need/1048576).toFixed(0)} MB，剩 ${((q.quota-q.usage)/1048576).toFixed(0)} MB`)}catch(e){if(/空間不足/.test(e.message))throw e}
+ for(const f of files){const key=host+repo+'/resolve/main/'+f,e=man.files[pre+f];if(await MC.match(key))continue;
+  if(e.parts){const urls=partURLs(pre+f,e);for(let i=0;i<urls.length;i++)await ensurePart(urls[i],f,i*94371840,e.size)}
+  else{const u8=await fetchFull(ghURL(pre+f,e),(g)=>dlProg(f,g,e.size));await cachePut(TC,key,u8,u8.byteLength)}}
+ return {n:files.length,bytes:need}}
 const H={
  async info(p,id,c){await lib(c);const g=c.dev!=='wasm'&&await gpu();return{gpu:g,f16:F16,ver:T.env.version,lib:LIBSRC,gh:GHN,loaded:[...M.keys()],thr:self.crossOriginIsolated?(navigator.hardwareConcurrency||1):1}},
  async asr(p,id,c){await lib(c);const g=c.dev!=='wasm'&&await gpu()&&!p.cpu;const key='asr:'+p.repo+':'+(g?'g':'c');drop('asr:',key);
@@ -461,16 +517,7 @@ const H={
   const r=await pipe([{role:'system',content:p.sys},{role:'user',content:p.user}],{max_new_tokens:p.max||400,do_sample:false,repetition_penalty:1.1});const g0=r[0].generated_text;
   return String(Array.isArray(g0)?g0.at(-1).content:g0).replace(/<think>[\s\S]*?<\/think>/g,'').trim()},
  /* 只把模型檔下載存到手機,不載入記憶體、不用 GPU */
- async prefetch(p,id,c){await lib(c);const host=T.env.remoteHost.replace(/\/*$/,'/'),cache=await caches.open(T.env.cacheKey||'transformers-cache');
-  const man=c.gh?await manifest(c.gh):{files:{}},pre=p.repo+'/';let files=Object.keys(man.files||{}).filter(k=>k.startsWith(pre)).map(k=>k.slice(pre.length));
-  if(!files.length)return {fallback:1};
-  files=files.filter(f=>{const m=f.match(/^onnx\/(.+?)\.onnx(_data.*)?$/);return m?p.onnx.includes(m[1]):!f.startsWith('onnx/')});
-  const need=[];let total=0,done=0;for(const f of files){const key=host+p.repo+'/resolve/main/'+f;if(await cache.match(key))continue;const sz=man.files[pre+f].size||0;need.push([f,key,sz]);total+=sz}
-  const f0=T.env.fetch;let last=0;
-  for(const [f,key,sz] of need){const r=await f0(key,{headers:new Headers()});if(!r.ok)throw new Error('下載失敗 '+f+'（'+r.status+'）');let got=0;
-   const counted=r.body.pipeThrough(new TransformStream({transform(ch,ctl){got+=ch.byteLength;const now=Date.now();if(now-last>400){last=now;post({id,prog:{key:'pre:'+p.repo,l:done+got,t:total,file:f}})}ctl.enqueue(ch)}}));
-   await cache.put(key,new Response(counted,{headers:{'content-length':String(sz),'content-type':'application/octet-stream'}}));done+=sz}
-  post({id,prog:{key:'pre:'+p.repo,ready:1}});return {n:need.length,total}},
+ async prefetch(p,id,c){await lib(c);const key='pre:'+p.repo;CUR={id,key};try{const r=await prefetchFiles(p.repo,p.onnx);post({id,prog:{key,ready:1}});delete DL[key];return r}finally{CUR=null}},
  async free(p){for(const [k,v] of [...M]){if(!p||!p.prefix||k.startsWith(p.prefix)){M.delete(k);Promise.resolve(v).then(dispose,()=>{})}}return 1}
 };
 let chain=Promise.resolve();
@@ -517,7 +564,7 @@ let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.6.0';
+const APP_VER='1.7.0';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -585,11 +632,14 @@ function show(v){if(cur=='tr'&&v!='tr'){camStop();if(LV.on)lvStop()}cur=v;docume
 $('#hr').onclick=()=>{if(cur=='tr'){show('rec');rsub('t')}else if(cur=='meet')$('#mfile').click();else if(cur=='learn')lsub('fav')};
 
 /* ================= AI 運算管理(Web Worker) ================= */
+/* 模型可用的記憶體上限:依手機記憶體大小(navigator.deviceMemory,最多回報 8 GB) */
+function memBudget(){const g=navigator.deviceMemory||4,mobile=IS_APP||/Android|iPhone|iPad/i.test(navigator.userAgent);return Math.round(Math.max(450,Math.min(mobile?1400:2600,g*1024*(mobile?.22:.35))))}
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 const AI={w:null,n:0,cb:{},
  init(){const u=URL.createObjectURL(new Blob([$('#wsrc').textContent],{type:'text/javascript'}));this.w=new Worker(u,{type:'module'});
-  this.w.onmessage=e=>{const d=e.data,c=this.cb[d.id];if(d.idle){delete LOADS[d.idle];return}if(d.prog){loadUI(d.prog);c&&c.prog&&c.prog(d.prog);return}if(!c)return;delete this.cb[d.id];d.ok?c.res(d.r):c.rej(new Error(d.err))};
+  this.w.onmessage=e=>{const d=e.data,c=this.cb[d.id];if(d.idle){delete LOADS[d.idle];loadUI({});return}if(d.warn){toast(d.warn,6000);return}if(d.prog){loadUI(d.prog);c&&c.prog&&c.prog(d.prog);return}if(!c)return;delete this.cb[d.id];d.ok?c.res(d.r):c.rej(new Error(d.err))};
   this.w.onerror=e=>{const m='AI 模組載入失敗：'+(e.message||'請確認網路');Object.values(this.cb).forEach(c=>c.rej(new Error(m)));this.cb={};this.w=null;loadUI({done:1})}},
- call(type,p,tr,prog){if(!this.w)this.init();const id=++this.n;return new Promise((res,rej)=>{this.cb[id]={res,rej,prog};this.w.postMessage({id,type,p,cfg:{hf:S.set.hf,dev:S.set.dev,lib:LIBB,gh:S.set.msrc=='gh'?GH.models:null,thr:Math.max(1,Math.min(S.set.thr2||3,(navigator.hardwareConcurrency||4)>>1))}},tr||[])})}};
+ call(type,p,tr,prog){if(!this.w)this.init();const id=++this.n;return new Promise((res,rej)=>{this.cb[id]={res,rej,prog};this.w.postMessage({id,type,p,cfg:{hf:S.set.hf,dev:S.set.dev,lib:LIBB,gh:S.set.msrc=='gh'?GH.models:null,mem:memBudget(),thr:Math.max(1,Math.min(S.set.thr2||3,(navigator.hardwareConcurrency||4)>>1))}},tr||[])})}};
 /* 模型下載進度膠囊 */
 const LOADS={};let lpT;
 const MNAME=k=>{if(k.startsWith('pre:'))return k.split('/')[1];if(k.startsWith('asr:'))return'語音辨識 '+k.split(':')[1].split('/')[1];if(k=='sv')return'講者聲紋 WavLM';if(k=='seg')return'講者分段 pyannote';if(k.startsWith('mt:')||k.startsWith('llm:'))return'翻譯 '+k.split(':')[1].split('/')[1];return k};

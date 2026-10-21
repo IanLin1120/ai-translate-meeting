@@ -43,6 +43,7 @@ class LLM:
             p = f"{d}/{fn}"
             if not (os.path.exists(p) and os.path.getsize(p) > 1e8):
                 self.status("下載開源語言模型")
+                print(f"::notice title=下載模型::{fn}（快取裡沒有）", flush=True)
                 r = subprocess.run(["curl", "-fsSL", "-o", p, f"https://huggingface.co/{repo}/resolve/main/{fn}"])
                 if r.returncode != 0 and os.path.exists(p):
                     os.remove(p)
