@@ -174,7 +174,16 @@ def asr(job, files, t_start):
         model = "sensevoice"  # FireRedASR 只支援中文、英文
     if model in ("firered", "sensevoice") and lang not in ("auto", "zh", "en", "ja", "ko", "yue"):
         model = "large-v3-turbo"  # 其他語言改用 Whisper
-    clip = lambda u: audio[int(max(0, u["s"] - 0.15) * SR):int(min(dur, u["e"] + 0.15) * SR)]
+    def clip(u):
+        """取出這段發言的音訊；太短（或超出錄音範圍）的段落會讓 FireRedASR 當掉（Invalid input shape），
+        小於 0.1 秒直接略過，0.1～0.5 秒補靜音到 0.5 秒"""
+        a = audio[int(max(0, u["s"] - 0.15) * SR):int(min(dur, max(u["e"], u["s"]) + 0.15) * SR)]
+        if len(a) < SR // 10 or not np.isfinite(a).all():
+            return None
+        if len(a) < SR // 2:
+            a = np.concatenate([a, np.zeros(SR // 2 - len(a), dtype=np.float32)])
+        return a
+    bad = [0]
     status("語音轉文字", 0)
     if model == "firered":
         import sherpa_onnx
@@ -187,10 +196,20 @@ def asr(job, files, t_start):
             model=sherpa_onnx.OfflinePunctuationModelConfig(ct_transformer=f"{pd}/model.onnx", num_threads=2)))
         t_asr = time.time()
         for i, u in enumerate(turns):
-            st = rec.create_stream()
-            st.accept_waveform(SR, clip(u))
-            rec.decode_stream(st)
-            txt = st.result.text.strip()
+            a = clip(u)
+            if a is None:
+                u["text"] = ""
+                continue
+            try:
+                st = rec.create_stream()
+                st.accept_waveform(SR, a)
+                rec.decode_stream(st)
+                txt = st.result.text.strip()
+            except Exception as e:  # 單一段落失敗不要讓整場會議失敗
+                bad[0] += 1
+                print("略過一段無法辨識的音訊：", type(e).__name__, flush=True)
+                u["text"] = ""
+                continue
             # FireRedASR 的英文是全大寫 → 轉成一般寫法（縮寫保留大寫）
             txt = re.sub(r"[A-Z][A-Z']+", lambda m: m.group(0) if len(m.group(0)) <= 3 else m.group(0).lower(), txt)
             u["text"] = pc.add_punctuation(txt) if txt else ""
@@ -207,15 +226,32 @@ def asr(job, files, t_start):
                                                              language=lang if lang in ("zh", "en", "ja", "ko", "yue") else "auto")
         B = 16
         for i in range(0, len(turns), B):
-            batch = turns[i:i + B]
+            batch = []
+            for u in turns[i:i + B]:
+                a = clip(u)
+                u["text"] = ""
+                if a is not None:
+                    batch.append((u, a))
             ss = []
-            for u in batch:
+            for u, a in batch:
                 st = rec.create_stream()
-                st.accept_waveform(SR, clip(u))
+                st.accept_waveform(SR, a)
                 ss.append(st)
-            rec.decode_streams(ss)
-            for u, st in zip(batch, ss):
-                u["text"] = st.result.text
+            try:
+                if ss:
+                    rec.decode_streams(ss)
+                for (u, a), st in zip(batch, ss):
+                    u["text"] = st.result.text
+            except Exception as e:
+                print("一批音訊辨識失敗，改成逐段辨識：", type(e).__name__, flush=True)
+                for u, a in batch:
+                    try:
+                        st = rec.create_stream()
+                        st.accept_waveform(SR, a)
+                        rec.decode_stream(st)
+                        u["text"] = st.result.text
+                    except Exception:
+                        bad[0] += 1
             if time.time() - last[0] > 20:
                 last[0] = time.time()
                 status("語音轉文字", min(99, (i + B) / len(turns) * 100))
@@ -228,10 +264,18 @@ def asr(job, files, t_start):
         prompt = "以下是會議錄音，內容是繁體中文和 English 夾雜。" if wl in (None, "zh") else None
         det = wl
         for i, u in enumerate(turns):
-            segs, info = wm.transcribe(clip(u), language=wl, beam_size=5, vad_filter=False, condition_on_previous_text=False,
-                                       without_timestamps=True, initial_prompt=prompt)
-            u["text"] = "".join(s.text for s in segs if not (s.no_speech_prob > 0.8 and s.avg_logprob < -1))
-            det = det or info.language
+            a = clip(u)
+            u["text"] = ""
+            if a is None:
+                continue
+            try:
+                segs, info = wm.transcribe(a, language=wl, beam_size=5, vad_filter=False, condition_on_previous_text=False,
+                                           without_timestamps=True, initial_prompt=prompt)
+                u["text"] = "".join(s.text for s in segs if not (s.no_speech_prob > 0.8 and s.avg_logprob < -1))
+                det = det or info.language
+            except Exception as e:
+                bad[0] += 1
+                print("略過一段無法辨識的音訊：", type(e).__name__, flush=True)
             if time.time() - last[0] > 20:
                 last[0] = time.time()
                 status("語音轉文字", min(99, (i + 1) / len(turns) * 100))
@@ -256,6 +300,8 @@ def asr(job, files, t_start):
     remap = {k: i + 1 for i, k in enumerate(ids)}
     for u in res:
         u["spk"] = remap[u["spk"]]
+    if bad[0]:
+        print(f"::notice title=略過的段落::{bad[0]} 段音訊無法辨識（已略過，其他內容正常）", flush=True)
     print(f"完成：{len(res)} 句、{len(ids)} 位講者，耗時 {(time.time() - t_start) / 60:.1f} 分鐘", flush=True)
     return {"dur": round(dur, 2), "lang": det, "model": model, "speakers": len(ids), "segs": res,
             "took": round(time.time() - t_start, 1)}
