@@ -1,7 +1,7 @@
 """會議逐字稿的 AI 整理：修正錯字、產生分章節的重點整理
 
 兩種引擎（都用 OpenAI 相容的 chat completions 介面）：
-- github：GitHub Models（GITHUB_TOKEN，workflow 需要 permissions: models: read）
+- github：GitHub Models（已於 2026-07-30 停止服務，現在自動改用 local）
 - local ：在 GitHub Actions 伺服器上用 llama-cpp-python 跑開源 Qwen3（文字不會送到其他服務）
 隱私：這個儲存庫是公開的，Actions 紀錄任何人都看得到，這裡不印出任何逐字稿內容。
 """
@@ -18,6 +18,8 @@ LOCAL_GGUF = [  # 依序嘗試（Hugging Face 上的開源 GGUF）
 
 class LLM:
     def __init__(self, engine, status=None):
+        if engine == "github":
+            engine = "local"  # GitHub Models 已於 2026-07-30 停止服務
         self.engine = engine
         self.status = status or (lambda *a, **k: None)
         self.model = None

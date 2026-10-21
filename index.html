@@ -512,7 +512,7 @@ const ASRM={tiny:{r:'onnx-community/whisper-tiny',n:'Whisper Tiny',s:'約 40 MB�
 const MTE={auto:{n:'自動選擇',s:'中↔英用 Opus-MT，其他語言用 NLLB-200'},opus:{n:'Opus-MT（中↔英）',s:'Helsinki-NLP・各約 100 MB・最快'},nllb:{n:'NLLB-200（200 種語言）',s:'Meta・約 900 MB・非商業授權'},m2m:{n:'M2M100（100 種語言）',s:'Meta・約 1 GB・MIT 授權'},q05:{n:'Qwen2.5 0.5B（LLM 翻譯）',s:'阿里巴巴・約 500 MB・語氣較自然，建議 WebGPU',r:'onnx-community/Qwen2.5-0.5B-Instruct'},q15:{n:'Qwen2.5 1.5B（LLM 翻譯）',s:'約 1.2 GB・品質最好，需要 WebGPU',r:'onnx-community/Qwen2.5-1.5B-Instruct'}};
 const HFS=[['https://huggingface.co/','Hugging Face 官方'],['https://hf-mirror.com/','hf-mirror 鏡像（官方連不上時）']];
 const DEF={theme:'sea',mode:'auto',font:16,blur:18,glass:.4,ui:'auto',surf:'paper',onb:0,src:'auto',tgt:'zh-TW',eng:'auto',asr:'base',asrc:'',dev:'wasm',hf:'https://huggingface.co/',
- mlang:'zh',mtr:'',thr:.8,maxSpk:0,fine:1,hall:1,keepAud:1,tw:1,lvtts:1,lvm:'one',lvA:'zh-TW',lvB:'en',lvSil:.7,tsub:'text',msrc:'gh',autoUpd:1,mcloud:'gh',cmodel:'firered',ghTok:'',thr2:3,v13:0,v15:0,v16:0,llm:'github',aifix:1,aisum:1,sync:0,syncPw:'',tomb:{},lastSync:0};
+ mlang:'zh',mtr:'',thr:.8,maxSpk:0,fine:1,hall:1,keepAud:1,tw:1,lvtts:1,lvm:'one',lvA:'zh-TW',lvB:'en',lvSil:.7,tsub:'text',msrc:'gh',autoUpd:1,mcloud:'gh',cmodel:'firered',ghTok:'',thr2:3,v13:0,v15:0,v16:0,llm:'local',aifix:1,aisum:1,sync:0,syncPw:'',tomb:{},lastSync:0};
 let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
@@ -1042,7 +1042,7 @@ async function cloudRun(m){if(CLOUD[m.id])return;CLOUD[m.id]=1;
    else{const w=Math.round((Date.now()-m.cj.disp)/1000);cloudSt(m,`等待 GitHub 伺服器啟動（${w} 秒）`);if(w>900)throw new Error('GitHub 伺服器太久沒有開始，請稍後到紀錄頁重試')}}}
  catch(e){m.st='cloudfail';m.cs='❌ '+e.message;saveM(m);toast(m.cs,5000)}
  finally{delete CLOUD[m.id];if(R.m==m&&cur=='meet')renderMeet();if(MD.id==m.id)renderMD();if(cur=='rec')renderRec()}}
-function aiOpts(){const on=S.set.llm&&S.set.llm!='off';return{llm:on?S.set.llm:'',fix:on&&S.set.aifix?1:0,summ:on&&S.set.aisum?1:0}}
+function aiOpts(){const on=S.set.llm&&S.set.llm!='off';return{llm:on?'local':'',fix:on&&S.set.aifix?1:0,summ:on&&S.set.aisum?1:0}}
 function cloudApply(m,r){m.spk=[];const map={};
  (r.segs||[]).forEach(s=>{if(map[s.spk]==null)map[s.spk]=newSpk(m).id});
  m.u=(r.segs||[]).map(s=>({id:uid(),s:map[s.spk],t0:s.s,t1:s.e,text:s.text,raw:s.raw,e:s.emb}));
@@ -1054,7 +1054,7 @@ function cloudApply(m,r){m.spk=[];const map={};
 const AIJ={};
 function aiSt(m,t,p){m.as=t+(p!=null?` ${Math.round(p)}%`:'');saveM(m,1);if(MD.id==m.id)renderMD()}
 async function aiRun(m,what){if(AIJ[m.id])return;if(!S.set.ghTok)return toast('請先到「設定 → ☁️ GitHub 雲端轉文字」填入 GitHub 權杖',3500);
- if(!m.u.length)return toast('這場會議還沒有逐字稿');const o=aiOpts();if(!o.llm)return toast('AI 整理已關閉，請到設定選擇 GitHub Models 或開源模型',3500);
+ if(!m.u.length)return toast('這場會議還沒有逐字稿');const o=aiOpts();if(!o.llm)return toast('AI 整理已關閉，請到「設定 → ✨ AI 修正錯字・重點整理」開啟',3500);
  AIJ[m.id]=1;let rel=null;
  try{aiSt(m,'建立 GitHub 工作');const r0=await ghApi('POST','/releases',{tag_name:'job-ai-'+m.id+'-'+Date.now().toString(36),name:'job-ai-'+m.id,draft:true,body:JSON.stringify({state:'uploading'})});rel=r0.id;
   const names={};m.spk.forEach(s=>names[s.id]=s.name);
@@ -1252,7 +1252,7 @@ function renderSet(){const s=S.set,sg=(id,a,v)=>`<div class="seg glass" id="${id
  h+=sec('📝 逐字稿',`<div class="grp glass">${tg('tw','中文輸出為繁體（台灣用語）','Whisper 預設常輸出簡體，自動用 OpenCC 轉成繁體')}${tg('hall','過濾「幻聽」字幕','移除「請訂閱」「字幕由…提供」這類模型亂補的句子')}${tg('keepAud','保存錄音檔','可以從逐字稿任一句直接播放原音（約 15 MB／小時）')}</div>`);
  h+=sec('🌐 翻譯引擎',`<div class="grp glass">${Object.entries(MTE).map(([k,e])=>`<div class="row${s.eng==k?' on':''}" data-eng="${k}"><b>${e.n}<small>${e.s}</small></b><span class="ck">✔</span></div>`).join('')}</div>`);
  let G=sec('☁️ GitHub 雲端轉文字',`<div class="grp glass"><div class="sl"><label>會議錄音・音檔轉文字在哪裡運算</label>${sg('smcloud',[['gh','GitHub 雲端'],['local','這支手機']],s.mcloud)}<small>${s.mcloud=='gh'?'錄音上傳到你 GitHub 的草稿 Release（只有你看得到）→ GitHub 伺服器辨識 → 錄音立刻從 GitHub 刪除 → 結果傳回手機。手機不用下載語音模型。':'在手機上辨識，不需要網路，但要下載模型、比較耗電。'}</small></div>${s.mcloud=='gh'?`<div class="sl"><label>GitHub 權杖<span id="tokst">${s.ghTok?'已設定':'未設定'}</span></label><input class="ti" id="ghtok" type="password" value="${esc(s.ghTok)}" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false"><small>建立方式：GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token → Repository access 只選 <b>${GH.repo}</b> → Permissions 把 <b>Contents</b> 和 <b>Actions</b> 設成 Read and write。權杖只存在這支手機裡。</small><div class="pr" style="margin-top:8px"><button class="btn sm" data-a="tokmk">🔑 到 GitHub 建立權杖</button><button class="btn sm on" data-a="toktest">測試連線</button></div></div><div class="sl"><label>雲端語音模型</label>${sg('scm',[['firered','FireRed 最準'],['sensevoice','SenseVoice 最快'],['large-v3-turbo','Whisper 多語']],s.cmodel)}<small>${s.cmodel=='firered'?'小紅書 FireRedASR：中文、中英夾雜辨識最準（AISHELL-1 錯誤率約 0.6%），比較慢，1 小時會議約 1～1.5 小時':s.cmodel=='sensevoice'?'阿里巴巴 SenseVoice：中英日韓粵語，速度最快（1 小時會議約 5～10 分鐘），準確度略低於 FireRedASR':'OpenAI Whisper：支援約 100 種語言，但中文準確度較低、速度較慢'}</small></div>`:''}</div>`);
- G+=sec('✨ AI 修正錯字・重點整理',`<div class="grp glass"><div class="sl"><label>AI 整理引擎</label>${sg('sllm',[['github','GitHub Models'],['local','開源 Qwen3'],['off','關閉']],s.llm||'github')}<small>${s.llm=='local'?'在你的 GitHub 伺服器上跑開源 Qwen3 4B（llama.cpp），逐字稿不會送到其他服務；比較慢，1 小時會議約多 30～60 分鐘，品質比 GitHub Models 差':s.llm=='off'?'不做 AI 修正與重點整理':'GitHub 提供的 GPT-4.1 mini 等模型（在微軟 Azure 上執行）：品質好、速度快；會把逐字稿「文字」送去處理（不含錄音）。免費額度每天約 150 次呼叫，1 小時會議約用 10 次'}</small></div>
+ G+=sec('✨ AI 修正錯字・重點整理',`<div class="grp glass"><div class="sl"><label>AI 整理引擎</label>${sg('sllm',[['local','開源 Qwen3'],['off','關閉']],s.llm=='off'?'off':'local')}<small>${s.llm=='off'?'不做 AI 修正與重點整理':'在你的 GitHub 伺服器上跑阿里巴巴開源的 Qwen3 4B 語言模型，逐字稿不會送到其他服務。1 小時的會議大約多花 30～60 分鐘'}</small></div>
   ${s.llm!='off'?tg('aifix','自動修正錯字','依上下文修正同音字、專有名詞、英文拼寫，保留原始辨識可對照')+tg('aisum','自動產生重點整理','分章節列出重點、決議事項、待辦事項'):''}</div>`);
  G+=sec('🔄 會議記錄同步（加密）',`<div class="grp glass">${tg('sync','在不同裝置同步會議記錄','逐字稿與重點整理加密後存到 GitHub（'+GH.repo+' 的 notes 分支）；錄音檔不會同步')}
   ${s.sync?`<div class="sl"><label>同步密碼<span id="syst">${esc(SY.msg||(s.lastSync?'上次同步 '+fmtD(s.lastSync):'尚未同步'))}</span></label><input class="ti" id="sypw" type="password" value="${esc(s.syncPw)}" placeholder="每台裝置都要輸入一樣的密碼" autocomplete="new-password"><small>用 AES-256-GCM 加密，GitHub 上只看得到亂碼。<b>忘記密碼就無法還原</b>，請記好。密碼只存在這台裝置。</small><div class="pr" style="margin-top:8px"><button class="btn sm on" data-a="synow">🔄 立即同步</button></div></div>`:''}</div>`);
@@ -1684,7 +1684,7 @@ $('#pmL').onclick=()=>{S.set.onb=1;save();$('#pm').classList.remove('on')};
 addEventListener('beforeunload',e=>{if(R.on){e.preventDefault();e.returnValue=''}});
 (async()=>{const d=await iget('k','s');if(d){S.set={...DEF,...d.set};S.hist=d.hist||[];S.meets=d.meets||[];S.fav=d.fav||[]}if(['word','phr','gram','term','fav'].includes(S.set.lsub))LS.sub=S.set.lsub;if(!TH[S.set.theme])S.set.theme='sea';
  /* v1.3:手機預設改用 CPU(GPU 容易發燙、當機);開 App 時不自動開相機/麥克風 */
- if(!S.set.v13){S.set.dev='wasm';S.set.v13=1;save()}if(!S.set.v16){if(S.set.cmodel=='sensevoice')S.set.cmodel='firered';S.set.v16=1;save()}if(!S.set.v15){if(S.set.cmodel=='large-v3-turbo'||S.set.cmodel=='medium'||S.set.cmodel=='small')S.set.cmodel='sensevoice';S.set.v15=1;save()}if(S.set.tsub=='cam'||S.set.tsub=='live')S.set.tsub='text';
+ if(!S.set.v13){S.set.dev='wasm';S.set.v13=1;save()}if(!S.set.v16){if(S.set.cmodel=='sensevoice')S.set.cmodel='firered';S.set.v16=1;save()}if(S.set.llm=='github'){S.set.llm='local';save()}if(!S.set.v15){if(S.set.cmodel=='large-v3-turbo'||S.set.cmodel=='medium'||S.set.cmodel=='small')S.set.cmodel='sensevoice';S.set.v15=1;save()}if(S.set.tsub=='cam'||S.set.tsub=='live')S.set.tsub='text';
  layout();apply();show('tr');
  /* 上次沒處理完的語音片段 → 繼續辨識;錄音中被關掉的會議 → 標記完成 */
  const ks=((await ikeys('q'))||[]).map(String).sort();for(const x of S.meets){if(x.st=='rec'){const m=await getM(x.id);if(m){m.st=ks.some(k=>k.startsWith(m.id))?'proc':'done';saveM(m)}}}

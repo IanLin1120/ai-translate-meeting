@@ -40,11 +40,16 @@ App 下方的「學習」分頁：
 會議錄音和上傳的音檔改在 GitHub Actions 的伺服器上辨識，手機不用下載語音／講者模型：
 
 1. App 把錄音上傳到這個儲存庫的**草稿 Release**（只有擁有者看得到，不會進 Git 歷史）
-2. App 觸發 [`transcribe.yml`](.github/workflows/transcribe.yml)：先分辨講者（pyannote segmentation 3.0 切段 ＋ 3D-Speaker ERes2Net 聲紋 ＋ 階層分群，見 [`diarize.py`](scripts/diarize.py)），再把每段發言分別轉文字（預設 SenseVoice，中英夾雜最準；也可選 Whisper large-v3-turbo）
+2. App 觸發 [`transcribe.yml`](.github/workflows/transcribe.yml)：先分辨講者（pyannote segmentation 3.0 切段 ＋ 3D-Speaker ERes2Net 聲紋 ＋ 階層分群，見 [`diarize.py`](scripts/diarize.py)），再把每段發言分別轉文字（預設 **FireRedASR**＋中英標點模型，中文最準；也可選 SenseVoice（最快）或 Whisper large-v3-turbo（多語言））
+   - **AI 修正錯字＋重點整理**（[`llm.py`](scripts/llm.py)）：在同一台 GitHub 伺服器上用 llama-cpp-python 跑開源 **Qwen3 4B**，依上下文修正同音字、專有名詞（保留原始辨識可對照），並產生分章節重點、決議事項、待辦事項；逐字稿不會送到其他服務
 3. 伺服器下載錄音後**立刻從 GitHub 刪除**；結果 `result.json` 放回草稿，App 取回後**刪除整個草稿**
 4. [`cleanup-jobs.yml`](.github/workflows/cleanup-jobs.yml) 每小時刪除超過 6 小時沒被取回的草稿
 
 公開儲存庫的 Actions 紀錄任何人都看得到，所以腳本不會在紀錄裡印出逐字稿內容。
+
+## 🔄 會議記錄同步（加密）
+
+逐字稿與重點整理以 **AES-256-GCM** 加密（金鑰由你的同步密碼經 PBKDF2-SHA256 310,000 次推導）後存到本儲存庫的 `notes` 分支；GitHub 上只看得到亂碼，錄音檔不會同步。每台裝置在「設定 → 🔄 會議記錄同步」輸入相同密碼即可同步。
 
 App 需要一組 **Fine-grained 權杖**：Repository access 只選本儲存庫，Permissions 把 **Contents** 和 **Actions** 設成 Read and write，填到 App「設定 → ☁️ GitHub 雲端轉文字」。
 
