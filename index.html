@@ -506,7 +506,7 @@ let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.5.0';
+const APP_VER='1.5.1';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -918,30 +918,33 @@ function assign(m,e,len){if(!e){if(!m.spk.length)newSpk(m);return m.spk[0].id}
  const max=+S.set.maxSpk||0,thr=+S.set.thr+(len<2?-.04:0);
  let s=best;if(!best||(bs<thr&&(!max||m.spk.length<max)))s=newSpk(m);
  const w=Math.min(len||1,6);if(!s.v)s.v=Array.from(v,x=>x*w);else for(let i=0;i<v.length;i++)s.v[i]+=v[i]*w;s.n++;return s.id}
-/* 講者分群:平均連結階層分群 → 零碎小群併入最像的群 → 依群中心反覆修正 */
-function ahcLabels(E,dur,k,thr,minS){const n=E.length;if(n<2)return new Array(n).fill(0);
+/* 講者分群(與 GitHub 端 diarize.py 相同):平均連結階層分群 → 零碎小群併入最像的群 → 依群中心修正;
+   指定人數時:人數不夠就降低門檻細分、太多就合併最像的群 */
+function ahcLabels(E,dur,k,thr,minFrac){const n=E.length;if(n<2)return new Array(n).fill(0);
  const X=E.map(v=>{let s=0;for(const x of v)s+=x*x;s=Math.sqrt(s)||1;return Float32Array.from(v,x=>x/s)}),d=X[0].length;
- const S=new Float32Array(n*n);for(let i=0;i<n;i++)for(let j=i;j<n;j++){let s=0;const a=X[i],b=X[j];for(let q=0;q<d;q++)s+=a[q]*b[q];S[i*n+j]=S[j*n+i]=s}
- const act=new Uint8Array(n).fill(1),sz=new Float64Array(n).fill(1),lab=Array.from({length:n},(_,i)=>i),best=new Int32Array(n),bs=new Float64Array(n);
- const rowBest=i=>{let b=-1,v=-9;for(let j=0;j<n;j++)if(j!=i&&act[j]&&S[i*n+j]>v){v=S[i*n+j];b=j}best[i]=b;bs[i]=v};
- for(let i=0;i<n;i++)rowBest(i);let cnt=n;
- while(cnt>1){let i=-1,v=-9;for(let q=0;q<n;q++)if(act[q]&&best[q]>=0&&bs[q]>v){v=bs[q];i=q}if(i<0)break;
-  if(k?cnt<=k:1-v>thr)break;const j=best[i];
-  for(let c=0;c<n;c++)if(act[c]&&c!=i&&c!=j){const s=(sz[i]*S[i*n+c]+sz[j]*S[j*n+c])/(sz[i]+sz[j]);S[i*n+c]=S[c*n+i]=s}
-  act[j]=0;sz[i]+=sz[j];cnt--;for(let q=0;q<n;q++)if(lab[q]==j)lab[q]=i;
-  for(let q=0;q<n;q++)if(act[q]&&(q==i||best[q]==i||best[q]==j))rowBest(q);else if(act[q]&&S[q*n+i]>bs[q]){bs[q]=S[q*n+i];best[q]=i}}
- let L=lab.slice();const tot=dur.reduce((a,b)=>a+b,0);if(minS==null)minS=Math.min(10,Math.max(3,tot*.015));
- const cent=()=>{const C=new Map();L.forEach((l,i)=>{let c=C.get(l);if(!c){c=new Float64Array(d);C.set(l,c)}for(let q=0;q<d;q++)c[q]+=X[i][q]});for(const c of C.values()){let s=0;for(const x of c)s+=x*x;s=Math.sqrt(s)||1;for(let q=0;q<d;q++)c[q]/=s}return C};
+ const S0=new Float32Array(n*n);for(let i=0;i<n;i++)for(let j=i;j<n;j++){let s=0;const a=X[i],b=X[j];for(let q=0;q<d;q++)s+=a[q]*b[q];S0[i*n+j]=S0[j*n+i]=s}
+ const raw=th=>{const S=S0.slice(),act=new Uint8Array(n).fill(1),sz=new Float64Array(n).fill(1),lab=Array.from({length:n},(_,i)=>i),best=new Int32Array(n),bs=new Float64Array(n);
+  const rowBest=i=>{let b=-1,v=-9;for(let j=0;j<n;j++)if(j!=i&&act[j]&&S[i*n+j]>v){v=S[i*n+j];b=j}best[i]=b;bs[i]=v};
+  for(let i=0;i<n;i++)rowBest(i);let cnt=n;
+  while(cnt>1){let i=-1,v=-9;for(let q=0;q<n;q++)if(act[q]&&best[q]>=0&&bs[q]>v){v=bs[q];i=q}if(i<0||1-v>th)break;const j=best[i];
+   for(let c=0;c<n;c++)if(act[c]&&c!=i&&c!=j){const s=(sz[i]*S[i*n+c]+sz[j]*S[j*n+c])/(sz[i]+sz[j]);S[i*n+c]=S[c*n+i]=s}
+   act[j]=0;sz[i]+=sz[j];cnt--;for(let q=0;q<n;q++)if(lab[q]==j)lab[q]=i;
+   for(let q=0;q<n;q++)if(act[q]&&(q==i||best[q]==i||best[q]==j))rowBest(q);else if(act[q]&&S[q*n+i]>bs[q]){bs[q]=S[q*n+i];best[q]=i}}
+  return lab};
+ const tot=dur.reduce((a,b)=>a+b,0),minS=Math.min(30,Math.max(3,tot*(minFrac??.015)));
  const dot=(a,b)=>{let s=0;for(let q=0;q<d;q++)s+=a[q]*b[q];return s};
- for(let it=0;it<6;it++){let C=cent();
-  if(!k){for(;;){const ks=[...C.keys()];if(ks.length<2)break;const T=new Map();L.forEach((l,i)=>T.set(l,(T.get(l)||0)+dur[i]));const s=ks.reduce((a,b)=>T.get(a)<=T.get(b)?a:b);if(T.get(s)>=minS)break;
-   const t=ks.filter(x=>x!=s).reduce((a,b)=>dot(C.get(s),C.get(a))>=dot(C.get(s),C.get(b))?a:b);L=L.map(l=>l==s?t:l);C=cent()}}
-  const ks=[...C.keys()],nw=X.map(x=>ks.reduce((a,b)=>dot(x,C.get(a))>=dot(x,C.get(b))?a:b));if(nw.every((v,i)=>v==L[i]))break;L=nw}
+ const cent=L=>{const C=new Map();L.forEach((l,i)=>{let c=C.get(l);if(!c){c=new Float64Array(d);C.set(l,c)}for(let q=0;q<d;q++)c[q]+=X[i][q]*dur[i]});for(const c of C.values()){let s=0;for(const x of c)s+=x*x;s=Math.sqrt(s)||1;for(let q=0;q<d;q++)c[q]/=s}return C};
+ const absorb=(L,floor)=>{let C=cent(L);while(C.size>Math.max(1,floor)){const T=new Map();L.forEach((l,i)=>T.set(l,(T.get(l)||0)+dur[i]));const ks=[...C.keys()],s=ks.reduce((a,b)=>T.get(a)<=T.get(b)?a:b);if(T.get(s)>=minS)break;
+   const t=ks.filter(x=>x!=s).reduce((a,b)=>dot(C.get(s),C.get(a))>=dot(C.get(s),C.get(b))?a:b);L=L.map(l=>l==s?t:l);C=cent(L)}return L};
+ let th=thr,L;for(;;){L=absorb(raw(th),k||1);if(!k||new Set(L).size>=k||th<=.3)break;th-=.05}
+ for(let it=0;it<8;it++){let C=cent(L);
+  while(k&&C.size>k){const ks=[...C.keys()];let ba=null,bb=null,bv=-9;for(let i=0;i<ks.length;i++)for(let j=i+1;j<ks.length;j++){const v=dot(C.get(ks[i]),C.get(ks[j]));if(v>bv){bv=v;ba=ks[i];bb=ks[j]}}L=L.map(l=>l==bb?ba:l);C=cent(L)}
+  const ks=[...C.keys()],nw=X.map(x=>ks.reduce((a,b)=>dot(x,C.get(a))>=dot(x,C.get(b))?a:b));if(nw.every((v,i)=>v==L[i]))break;L=absorb(nw,k||1)}
  const o=new Map();return L.map(l=>{if(!o.has(l))o.set(l,o.size);return o.get(l)})}
 /* 重新分辨講者:雲端結果用 3D-Speaker 聲紋、手機結果用 WavLM 聲紋,門檻不同 */
 function recluster(m,k){const it=m.u.map((u,i)=>[u,i]).filter(([u])=>u.e&&u.e.length);if(!it.length)return;
  const cloud=!!m.cm,sl=+S.set.thr||.8;
- const thr=cloud?Math.max(.4,Math.min(.85,1.4-sl)):Math.max(.05,Math.min(.35,.12+(.8-sl)*.5));
+ const thr=cloud?Math.max(.45,Math.min(.85,1.45-sl)):Math.max(.05,Math.min(.35,.12+(.8-sl)*.5));
  const lab=ahcLabels(it.map(([u])=>u.e),it.map(([u])=>Math.max(.5,u.t1-u.t0)),k||+S.set.maxSpk||0,thr);
  const keep={};m.spk.forEach(s=>keep[s.id]=s);const vote={};it.forEach(([u],j)=>{(vote[lab[j]]=vote[lab[j]]||{})[u.s]=(vote[lab[j]][u.s]||0)+1});
  m.spk=[];const map={};[...new Set(lab)].forEach(l=>{const s=newSpk(m);map[l]=s.id;const old=Object.entries(vote[l]).sort((a,b)=>b[1]-a[1])[0];const o=old&&keep[old[0]];if(o&&!/^講者 \d+$/.test(o.name)&&!m.spk.some(x=>x.name==o.name)){s.name=o.name;s.c=o.c}});
@@ -1011,7 +1014,7 @@ async function cloudRun(m){if(CLOUD[m.id])return;CLOUD[m.id]=1;
    if(m.cj.up[name])continue;const b=await iget('a',m.id+':'+a.n);if(!b)continue;
    cloudSt(m,`上傳錄音 ${k}/${m.aud.length}`,0);await ghUpload(rel,name,b,(s,t)=>cloudSt(m,`上傳錄音 ${k}/${m.aud.length}（${fmtMB(s)}/${fmtMB(t)}）`,s/t*100));m.cj.up[name]=1;saveM(m)}
   if(!parts.length)throw new Error('沒有錄音檔可以上傳');
-  if(!m.cj.job){const spk=+S.set.maxSpk||0,sens=Math.max(.5,Math.min(.85,1.5-(+S.set.thr||.8)));
+  if(!m.cj.job){const spk=+S.set.maxSpk||0,sens=Math.max(.45,Math.min(.85,1.45-(+S.set.thr||.8)));
    const job=new Blob([JSON.stringify({parts,lang:m.lang=='auto'?'auto':m.lang,model:S.set.cmodel||'sensevoice',speakers:spk,sens,tw:S.set.tw?1:0})],{type:'application/json'});
    await ghUpload(rel,'job.json',job);m.cj.job=1;saveM(m)}
   if(!m.cj.disp){cloudSt(m,'啟動 GitHub 轉文字');await ghApi('POST','/actions/workflows/transcribe.yml/dispatches',{ref:'main',inputs:{release:String(rel)}});m.cj.disp=Date.now();saveM(m)}

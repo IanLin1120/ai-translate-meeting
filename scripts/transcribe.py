@@ -136,7 +136,7 @@ def main():
     # ---- 1. 講者辨識：先切段、算聲紋、分群（diarize.py） ----
     import diarize as DZ
     n_spk = int(job.get("speakers") or 0)
-    sens = float(job.get("sens") or 0.6)
+    sens = float(job.get("sens") or 0.65)
     status("分辨講者", 0)
     last = [0.0]
 
