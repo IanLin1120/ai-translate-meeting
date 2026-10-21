@@ -3,16 +3,20 @@ import json, os, sys, time, urllib.request, urllib.error
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 eng = os.environ.get("ENGINE", "github")
 if eng == "github":
-    for model in ["openai/gpt-4.1-mini", "openai/gpt-4o-mini"]:
-        body = {"model": model, "messages": [{"role": "user", "content": "用一句繁體中文打招呼"}], "max_tokens": 50}
-        req = urllib.request.Request("https://models.github.ai/inference/chat/completions", data=json.dumps(body).encode(), method="POST",
-                                     headers={"Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}", "Content-Type": "application/json", "Accept": "application/json"})
-        try:
-            with urllib.request.urlopen(req, timeout=60) as r:
-                raw = r.read()
-                print(f"::notice title={model} HTTP {r.status}::type={r.headers.get('content-type')} enc={r.headers.get('content-encoding')} body={raw[:300]!r}")
-        except urllib.error.HTTPError as e:
-            print(f"::notice title={model} HTTP {e.code}::{e.read()[:300]!r}")
+    import subprocess
+    tok = os.environ["GITHUB_TOKEN"]
+    body = json.dumps({"model": "openai/gpt-4.1-mini", "messages": [{"role": "user", "content": "用一句繁體中文打招呼"}], "max_tokens": 50})
+    variants = [
+        ("doc headers", "https://models.github.ai/inference/chat/completions", ["-H", "Accept: application/vnd.github+json", "-H", "X-GitHub-Api-Version: 2022-11-28"]),
+        ("plain json", "https://models.github.ai/inference/chat/completions", ["-H", "Accept: application/json"]),
+        ("azure endpoint", "https://models.inference.ai.azure.com/chat/completions", ["-H", "Accept: application/json"]),
+    ]
+    for name, url, h in variants:
+        b = body if "azure" not in url else body.replace("openai/gpt-4.1-mini", "gpt-4.1-mini")
+        r = subprocess.run(["curl", "-sS", "-m", "60", "-w", "\\nHTTP %{http_code} %{content_type}", "-X", "POST", url, "-H", f"Authorization: Bearer {tok}",
+                            "-H", "Content-Type: application/json", *h, "-d", b], capture_output=True, text=True)
+        print(f"::notice title=curl {name}::{(r.stdout or r.stderr)[-350:]}")
+    print("proxy env:", {k: v for k, v in os.environ.items() if 'proxy' in k.lower()}, flush=True)
 import llm as L
 segs = [{"s": 1, "e": 6, "spk": 1, "text": "大家好今天我們要討論新產品的上式時間跟預算"},
         {"s": 7, "e": 12, "spk": 2, "text": "我覺得上式時間可以訂在十二月初，但是budget要在確認一下"},
