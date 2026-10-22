@@ -601,7 +601,7 @@ let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.15.0';
+const APP_VER='1.16.0';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -1202,7 +1202,9 @@ function cloudNote(m,t,p){if(!IS_APP||!NB.cloudWatch)return;const now=Date.now()
 function notifAsk(){if(!IS_APP)return;const P=perm();if(P&&P.notif&&P.notif!='yes'&&NB.requestPerms)NB.requestPerms('notif')}
 function cloudFin(m,ok,msg){delete CNT[m.id];if(IS_APP&&NB.cloudDone){try{NB.cloudDone(m.id,ok,msg||'')}catch(e){}}}
 window.__openM=id=>{if(id&&MS[id]||S.meets.some(x=>x.id==id))openMD(id)};
-function cloudSt(m,t,p){m.cs=t+(p!=null?` ${Math.round(p)}%`:'');saveM(m);cloudNote(m,t,p);if(R.m==m&&cur=='meet'){mStatus();if(!m.u.length&&!R.on)mList(m)}if(MD.id==m.id)renderMD();if(cur=='rec')renderRec()}
+const etaS=s=>s>=3600?`${Math.floor(s/3600)} 小時 ${Math.round(s%3600/60)} 分`:s>=90?`${Math.round(s/60)} 分鐘`:'1 分鐘內';
+const stTxt=b=>'GitHub '+(b.stage||'處理中'),etaT=e=>e>0?`・剩約 ${etaS(e)}`:'';
+function cloudSt(m,t,p,eta){m.cs=t+(p!=null?` ${Math.round(p)}%`:'')+etaT(eta);saveM(m);cloudNote(m,t+etaT(eta),p);if(R.m==m&&cur=='meet'){mStatus();if(!m.u.length&&!R.on)mList(m)}if(MD.id==m.id)renderMD();if(cur=='rec')renderRec()}
 async function cloudRun(m){if(CLOUD[m.id])return;CLOUD[m.id]=1;
  try{if(!S.set.ghTok){m.st='cloudwait';cloudSt(m,'等待設定 GitHub 權杖（設定 → ☁️ GitHub 雲端）');return}
   m.st='cloud';m.cj=m.cj||{up:{}};
@@ -1226,7 +1228,7 @@ async function cloudRun(m){if(CLOUD[m.id])return;CLOUD[m.id]=1;
     if(!S.set.keepAud&&!m.imp){for(const a of m.aud)await idel('a',m.id+':'+a.n);m.aud=[]}
     delete m.cj;m.st='done';m.cs='';saveM(m);cloudFin(m,1,m.u.length+' 句・'+m.spk.length+' 位講者'+(m.sum?'・含重點整理':''));toast('☁️ GitHub 轉文字完成：'+m.u.length+' 句、'+m.spk.length+' 位講者',3500);break}
    if(b.state=='error')throw new Error('GitHub 處理失敗：'+(b.err||'未知錯誤'));
-   if(b.state=='running'){lastT=Date.now();cloudSt(m,'GitHub '+(b.stage||'處理中'),b.p)}
+   if(b.state=='running'){lastT=Date.now();cloudSt(m,stTxt(b),b.p,b.eta)}
    else{const w=Math.round((Date.now()-m.cj.disp)/1000);cloudSt(m,`等待 GitHub 伺服器啟動（${w} 秒）`);if(w>900)throw new Error('GitHub 伺服器太久沒有開始，請稍後到紀錄頁重試')}}}
  catch(e){m.st='cloudfail';m.cs='❌ '+e.message;saveM(m);cloudFin(m,0,e.message);toast(m.cs,5000)}
  finally{delete CLOUD[m.id];if(R.m==m&&cur=='meet')renderMeet();if(MD.id==m.id)renderMD();if(cur=='rec')renderRec()}}
@@ -1241,13 +1243,13 @@ function cloudApply(m,r){m.spk=[];const map={};
 /* ================= AI 修正錯字＋重點整理(既有會議:只送逐字稿文字) ================= */
 const AIJ={};
 const AREL={};
-function aiSt(m,t,p){m.as=t+(p!=null?` ${Math.round(p)}%`:'');saveM(m,1);cloudNote(m,'AI '+t.replace(/^GitHub /,''),p);if(MD.id==m.id)renderMD()}
+function aiSt(m,t,p,eta){m.as=t+(p!=null?` ${Math.round(p)}%`:'')+etaT(eta);saveM(m,1);cloudNote(m,(x=>/^AI/.test(x)?x:'AI '+x)(t.replace(/^GitHub /,''))+etaT(eta),p);if(MD.id==m.id)renderMD()}
 async function aiRun(m,what){if(AIJ[m.id])return;if(!S.set.ghTok&&S.set.sync)await syTokFetch(0);if(!S.set.ghTok)return toast('請先到「設定 → ☁️ GitHub 雲端轉文字」填入 GitHub 權杖',3500);
  if(!m.u.length)return toast('這場會議還沒有逐字稿');const o=aiOpts();if(!o.llm)return toast('AI 整理已關閉，請到「設定 → ✨ AI 修正錯字・重點整理」開啟',3500);
  AIJ[m.id]=1;let rel=null;
  try{aiSt(m,'建立 GitHub 工作');const r0=await ghApi('POST','/releases',{tag_name:'job-ai-'+m.id+'-'+Date.now().toString(36),name:'job-ai-'+m.id,draft:true,body:JSON.stringify({state:'uploading'})});rel=r0.id;AREL[m.id]={rel,disp:0};notifAsk();
   const names={};m.spk.forEach(s=>names[s.id]=s.name);
-  const job={mode:'text',dur:m.dur,lang:m.lang,tw:S.set.tw?1:0,llm:o.llm,fix:what!='sum'?1:0,summ:what!='fix'?1:0,names,segs:m.u.map(u=>({s:u.t0,e:u.t1,spk:u.s,text:u.raw||u.text}))};
+  const job={mode:'text',dur:m.dur,lang:m.lang,tw:S.set.tw?1:0,llm:o.llm,fix:what!='sum'?1:0,summ:what!='fix'?1:0,names,segs:m.u.map(u=>({s:u.t0,e:u.t1,spk:u.s,text:u.text}))};
   await ghUpload(rel,'job.json',new Blob([JSON.stringify(job)],{type:'application/json'}));
   aiSt(m,'啟動 GitHub AI 整理');await ghApi('POST','/actions/workflows/transcribe.yml/dispatches',{ref:'main',inputs:{release:String(rel)}});AREL[m.id].disp=1;const t0=Date.now();
   for(;;){await sleep(8000);let r;try{r=await ghApi('GET','/releases/'+rel)}catch(e){if(e.code==404)throw new Error('GitHub 上的工作已被刪除');continue}
@@ -1255,10 +1257,10 @@ async function aiRun(m,what){if(AIJ[m.id])return;if(!S.set.ghTok&&S.set.sync)awa
    const res=(r.assets||[]).find(a=>a.name=='result.json');
    if(res){aiSt(m,'下載結果');let x=await ghAssetText(res.id);x=typeof x=='string'?JSON.parse(x):x;
     if(x.llm_error)throw new Error(x.llm_error);
-    if(job.fix)(x.segs||[]).forEach((s,i)=>{const u=m.u[i];if(!u)return;if(s.raw){u.raw=u.raw||s.raw;u.text=s.text}});
+    if(job.fix)(x.segs||[]).forEach((s,i)=>{const u=m.u[i];if(!u||u.ed)return;if(s.raw){u.raw=u.raw||s.raw;u.text=s.text}});
     if(x.summary)m.sum=x.summary;if(x.llm)m.llm=x.llm;m.as='';saveM(m);cloudFin(m,1,'AI 整理完成'+(x.summary?'・重點整理已更新':''));toast('✨ AI 整理完成',2500);break}
    if(b.state=='error')throw new Error(b.err||'GitHub 處理失敗');
-   if(b.state=='running')aiSt(m,'GitHub '+(b.stage||'處理中'),b.p);else{const w=Math.round((Date.now()-t0)/1000);aiSt(m,`等待 GitHub 伺服器啟動（${w} 秒）`);if(w>900)throw new Error('GitHub 伺服器太久沒有開始')}}}
+   if(b.state=='running')aiSt(m,stTxt(b),b.p,b.eta);else{const w=Math.round((Date.now()-t0)/1000);aiSt(m,`等待 GitHub 伺服器啟動（${w} 秒）`);if(w>900)throw new Error('GitHub 伺服器太久沒有開始')}}}
  catch(e){m.as='';saveM(m,1);cloudFin(m,0,'AI 整理失敗：'+e.message);toast('❌ AI 整理失敗：'+e.message,5000)}
  finally{delete AREL[m.id];if(rel){try{await ghApi('DELETE','/releases/'+rel)}catch(e){}}delete AIJ[m.id];if(MD.id==m.id)renderMD()}}
 
@@ -1562,7 +1564,7 @@ function utEdit(m,i){return new Promise(done=>{const u=m.u[i],s=spkOf(m,u.s),sh=
   if(k=='raw'){ta.value=u.raw;fit(ta);$('#ue-c').textContent=ta.value.length+' 字';return}
   if(k=='0')return close(0);
   const v=ta.value.trim();if(!v){if(confirm('文字是空的，要刪除這句嗎？')){m.u.splice(i,1);saveM(m);return close(1)}return}
-  u.text=v;if(u.raw&&u.raw===v)delete u.raw;if(tr)u.tr=tr.value.trim();saveM(m);toast('✅ 已儲存',1200);close(1)}})}
+  if(v!==u.text)u.ed=1;u.text=v;if(u.raw&&u.raw===v)delete u.raw;if(tr)u.tr=tr.value.trim();saveM(m);toast('✅ 已儲存',1200);close(1)}})}
 $('#aud').onplay=$('#aud').onpause=()=>apUpd();
 $('#aud').ontimeupdate=()=>{const m=AUD.m;if(!m)return;const t=m.aud[AUD.part].t0+$('#aud').currentTime;if(AUD.stopAt&&t>=AUD.stopAt){AUD.stopAt=null;$('#aud').pause()}apUpd();if(MD.id!=m.id)return;let k=-1;m.u.forEach((u,i)=>{if(u.t0<=t+.2)k=i});
  if(k!=MD.pl){MD.pl=k;$$('#mdl .ut.pl').forEach(x=>x.classList.remove('pl'));const el=$('#mdl').querySelector(`.ut[data-i="${k}"]`);if(el){el.classList.add('pl');el.scrollIntoView({block:'center',behavior:'smooth'})}}};

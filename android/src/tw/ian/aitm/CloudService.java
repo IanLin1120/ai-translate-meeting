@@ -101,6 +101,8 @@ public class CloudService extends Service {
         nm.notify(2000 + (mid.hashCode() & 0xffff), b.build());
     }
 
+    static String etaS(int s) { return s >= 3600 ? (s / 3600) + " 小時 " + Math.round((s % 3600) / 60.0) + " 分" : s >= 90 ? Math.round(s / 60.0) + " 分鐘" : "1 分鐘內"; }
+
     Notification progress(String title, String text, int pct, int count) {
         Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CH_P) : new Notification.Builder(this);
         b.setSmallIcon(R.drawable.ic_stat).setOngoing(true).setOnlyAlertOnce(true)
@@ -184,14 +186,19 @@ public class CloudService extends Service {
                         if (res) { done(this, mid, 1, "結果已準備好", !appVisible); continue; }
                         String state = st.optString("state", "");
                         if ("error".equals(state)) { done(this, mid, 0, st.optString("err", "處理失敗"), !appVisible); continue; }
-                        if ("running".equals(state)) { text = "GitHub " + st.optString("stage", "處理中"); p = st.has("p") ? (int) Math.round(st.optDouble("p", -1)) : -1; }
+                        if ("running".equals(state)) {
+                            p = st.has("p") ? (int) Math.round(st.optDouble("p", -1)) : -1;
+                            int eta = st.optInt("eta", -1);
+                            text = "GitHub " + st.optString("stage", "處理中") + (p >= 0 ? "　" + p + "%" : "") + (eta > 0 ? "・剩約 " + etaS(eta) : "");
+                            o.put("shown", 1);
+                        }
                         else if (rel > 0) { text = "等待 GitHub 伺服器啟動"; p = -1; }
                         o.put("text", text); o.put("p", p);
                         JSONObject j2 = jobs(this);
                         if (j2.has(mid)) { j2.put(mid, o); saveJobs(this, j2); }
                     } catch (Exception e) { text = "連線中斷，稍後重試"; }
                 }
-                if (firstTitle == null) { firstTitle = title; firstText = text + (p >= 0 ? "　" + p + "%" : ""); firstP = p; }
+                if (firstTitle == null) { firstTitle = title; firstText = text + (p >= 0 && !text.contains("%") ? "　" + p + "%" : ""); firstP = p; }
             }
             int cnt = jobs(this).length();
             if (cnt > 0 && firstTitle != null && nm != null) nm.notify(999, progress(firstTitle, firstText, firstP, cnt));

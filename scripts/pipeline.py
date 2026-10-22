@@ -199,6 +199,23 @@ def prep():
 
 
 # ---------------- 2. 轉文字（每台一部分） ----------------
+_SHORT = set("A AN THE AND OR BUT IF SO TO OF IN ON AT BY FOR UP OUT OFF AS IS AM ARE WAS BE BEEN DO DID DOES HAS HAD HAVE CAN MAY NOT NO YES WE YOU HE SHE IT ITS HIS HER OUR US ME MY THEY THEM THIS THAT WHO WHY HOW WHAT ALL ANY ONE TWO NEW OLD GET GOT LET SEE SAY SET PUT USE WAY DAY NOW THEN TOO VERY JUST UM UH AH OH HMM OKAY HI BYE ALSO FROM WITH WILL WOULD SHALL INTO OVER".split())
+
+
+def en_case(txt):
+    """FireRedASR 的英文是全大寫 → 轉成一般寫法：常見單字小寫、縮寫（AI、QC、SOP）保留大寫、句首與 I 大寫"""
+    def f(m):
+        w = m.group(0)
+        if w == "I":
+            return w
+        if len(w) > 3 or w.split("'")[0] in _SHORT:
+            return w.lower()
+        return w
+    txt = re.sub(r"[A-Z][A-Z']*", f, txt)
+    txt = re.sub(r"\bi\b", "I", txt)
+    return re.sub(r"(^|[.!?。！？]\s*)([a-z])", lambda m: m.group(1) + m.group(2).upper(), txt)
+
+
 def asr_shard(k):
     t0 = time.time()
     plan = get("w-plan.json")
@@ -264,7 +281,7 @@ def asr_shard(k):
                     st = rec.create_stream()
                     st.accept_waveform(SR, a)
                     rec.decode_stream(st)
-                    txt = re.sub(r"[A-Z][A-Z']+", lambda m: m.group(0) if len(m.group(0)) <= 3 else m.group(0).lower(), st.result.text.strip())
+                    txt = en_case(st.result.text.strip())
                     texts[i] = pcm.add_punctuation(txt) if txt else ""
                 except Exception:
                     bad += 1
