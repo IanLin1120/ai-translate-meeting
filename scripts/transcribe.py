@@ -44,7 +44,7 @@ def gh(method, url, data=None, ctype="application/json", accept="application/vnd
         time.sleep(3 * (i + 1))
 
 
-def status(stage, p=None, state="running", err=None):
+def status(stage, p=None, state="running", err=None, eta=None):
     """把進度寫在草稿 Release 的說明欄，App 會輪詢顯示。"""
     msg = f"{stage}" + (f" {p:.0f}%" if p is not None else "")
     print("status:", msg, flush=True)
@@ -53,6 +53,8 @@ def status(stage, p=None, state="running", err=None):
     body = {"state": state, "stage": stage, "p": None if p is None else round(p, 1), "t": int(time.time())}
     if err:
         body["err"] = err
+    if eta is not None:
+        body["eta"] = int(eta)
     try:
         gh("PATCH", f"/releases/{REL}", {"body": json.dumps(body, ensure_ascii=False)})
     except Exception as e:

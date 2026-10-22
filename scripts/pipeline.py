@@ -73,6 +73,25 @@ def clean_work(keep_result=True):
             pass
 
 
+def span(plan, phase):
+    """整體進度：每個階段佔的百分比範圍"""
+    a, l = bool(plan.get("asr")), bool(plan.get("llm"))
+    R = {(True, True): {"asr": (5, 65), "llm": (65, 90), "final": (90, 100)},
+         (True, False): {"asr": (5, 95), "llm": (95, 95), "final": (95, 100)},
+         (False, True): {"asr": (5, 5), "llm": (5, 85), "final": (85, 100)},
+         (False, False): {"asr": (5, 5), "llm": (5, 5), "final": (5, 100)}}[(a, l)]
+    return R.get(phase, (0, 5))
+
+
+def ostat(plan, phase, stage, p=0):
+    """回報整體進度與預估剩餘時間（App 與通知欄會顯示）"""
+    a, b = span(plan, phase)
+    P = a + (b - a) * max(0, min(100, p)) / 100
+    el = time.time() - float(plan.get("t_start") or time.time())
+    eta = el * (100 - P) / P if P >= 6 else None
+    T.status(stage, P, eta=eta)
+
+
 def split_by_weight(weights, k):
     """把連續的項目切成 k 份，每份的總量差不多；回傳 [(i0, i1), ...]"""
     n = len(weights)
@@ -175,7 +194,7 @@ def prep():
     out("asr", json.dumps(list(range(len(asr_sh)))))
     out("llm", json.dumps(list(range(m))))
     n_srv = len(asr_sh)
-    T.status(f"分辨講者與轉文字（{n_srv} 台伺服器同時處理）" if n_srv else "AI 整理", 0)
+    ostat(plan, "asr" if n_srv else "llm", f"分辨講者與轉文字（{n_srv} 台伺服器同時處理）" if n_srv else f"AI 整理（{m} 台伺服器同時處理）", 0)
     print(f"::notice title=分工::轉文字 {len(asr_sh)} 台、AI 整理 {m} 台；準備花了 {time.time() - t0:.0f} 秒", flush=True)
 
 
@@ -197,7 +216,7 @@ def asr_shard(k):
     def say(p):
         if rep and time.time() - last[0] > 20:
             last[0] = time.time()
-            T.status(st_name, min(99, p))
+            ostat(plan, "asr", st_name, min(99, p))
     # 1. 講者片段＋聲紋
     import diarize as DZ
     pieces, embs = DZ.segments_and_embeddings(audio, MODELS, lambda p: say(p * 0.25), threads=os.cpu_count() or 4)
@@ -385,7 +404,7 @@ def llm_shard(k):
         def prog(stage_i, p):
             if rep and time.time() - last[0] > 20:
                 last[0] = time.time()
-                T.status(f"AI 修正錯字・整理重點（{m} 台伺服器同時處理）", min(99, (stage_i + p / 100) / max(1, steps) * 100))
+                ostat(plan, "llm", f"AI 修正錯字・整理重點（{m} 台伺服器同時處理）", min(99, (stage_i + p / 100) / max(1, steps) * 100))
         ai = None
         try:
             ai = L.LLM("local", T.status if rep else None)
@@ -417,6 +436,7 @@ def final():
         raise RuntimeError("其中一台伺服器處理失敗，請再試一次")
     plan = get("w-plan.json")
     t_start = plan.get("t_start", time.time())
+    ostat(plan, "final", "合併結果", 5)
     segs, bad = build_segs(plan)
     job = plan["job"]
     r = {"dur": round(plan.get("dur", 0), 2), "lang": job.get("lang"), "model": "text" if job.get("mode") == "text" else plan["model"],
@@ -446,7 +466,7 @@ def final():
             calls += o.get("calls", 0)
         if job.get("summ") and parts:
             import llm as L
-            T.status("AI 彙整成分章節的重點")
+            ostat(plan, "final", "AI 彙整成分章節的重點", 30)
             ai = L.LLM("local", T.status)
             try:
                 s = L.summarize_merge(ai, parts)
