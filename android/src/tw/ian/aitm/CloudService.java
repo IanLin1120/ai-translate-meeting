@@ -95,9 +95,9 @@ public class CloudService extends Service {
         if (nm == null) return;
         Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(c, CH_D) : new Notification.Builder(c);
         b.setSmallIcon(R.drawable.ic_stat).setAutoCancel(true).setContentIntent(openApp(c, mid))
-                .setContentTitle(ok ? "✅ 會議轉文字完成" : "❌ 會議轉文字失敗")
+                .setContentTitle(ok ? "✅ GitHub 處理完成" : "❌ GitHub 處理失敗")
                 .setContentText(title + (msg != null && !msg.isEmpty() ? "・" + msg : ""))
-                .setStyle(new Notification.BigTextStyle().bigText(title + (msg != null && !msg.isEmpty() ? "\n" + msg : "") + (ok ? "\n點一下查看逐字稿與重點整理" : "\n點一下開啟 App 重試")));
+                .setStyle(new Notification.BigTextStyle().bigText(title + (msg != null && !msg.isEmpty() ? "\n" + msg : "") + (ok ? "\n點一下查看逐字稿與重點整理" : "\n點一下開啟 App 查看")));
         nm.notify(2000 + (mid.hashCode() & 0xffff), b.build());
     }
 

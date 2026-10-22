@@ -131,7 +131,8 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 .mhead{display:flex;align-items:center;gap:8px}
 .mi-row{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}.mi-c{font-size:.82em;padding:5px 11px;border-radius:999px;border:1px dashed var(--edge);color:var(--sub);cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mi-c.on{border-style:solid;color:var(--tx,inherit);background:var(--glass);font-weight:600}
 .mc{position:relative}.mc-ed{position:absolute;right:8px;top:8px;opacity:.75}.mc>b{padding-right:34px}.mc-i{display:block;color:var(--ac);margin-top:2px}
-.ie-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.ie-chips span{font-size:.8em;padding:4px 10px;border-radius:999px;background:var(--glass);border:1px solid var(--edge);cursor:pointer}
+.ie-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.ie-chips span b{margin-left:6px;font-weight:700;color:var(--ac)}.ie-chips span.on{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 12%,transparent)}
+.ie-chips span{font-size:.8em;padding:4px 10px;border-radius:999px;background:var(--glass);border:1px solid var(--edge);cursor:pointer}
 #mdt{cursor:pointer}.mdh{flex-wrap:wrap}.mdh .mi-row{flex-basis:100%;width:100%;margin:0 0 4px}
 .mhead .mtt{flex:1;min-width:0}
 .mst.err{color:#c0392b}[data-dk="1"] .mst.err{color:#ff8a7a}
@@ -600,7 +601,7 @@ let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.14.0';
+const APP_VER='1.15.0';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -991,6 +992,14 @@ async function infoPick(k,cur){const L=infoList(k),[ic,n]=INFO_N[k];
  if(!v)return null;if(v=='none')return'';if(v=='new'){const t=prompt('輸入'+n+'名稱',cur||'');if(t==null||!t.trim())return null;infoUse(k,t);return t.trim()}
  const x=v.slice(2);infoUse(k,x);return x}
 function infoChips(o){const on=infoOn();return (on.cli?`<span class="mi-c${o.client?' on':''}" data-pick="cli">${INFO_N.cli[0]} ${esc(o.client||'客戶：未指定')}</span>`:'')+(on.room?`<span class="mi-c${o.room?' on':''}" data-pick="room">${INFO_N.room[0]} ${esc(o.room||'會議室：未指定')}</span>`:'')}
+const dtLocal=ms=>{const d=new Date(ms||Date.now());return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes())};
+/* 可選的開始時間:檔案時間(錄完)−長度、檔案時間本身、檔名裡的日期時間 */
+async function tsChoices(m){const out=[],dur=Math.round((m.dur||0)*1000);let f=null;try{f=m.aud&&m.aud.length?await iget('a',m.id+':'+m.aud[0].n):null}catch(e){}
+ const mt=(f&&f.lastModified)||m.fmt||0,name=(f&&f.name)||(m.aud&&m.aud[0]&&m.aud[0].nm)||m.title||'';
+ if(mt){out.push({n:'檔案時間是「錄完」→ 往前推算 ',t:mt-dur});out.push({n:'檔案時間就是「開始」',t:mt})}
+ const g=name.match(/(20\d\d)[-_.年 ]?(\d\d)[-_.月 ]?(\d\d)[日]?[ _T-]*(\d\d)[-_.:時]?(\d\d)(?:[-_.:分]?(\d\d))?/);
+ if(g){const d=new Date(+g[1],+g[2]-1,+g[3],+g[4],+g[5],+(g[6]||0)).getTime();if(isFinite(d)){out.push({n:'檔名裡的時間（開始）',t:d});out.push({n:'檔名裡的時間是「錄完」→ 往前推算 ',t:d-dur})}}
+ out.push({n:'目前設定',t:m.ts});const seen=new Set();return out.filter(x=>{const k=Math.round(x.t/60000);if(seen.has(k))return false;seen.add(k);return true})}
 function infoLine(m){return [m.client?'🏢 '+m.client:'',m.room?'🚪 '+m.room:''].filter(Boolean).join('・')}
 /* 完整的「編輯會議資訊」視窗 */
 function infoEdit(m){return new Promise(done=>{const s=$('#act'),on=infoOn();
@@ -998,12 +1007,17 @@ function infoEdit(m){return new Promise(done=>{const s=$('#act'),on=infoOn();
  $('#actb').innerHTML=`<div class="pmb" style="padding-bottom:0"><h3 style="font-size:1em">✏️ 會議資訊</h3></div><div class="grp" style="padding:4px 14px 10px">
   <div class="sl"><label>📝 會議標題</label><input class="ti" id="ie-title" value="${esc(m.title||'')}" placeholder="${esc('會議 '+fmtD(m.ts))}"></div>
   ${on.cli?field('cli',m.client):''}${on.room?field('room',m.room):''}
+  <div class="sl"><label>🕐 開始時間<span id="ie-end"></span></label><input class="ti" id="ie-ts" type="datetime-local" step="60" value="${dtLocal(m.ts)}"><div class="ie-chips" id="ie-tsc"><span data-tsread="1">🔄 重新讀取錄音檔的時間</span></div><small style="color:var(--sub)">匯入的錄音檔，檔案時間通常是「錄完」的時間；按上面的按鈕可以選要用哪一個時間點</small></div>
   ${!on.cli||!on.room?`<small style="color:var(--sub)">可以到「設定 → 🏷 會議資訊欄位」開啟${!on.cli?'客戶名稱':''}${!on.cli&&!on.room?'、':''}${!on.room?'會議室':''}欄位</small>`:''}</div>
   <div class="pmb pr" style="padding-top:6px"><button class="btn" data-ie="0" style="flex:1">取消</button><button class="btn on" data-ie="1" style="flex:1">💾 儲存</button></div>`;
  s.classList.add('on');setTimeout(()=>{const t=$('#ie-title');t&&t.focus()},150);
  const close=v=>{s.classList.remove('on');s.onclick=null;done(v)};
- s.onclick=e=>{const f=e.target.closest('[data-fill]');if(f){$('#ie-'+f.dataset.fill).value=f.textContent;return}
+ const endUpd=()=>{const v=new Date($('#ie-ts').value).getTime();$('#ie-end').textContent=isFinite(v)?'結束 '+fmtD(v+(m.dur||0)*1000).slice(-5)+'（'+fmtT(m.dur)+'）':''};endUpd();$('#ie-ts').oninput=endUpd;
+ s.onclick=async e=>{const f=e.target.closest('[data-fill]');if(f){$('#ie-'+f.dataset.fill).value=f.textContent;return}
+  const tp=e.target.closest('[data-tsv]');if(tp){$('#ie-ts').value=dtLocal(+tp.dataset.tsv);endUpd();$$('#ie-tsc [data-tsv]').forEach(x=>x.classList.toggle('on',x===tp));return}
+  if(e.target.closest('[data-tsread]')){const c=await tsChoices(m);$('#ie-tsc').innerHTML=c.length?c.map(x=>`<span data-tsv="${x.t}">${esc(x.n)}<b>${fmtD(x.t)}</b></span>`).join(''):'<small style="color:var(--sub)">這場會議沒有保存錄音檔，請直接修改上面的時間</small>';return}
   const b=e.target.closest('[data-ie]');if(b){if(b.dataset.ie=='0')return close(0);
+   const tv=$('#ie-ts').value;if(tv){const nt=new Date(tv).getTime();if(isFinite(nt)&&Math.abs(nt-m.ts)>30000){m.ts=nt;m.tsAdj=1}}
    m.title=$('#ie-title').value.trim();if(on.cli){m.client=$('#ie-cli').value.trim();infoUse('cli',m.client)}if(on.room){m.room=$('#ie-room').value.trim();infoUse('room',m.room)}
    saveM(m);if(R.m&&R.m.id==m.id){MI.cli=m.client||'';MI.room=m.room||''}toast('✅ 已儲存',1500);return close(1)}
   if(e.target==s)close(0)}})}
@@ -1141,12 +1155,12 @@ async function utSpk(m,i,done){const u=m.u[i];const k=await menu('這句話是�
 /* ---- 匯入音檔轉文字 ---- */
 $('#mfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;if(R.on)return toast('請先結束目前的錄音');
  if(cloudOn()){const m={id:uid(),title:f.name.replace(/\.[^.]+$/,''),client:MI.cli,room:MI.room,ts:0,dur:await mediaDur(f),off:0,lang:S.set.mlang,tr:S.set.mtr,spk:[],u:[],aud:[{n:0,t0:0,ty:f.type,nm:f.name}],st:'cloud',cs:'準備上傳',seq:0,imp:1,cloud:1};
-  m.ts=(f.lastModified||Date.now())-Math.round((m.dur||0)*1000);m.tsAdj=1;MS[m.id]=m;R.m=m;await iput('a',m.id+':0',f);saveM(m);renderMeet();cloudRun(m);return}
+  m.ts=(f.lastModified||Date.now())-Math.round((m.dur||0)*1000);m.tsAdj=1;m.fmt=f.lastModified||0;MS[m.id]=m;R.m=m;await iput('a',m.id+':0',f);saveM(m);renderMeet();cloudRun(m);return}
  toast('讀取音檔中…',60000);let buf;
  try{const ab=await f.arrayBuffer();const ac=new (window.AudioContext||window.webkitAudioContext)();const dec=await ac.decodeAudioData(ab);ac.close();
   const n=Math.ceil(dec.duration*16000),oc=new OfflineAudioContext(1,n,16000),src=oc.createBufferSource();src.buffer=dec;src.connect(oc.destination);src.start();buf=(await oc.startRendering()).getChannelData(0)}
  catch(err){return toast('無法讀取這個音檔（格式不支援或檔案太大）',4000)}
- const m={id:uid(),title:f.name.replace(/\.[^.]+$/,''),client:MI.cli,room:MI.room,ts:(f.lastModified||Date.now())-Math.round(buf.length/16),tsAdj:1,dur:buf.length/16000,off:0,lang:S.set.mlang,tr:S.set.mtr,spk:[],u:[],aud:[],st:'proc',seq:0,imp:1};
+ const m={id:uid(),title:f.name.replace(/\.[^.]+$/,''),client:MI.cli,room:MI.room,ts:(f.lastModified||Date.now())-Math.round(buf.length/16),tsAdj:1,fmt:f.lastModified||0,dur:buf.length/16000,off:0,lang:S.set.mlang,tr:S.set.mtr,spk:[],u:[],aud:[],st:'proc',seq:0,imp:1};
  MS[m.id]=m;R.m=m;await iput('a',m.id+':0',f);m.aud.push({n:0,t0:0,ty:f.type});saveM(m);
  const v=new VAD({hang:.65,max:25,onSeg:s=>segs.push(s)}),segs=[];for(let i=0;i<buf.length;i+=16000)v.push(buf.subarray(i,i+16000));v.flush();
  for(const s of segs){const k=m.id+':'+String(++m.seq).padStart(6,'0');await iput('q',k,{mid:m.id,t0:s.t0,pcm:f2i(s.a)});MQ.push(k)}
@@ -1184,14 +1198,15 @@ const CLOUD={};
 /* 通知欄:雲端轉文字進度(App 在背景時由原生服務繼續查詢 GitHub) */
 const CNT={};
 function cloudNote(m,t,p){if(!IS_APP||!NB.cloudWatch)return;const now=Date.now();if(CNT[m.id]&&now-CNT[m.id]<2000&&p!=null&&p<100)return;CNT[m.id]=now;
- try{NB.cloudWatch(m.id,mTitle(m),GH.user+'/'+GH.repo,S.set.ghTok||'',+(m.cj&&m.cj.rel)||0,t,p==null?-1:Math.round(p),!!(m.cj&&m.cj.disp))}catch(e){}}
+ const j=m.cj||AREL[m.id]||{};try{NB.cloudWatch(m.id,mTitle(m),GH.user+'/'+GH.repo,S.set.ghTok||'',+j.rel||0,t,p==null?-1:Math.round(p),!!j.disp)}catch(e){}}
+function notifAsk(){if(!IS_APP)return;const P=perm();if(P&&P.notif&&P.notif!='yes'&&NB.requestPerms)NB.requestPerms('notif')}
 function cloudFin(m,ok,msg){delete CNT[m.id];if(IS_APP&&NB.cloudDone){try{NB.cloudDone(m.id,ok,msg||'')}catch(e){}}}
 window.__openM=id=>{if(id&&MS[id]||S.meets.some(x=>x.id==id))openMD(id)};
 function cloudSt(m,t,p){m.cs=t+(p!=null?` ${Math.round(p)}%`:'');saveM(m);cloudNote(m,t,p);if(R.m==m&&cur=='meet'){mStatus();if(!m.u.length&&!R.on)mList(m)}if(MD.id==m.id)renderMD();if(cur=='rec')renderRec()}
 async function cloudRun(m){if(CLOUD[m.id])return;CLOUD[m.id]=1;
  try{if(!S.set.ghTok){m.st='cloudwait';cloudSt(m,'等待設定 GitHub 權杖（設定 → ☁️ GitHub 雲端）');return}
   m.st='cloud';m.cj=m.cj||{up:{}};
-  if(!m.cj.rel){cloudSt(m,'建立 GitHub 工作');const r=await ghApi('POST','/releases',{tag_name:'job-'+m.id,name:'job-'+m.id,draft:true,body:JSON.stringify({state:'uploading'})});m.cj.rel=r.id;saveM(m)}
+  notifAsk();if(!m.cj.rel){cloudSt(m,'建立 GitHub 工作');const r=await ghApi('POST','/releases',{tag_name:'job-'+m.id,name:'job-'+m.id,draft:true,body:JSON.stringify({state:'uploading'})});m.cj.rel=r.id;saveM(m)}
   const rel=m.cj.rel,ext=t=>/mp4|m4a|aac/.test(t)?'m4a':/ogg/.test(t)?'ogg':/wav/.test(t)?'wav':/mpeg|mp3/.test(t)?'mp3':/video/.test(t)?'mp4':'webm';
   const parts=[];let k=0;
   for(const a of m.aud){k++;const name='audio-'+String(a.n).padStart(3,'0')+'.'+(a.nm&&a.nm.includes('.')?a.nm.split('.').pop().toLowerCase():ext(a.ty||''));parts.push({name,t0:a.t0});
@@ -1225,26 +1240,27 @@ function cloudApply(m,r){m.spk=[];const map={};
  if(m.tr)(async()=>{for(const u of m.u){try{u.tr=(await translate(u.text,'auto',m.tr)).t}catch(e){break}}saveM(m);if(MD.id==m.id)renderMD();if(R.m==m)renderMeet()})()}
 /* ================= AI 修正錯字＋重點整理(既有會議:只送逐字稿文字) ================= */
 const AIJ={};
-function aiSt(m,t,p){m.as=t+(p!=null?` ${Math.round(p)}%`:'');saveM(m,1);if(MD.id==m.id)renderMD()}
-async function aiRun(m,what){if(AIJ[m.id])return;if(!S.set.ghTok)return toast('請先到「設定 → ☁️ GitHub 雲端轉文字」填入 GitHub 權杖',3500);
+const AREL={};
+function aiSt(m,t,p){m.as=t+(p!=null?` ${Math.round(p)}%`:'');saveM(m,1);cloudNote(m,'AI '+t.replace(/^GitHub /,''),p);if(MD.id==m.id)renderMD()}
+async function aiRun(m,what){if(AIJ[m.id])return;if(!S.set.ghTok&&S.set.sync)await syTokFetch(0);if(!S.set.ghTok)return toast('請先到「設定 → ☁️ GitHub 雲端轉文字」填入 GitHub 權杖',3500);
  if(!m.u.length)return toast('這場會議還沒有逐字稿');const o=aiOpts();if(!o.llm)return toast('AI 整理已關閉，請到「設定 → ✨ AI 修正錯字・重點整理」開啟',3500);
  AIJ[m.id]=1;let rel=null;
- try{aiSt(m,'建立 GitHub 工作');const r0=await ghApi('POST','/releases',{tag_name:'job-ai-'+m.id+'-'+Date.now().toString(36),name:'job-ai-'+m.id,draft:true,body:JSON.stringify({state:'uploading'})});rel=r0.id;
+ try{aiSt(m,'建立 GitHub 工作');const r0=await ghApi('POST','/releases',{tag_name:'job-ai-'+m.id+'-'+Date.now().toString(36),name:'job-ai-'+m.id,draft:true,body:JSON.stringify({state:'uploading'})});rel=r0.id;AREL[m.id]={rel,disp:0};notifAsk();
   const names={};m.spk.forEach(s=>names[s.id]=s.name);
   const job={mode:'text',dur:m.dur,lang:m.lang,tw:S.set.tw?1:0,llm:o.llm,fix:what!='sum'?1:0,summ:what!='fix'?1:0,names,segs:m.u.map(u=>({s:u.t0,e:u.t1,spk:u.s,text:u.raw||u.text}))};
   await ghUpload(rel,'job.json',new Blob([JSON.stringify(job)],{type:'application/json'}));
-  aiSt(m,'啟動 GitHub AI 整理');await ghApi('POST','/actions/workflows/transcribe.yml/dispatches',{ref:'main',inputs:{release:String(rel)}});const t0=Date.now();
+  aiSt(m,'啟動 GitHub AI 整理');await ghApi('POST','/actions/workflows/transcribe.yml/dispatches',{ref:'main',inputs:{release:String(rel)}});AREL[m.id].disp=1;const t0=Date.now();
   for(;;){await sleep(8000);let r;try{r=await ghApi('GET','/releases/'+rel)}catch(e){if(e.code==404)throw new Error('GitHub 上的工作已被刪除');continue}
    let b={};try{b=JSON.parse(r.body||'{}')}catch(e){}
    const res=(r.assets||[]).find(a=>a.name=='result.json');
    if(res){aiSt(m,'下載結果');let x=await ghAssetText(res.id);x=typeof x=='string'?JSON.parse(x):x;
     if(x.llm_error)throw new Error(x.llm_error);
     if(job.fix)(x.segs||[]).forEach((s,i)=>{const u=m.u[i];if(!u)return;if(s.raw){u.raw=u.raw||s.raw;u.text=s.text}});
-    if(x.summary)m.sum=x.summary;if(x.llm)m.llm=x.llm;m.as='';saveM(m);toast('✨ AI 整理完成',2500);break}
+    if(x.summary)m.sum=x.summary;if(x.llm)m.llm=x.llm;m.as='';saveM(m);cloudFin(m,1,'AI 整理完成'+(x.summary?'・重點整理已更新':''));toast('✨ AI 整理完成',2500);break}
    if(b.state=='error')throw new Error(b.err||'GitHub 處理失敗');
    if(b.state=='running')aiSt(m,'GitHub '+(b.stage||'處理中'),b.p);else{const w=Math.round((Date.now()-t0)/1000);aiSt(m,`等待 GitHub 伺服器啟動（${w} 秒）`);if(w>900)throw new Error('GitHub 伺服器太久沒有開始')}}}
- catch(e){m.as='';saveM(m,1);toast('❌ AI 整理失敗：'+e.message,5000)}
- finally{if(rel){try{await ghApi('DELETE','/releases/'+rel)}catch(e){}}delete AIJ[m.id];if(MD.id==m.id)renderMD()}}
+ catch(e){m.as='';saveM(m,1);cloudFin(m,0,'AI 整理失敗：'+e.message);toast('❌ AI 整理失敗：'+e.message,5000)}
+ finally{delete AREL[m.id];if(rel){try{await ghApi('DELETE','/releases/'+rel)}catch(e){}}delete AIJ[m.id];if(MD.id==m.id)renderMD()}}
 
 /* ================= 會議記錄同步(AES-256-GCM 加密後存到 GitHub 的 notes 分支) ================= */
 const SY={key:null,pw:'',busy:0,t:null,msg:''};
@@ -1262,7 +1278,16 @@ async function syDel(path,sha){try{await ghApi('DELETE','/contents/'+path,{messa
 function syncSoon(){clearTimeout(SY.t);SY.t=setTimeout(()=>syncNow(0),6000)}
 /* 會議要上傳的內容:不含錄音、不含聲紋向量 */
 function syPack(m){return{id:m.id,title:m.title,client:m.client||'',room:m.room||'',ts:m.ts,dur:m.dur,lang:m.lang,tr:m.tr,up:m.up,cm:m.cm,sum:m.sum,llm:m.llm,spk:m.spk.map(({v,...s})=>s),u:m.u.map(({e,...u})=>u)}}
-async function syncNow(manual){if(!S.set.sync||!S.set.ghTok||!S.set.syncPw){if(manual)toast(!S.set.ghTok?'請先設定 GitHub 權杖':'請先設定同步密碼',3000);return}
+async function sha1s(s){return b64e(new Uint8Array(await crypto.subtle.digest('SHA-1',new TextEncoder().encode(s||''))))}
+/* 沒有權杖的裝置:用同步密碼從公開儲存庫讀回加密的權杖 */
+async function syTokFetch(manual){if(!S.set.syncPw){if(manual)toast('請先輸入同步密碼',3000);return false}
+ const raw=n=>fetch(`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/notes/${n}?t=${Date.now()}`,{cache:'no-store'}).then(r=>r.ok?r.text():null).catch(()=>null);
+ try{const kt=await raw('key.json'),ct=await raw('cfg.enc');if(!kt||!ct){if(manual)toast('還沒有裝置上傳過權杖：請先在已設定權杖的手機上按一次「立即同步」',5000);return false}
+  const kj=JSON.parse(kt);SY.key=null;const key=await syKey(kj.salt,kj.iter);try{await syDec(key,kj.check)}catch(e){if(manual)toast('❌ 同步密碼錯誤',3000);return false}
+  const c=await syDec(key,ct);if(!c.ghTok)return false;S.set.ghTok=c.ghTok;S.set.cfgH=await sha1s(c.ghTok);save();if(manual)toast('✅ 已取得 GitHub 權杖，雲端功能可以使用了',3000);if(cur=='set')renderSet();return true}
+ catch(e){if(manual)toast('❌ 無法取得：'+e.message,4000);return false}}
+async function syncNow(manual){if(S.set.sync&&S.set.syncPw&&!S.set.ghTok)await syTokFetch(0);
+ if(!S.set.sync||!S.set.ghTok||!S.set.syncPw){if(manual)toast(!S.set.ghTok?'請先設定 GitHub 權杖':'請先設定同步密碼',3000);return}
  if(SY.busy)return;SY.busy=1;let up=0,down=0,del=0;const say=t=>{SY.msg=t;const el=$('#syst');el&&(el.textContent=t)};
  try{say('同步中…');
   /* 1. 金鑰檔:第一次建立;之後用來檢查密碼 */
@@ -1270,6 +1295,8 @@ async function syncNow(manual){if(!S.set.sync||!S.set.ghTok||!S.set.syncPw){if(m
   if(!kf){const salt=b64e(crypto.getRandomValues(new Uint8Array(16)));const key=await syKey(salt,310000);kj={v:1,salt,iter:310000,check:await syEnc(key,{ok:'aitm'})};await syPut('key.json',JSON.stringify(kj),null,'建立同步金鑰')}
   else kj=JSON.parse(kf.txt);
   const key=await syKey(kj.salt,kj.iter);try{await syDec(key,kj.check)}catch(e){throw new Error('同步密碼錯誤（和其他裝置設定的不一樣）')}
+  /* 權杖也加密同步：其他裝置（例如網頁版）只要輸入同步密碼就能使用雲端功能 */
+  try{const h=await sha1s(S.set.ghTok);if(S.set.cfgH!==h){const cf=await syGet('cfg.enc');await syPut('cfg.enc',await syEnc(key,{ghTok:S.set.ghTok,t:Date.now()}),cf&&cf.sha,'更新設定');S.set.cfgH=h;save()}}catch(e){}
   /* 2. 目錄 */
   const xf=await syGet('index.enc');let idx=xf?await syDec(key,xf.txt):{items:{}};const sha={};let changed=0;
   const local={};S.meets.forEach(x=>local[x.id]=x);
@@ -1328,7 +1355,8 @@ const xe=s=>String(s==null?'':s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001
 /* Word 匯出：App 的配色與風格；卡片用表格做（文字一定完整顯示、會自動長高、可以跨頁），只放重點 */
 function spkNames(m,str){/* 重點整理裡的「講者 N」換成你改好的名字 */
  return String(str==null?'':str).replace(/講者\s?(\d+)(?!\d)/g,(x,n)=>{const s=m.spk.find(z=>z.id==+n);return s&&s.name&&!/^講者\s?\d+$/.test(s.name)?s.name:x})}
-function sumNamed(m){if(!m.sum)return null;const f=v=>typeof v=='string'?spkNames(m,v):Array.isArray(v)?v.map(f):v&&typeof v=='object'?Object.fromEntries(Object.entries(v).map(([k,x])=>[k,f(x)])):v;return f(m.sum)}
+function dueOK(d,m){d=String(d||'').trim();if(!d||/^\d{1,2}[:：]\d{2}/.test(d)||/^(未指定|無|—|-)$/.test(d))return'';const y=d.match(/(20\d\d)/);if(y&&+y[1]<new Date(m.ts||Date.now()).getFullYear())return'';return d}
+function sumNamed(m){if(!m.sum)return null;const f=v=>typeof v=='string'?spkNames(m,v):Array.isArray(v)?v.map(f):v&&typeof v=='object'?Object.fromEntries(Object.entries(v).map(([k,x])=>[k,f(x)])):v;const s=f(m.sum);if(Array.isArray(s.actions))s.actions.forEach(a=>{if(a)a.due=dueOK(a.due,m)});return s}
 function buildDocx(m,opt={}){const s=sumNamed(m),A=x=>Array.isArray(x)?x:[],body=[];
  const ACC='3F6079',ACC2='4A7593',INK='262A2E',SUB='6E737B',CARD='FAF8F4',LINE='E3DDD3',SOFT='EFEBE4';
  const W=9026;
@@ -1579,8 +1607,11 @@ function renderSet(){const s=S.set,sg=(id,a,v)=>`<div class="seg glass" id="${id
  let G=sec('☁️ GitHub 雲端轉文字',`<div class="grp glass"><div class="sl"><label>會議錄音・音檔轉文字在哪裡運算</label>${sg('smcloud',[['gh','GitHub 雲端'],['local','這支手機']],s.mcloud)}<small>${s.mcloud=='gh'?'錄音上傳到你 GitHub 的草稿 Release（只有你看得到）→ GitHub 伺服器辨識 → 錄音立刻從 GitHub 刪除 → 結果傳回手機。手機不用下載語音模型。':'在手機上辨識，不需要網路，但要下載模型、比較耗電。'}</small></div>${s.mcloud=='gh'?`<div class="sl"><label>GitHub 權杖<span id="tokst">${s.ghTok?'已設定':'未設定'}</span></label><input class="ti" id="ghtok" type="password" value="${esc(s.ghTok)}" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false"><small>建立方式：GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token → Repository access 只選 <b>${GH.repo}</b> → Permissions 把 <b>Contents</b> 和 <b>Actions</b> 設成 Read and write。權杖只存在這支手機裡。</small><div class="pr" style="margin-top:8px"><button class="btn sm" data-a="tokmk">🔑 到 GitHub 建立權杖</button><button class="btn sm on" data-a="toktest">測試連線</button></div></div><div class="sl"><label>雲端語音模型</label>${sg('scm',[['firered','FireRed 最準'],['sensevoice','SenseVoice 最快'],['large-v3-turbo','Whisper 多語']],s.cmodel)}<small>${s.cmodel=='firered'?'小紅書 FireRedASR：中文、中英夾雜辨識最準（AISHELL-1 錯誤率約 0.6%），比較慢，1 小時會議約 1～1.5 小時':s.cmodel=='sensevoice'?'阿里巴巴 SenseVoice：中英日韓粵語，速度最快（1 小時會議約 5～10 分鐘），準確度略低於 FireRedASR':'OpenAI Whisper：支援約 100 種語言，但中文準確度較低、速度較慢'}</small></div>`:''}</div>`);
  G+=sec('✨ AI 修正錯字・重點整理',`<div class="grp glass"><div class="sl"><label>AI 整理引擎</label>${sg('sllm',[['local','開源 Qwen3'],['off','關閉']],s.llm=='off'?'off':'local')}<small>${s.llm=='off'?'不做 AI 修正與重點整理':'在你的 GitHub 伺服器上跑阿里巴巴開源的 Qwen3 4B 語言模型，逐字稿不會送到其他服務。1 小時的會議大約多花 30～60 分鐘'}</small></div>
   ${s.llm!='off'?tg('aifix','自動修正錯字','依上下文修正同音字、專有名詞、英文拼寫，保留原始辨識可對照')+tg('aisum','自動產生重點整理','分章節列出重點、決議事項、待辦事項'):''}</div>`);
+ if(IS_APP){const P=perm()||{},ok=!!NB.cloudWatch;G+=sec('🔔 雲端處理通知',`<div class="grp glass"><div class="sl"><small>${ok?'✅ 這個 App 版本支援通知欄進度與完成通知':'⚠️ 目前安裝的 App 版本太舊，沒有通知功能：請到「檢查更新」下載新版 APK 安裝'}</small></div>
+  <div class="row" data-p="notif"><b>通知權限<small>${P.notif=='yes'?'已允許':'未允許：點這裡允許，不然通知不會出現'}</small></b>${P.notif=='yes'?'<span class="pst ok">已允許</span>':'<span class="pst no">允許 ›</span>'}</div>
+  ${NB.notifyTest?'<div class="row" data-a="ntest"><b>傳送測試通知<small>確認手機會跳出通知</small></b>›</div>':''}<div class="row" data-p="app"><b>App 通知設定<small>如果還是沒看到，請確認「雲端轉文字完成」通知類別有開啟</small></b>›</div></div>`)}
  G+=sec('🔄 會議記錄同步（加密）',`<div class="grp glass">${tg('sync','在不同裝置同步會議記錄','逐字稿與重點整理加密後存到 GitHub（'+GH.repo+' 的 notes 分支）；錄音檔不會同步')}
-  ${s.sync?`<div class="sl"><label>同步密碼<span id="syst">${esc(SY.msg||(s.lastSync?'上次同步 '+fmtD(s.lastSync):'尚未同步'))}</span></label><input class="ti" id="sypw" type="password" value="${esc(s.syncPw)}" placeholder="每台裝置都要輸入一樣的密碼" autocomplete="new-password"><small>用 AES-256-GCM 加密，GitHub 上只看得到亂碼。<b>忘記密碼就無法還原</b>，請記好。密碼只存在這台裝置。</small><div class="pr" style="margin-top:8px"><button class="btn sm on" data-a="synow">🔄 立即同步</button></div></div>`:''}</div>`);
+  ${s.sync?`<div class="sl"><label>同步密碼<span id="syst">${esc(SY.msg||(s.lastSync?'上次同步 '+fmtD(s.lastSync):'尚未同步'))}</span></label><input class="ti" id="sypw" type="password" value="${esc(s.syncPw)}" placeholder="每台裝置都要輸入一樣的密碼" autocomplete="new-password"><small>用 AES-256-GCM 加密，GitHub 上只看得到亂碼。<b>忘記密碼就無法還原</b>，請記好。密碼只存在這台裝置。</small><div class="pr" style="margin-top:8px"><button class="btn sm on" data-a="synow">🔄 立即同步</button>${!s.ghTok?'<button class="btn sm" data-a="sytok">🔑 從其他裝置取得 GitHub 權杖</button>':''}</div><small>GitHub 權杖也會用同步密碼加密後同步，在網頁版或其他裝置只要輸入同一組同步密碼就能用雲端轉文字和 AI 整理（請使用夠長、不好猜的密碼）。</small></div>`:''}</div>`);
  G+=sec('☁️ GitHub 雲端（功能與模型）',`<div class="grp glass"><div class="sl"><label>AI 模型下載來源</label>${sg('smsrc',[['gh','GitHub 優先'],['hf','Hugging Face']],s.msrc)}<small id="ghinfo">GitHub 鏡像：讀取中…</small></div>
   ${IS_APP?tg('autoUpd','自動更新功能','開啟 App 時從 GitHub 下載最新版介面與功能（不用重新安裝 APK）'):''}
   <div class="row" data-a="upd"><span>🔄</span><b>檢查更新<small>目前版本 v${APP_VER}${IS_APP&&I?'・APK v'+I.ver:''}</small></b>›</div>
@@ -1611,6 +1642,8 @@ $('#se').onclick=async e=>{const _ix=e.target.closest('[data-ix]'),_ia=e.target.
   if(k=='toktest'){const v=$('#ghtok').value.trim();S.set.ghTok=v;save();if(!v)return toast('請先貼上權杖');toast('測試中…',8000);
    try{const r=await ghApi('GET','');if(!r.permissions||!r.permissions.push)throw new Error('權杖沒有寫入權限');await ghApi('GET','/actions/workflows/transcribe.yml');await ghApi('GET','/releases?per_page=1');$('#tokst').textContent='✅ 連線成功';toast('✅ 連線成功，可以使用 GitHub 雲端轉文字',3000);
     for(const x of S.meets)if(x.st=='cloudwait'){const m=await getM(x.id);if(m)cloudRun(m)}}catch(e){$('#tokst').textContent='❌ 失敗';toast('❌ '+e.message,5000)}}
+  if(k=='ntest'){try{NB.notifyTest()}catch(e){}toast('已送出測試通知，請看通知欄',2500);return}
+  if(k=='sytok'){const pw=$('#sypw');if(pw){S.set.syncPw=pw.value;SY.key=null;save()}await syTokFetch(1);return}
   if(k=='synow'){const pw=$('#sypw');if(pw){S.set.syncPw=pw.value;SY.key=null;save()}if(!S.set.syncPw)return toast('請先設定同步密碼',3000);syncNow(1)}
   if(k=='upd')checkUpd(1);if(k=='rst'&&confirm('還原為 APK 內建版本？')){NB.resetApp();location.reload()}if(k=='ghweb')openURL(GH.pages);if(k=='ghrepo')openURL(GH.web+'/releases');
   if(k=='ej'){toast('打包中…');const out=[];for(const x of S.meets){const m=await getM(x.id);if(m)out.push({...m,spk:m.spk.map(({v,...q})=>q),u:m.u.map(({e,...u})=>u)})}dl('AI翻譯會議-備份.json',JSON.stringify({meets:out,hist:S.hist},null,1),'application/json')}

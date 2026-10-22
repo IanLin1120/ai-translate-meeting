@@ -423,6 +423,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String perm() { return permJson(); }
         @JavascriptInterface public void cloudWatch(String mid, String title, String repo, String tok, double rel, String text, int pct, boolean disp) { CloudService.watch(MainActivity.this, mid, title, repo, tok, (long) rel, text, pct, disp); }
         @JavascriptInterface public void cloudDone(String mid, int ok, String msg) { CloudService.done(MainActivity.this, mid, ok, msg, !CloudService.appVisible); }
+        @JavascriptInterface public void notifyTest() { CloudService.notifyDone(MainActivity.this, "", "這是測試通知", true, "雲端處理完成時會像這樣通知你"); }
         @JavascriptInterface public String openMeeting() { String s = pendingOpen; pendingOpen = null; return s == null ? "" : s; }
         @JavascriptInterface public void setIso(boolean on) { getSharedPreferences("p", 0).edit().putBoolean("iso", on).apply(); }
         @JavascriptInterface public void requestPerms(String k) { ui.post(() -> MainActivity.this.requestPerms(k)); }
