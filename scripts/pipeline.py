@@ -137,33 +137,19 @@ def prep():
         dur = total / SR
         plan["dur"] = dur
         print(f"音訊長度 {dur / 60:.1f} 分鐘", flush=True)
-        turns = []
-        if dur >= 0.5:
-            import diarize as DZ
-            T.status("分辨講者", 0)
-            last = [0.0]
-
-            def prog(p):
-                if time.time() - last[0] > 20:
-                    last[0] = time.time()
-                    T.status("分辨講者", p)
-            pieces, embs = DZ.segments_and_embeddings(audio, MODELS, prog, threads=os.cpu_count() or 4)
-            labs = DZ.label(pieces, embs, int(job.get("speakers") or 0), float(job.get("sens") or 0.65))
-            for (s, e), k, x in zip(pieces, labs, embs):
-                if turns and turns[-1]["spk"] == int(k) and s - turns[-1]["e"] < 0.8 and e - turns[-1]["s"] < 25:
-                    turns[-1]["e"] = e
-                    if x is not None:
-                        turns[-1]["E"].append(x)
-                else:
-                    turns.append({"s": float(s), "e": float(e), "spk": int(k), "E": [x] if x is not None else []})
-            for u in turns:
-                u["emb"] = [round(float(v), 4) for v in np.mean(np.stack(u["E"]), 0)] if u["E"] else None
-                del u["E"]
-            print(f"發言 {len(turns)} 段、講者 {len(set(u['spk'] for u in turns))} 位", flush=True)
-        plan["turns"] = turns
-        # 轉文字的伺服器數：大約每 6 分鐘錄音一台（最多 10 台）
-        n = max(1, min(10, math.ceil(dur / 360))) if turns else 0
-        asr_sh = split_by_weight([u["e"] - u["s"] + 0.6 for u in turns], n) if n else []
+        # 依錄音長度切成幾段（切在最安靜的地方），每台伺服器各自分辨講者片段＋轉文字，最後再一起分群
+        n = max(1, min(10, math.ceil(dur / float(os.environ.get("SHARD_SEC") or 360)))) if dur >= 0.5 else 0
+        fr = int(SR * 0.1)
+        rms = np.sqrt(np.convolve(np.square(audio[: len(audio) // fr * fr].reshape(-1, fr)).mean(1), np.ones(5) / 5, "same")) if len(audio) >= fr * 5 else np.zeros(1)
+        cuts = [0.0]
+        for j in range(1, n):
+            c = dur * j / n
+            a0, a1 = int(max(0, c - 15) * 10), int(min(dur, c + 15) * 10)
+            cuts.append((a0 + int(np.argmin(rms[a0:a1]))) / 10 if a1 > a0 else c)
+        cuts.append(dur)
+        asr_sh = [[round(cuts[j], 2), round(cuts[j + 1], 2)] for j in range(n) if cuts[j + 1] - cuts[j] > 0.3]
+        plan["turns"] = None
+        print(f"音訊切成 {len(asr_sh)} 段平行處理", flush=True)
         if asr_sh:
             T.status("上傳給轉文字伺服器")
             fl = os.path.join(TMP, "audio.flac")
@@ -188,7 +174,7 @@ def prep():
     out("asr", json.dumps(list(range(len(asr_sh)))))
     out("llm", json.dumps(list(range(m))))
     n_srv = len(asr_sh)
-    T.status(f"語音轉文字（{n_srv} 台伺服器同時處理）" if n_srv else "AI 整理", 0)
+    T.status(f"分辨講者與轉文字（{n_srv} 台伺服器同時處理）" if n_srv else "AI 整理", 0)
     print(f"::notice title=分工::轉文字 {len(asr_sh)} 台、AI 整理 {m} 台；準備花了 {time.time() - t0:.0f} 秒", flush=True)
 
 
@@ -196,38 +182,62 @@ def prep():
 def asr_shard(k):
     t0 = time.time()
     plan = get("w-plan.json")
-    i0, i1 = plan["asr"][k]
-    turns = plan["turns"][i0:i1]
-    audio = T.decode(get("w-audio.flac", binary=True))
+    ta, tb = plan["asr"][k]
+    full = T.decode(get("w-audio.flac", binary=True))
+    audio = full[int(ta * SR):int(tb * SR)].copy()
+    del full
     dur = len(audio) / SR
     model, lang = plan["model"], plan["job"].get("lang") or "auto"
     rep = k == 0
     last = [0.0]
     n_srv = len(plan["asr"])
+    st_name = f"分辨講者與轉文字（{n_srv} 台伺服器同時處理）"
 
-    def prog(i):
+    def say(p):
         if rep and time.time() - last[0] > 20:
             last[0] = time.time()
-            T.status(f"語音轉文字（{n_srv} 台伺服器同時處理）", min(99, (i + 1) / max(1, len(turns)) * 100))
+            T.status(st_name, min(99, p))
+    # 1. 講者片段＋聲紋
+    import diarize as DZ
+    pieces, embs = DZ.segments_and_embeddings(audio, MODELS, lambda p: say(p * 0.25), threads=os.cpu_count() or 4)
+    raw = getattr(DZ.segments_and_embeddings, "raw", [])
+    rsp = getattr(DZ.segments_and_embeddings, "raw_spk", [0] * len(raw))
+    # 同一個人連續說的話合成一段（最長 25 秒）再轉文字：上下文比較完整，標點與用字比較準
+    grp = []
+    for (s, e), sp in zip(raw, rsp):
+        if grp and grp[-1][2] == sp and s - grp[-1][1] < 0.8 and e - grp[-1][0] <= 25:
+            grp[-1][1] = max(grp[-1][1], e)
+        else:
+            grp.append([s, e, sp])
+    units = []
+    for s, e, _ in grp:
+        n = max(1, math.ceil((e - s) / 25))
+        w = (e - s) / n
+        units += [(s + i * w, s + (i + 1) * w) for i in range(n)]
+    pc = []
+    for (s, e), x in zip(pieces, embs):
+        m = (s + e) / 2
+        ui = next((i for i, (a, b) in enumerate(units) if a - 0.05 <= m <= b + 0.05), None)
+        pc.append({"s": round(s + ta, 3), "e": round(e + ta, 3), "u": ui, "emb": None if x is None else [round(float(v), 4) for v in x]})
 
     def clip(u):
-        a = audio[int(max(0, u["s"] - 0.15) * SR):int(min(dur, max(u["e"], u["s"]) + 0.15) * SR)]
+        a = audio[int(max(0, u[0] - 0.15) * SR):int(min(dur, max(u[1], u[0]) + 0.15) * SR)]
         if len(a) < SR // 10 or not np.isfinite(a).all():
             return None
         if len(a) < SR // 2:
             a = np.concatenate([a, np.zeros(SR // 2 - len(a), dtype=np.float32)])
         return a
-
-    texts, bad = [""] * len(turns), 0
+    texts, bad = [""] * len(units), 0
+    prog = lambda i: say(25 + 75 * (i + 1) / max(1, len(units)))
     if model == "firered":
         import sherpa_onnx
         d = f"{MODELS}/firered"
         pd = f"{MODELS}/punct"
         rec = sherpa_onnx.OfflineRecognizer.from_fire_red_asr(encoder=f"{d}/encoder.int8.onnx", decoder=f"{d}/decoder.int8.onnx",
                                                               tokens=f"{d}/tokens.txt", num_threads=os.cpu_count() or 4)
-        pc = sherpa_onnx.OfflinePunctuation(sherpa_onnx.OfflinePunctuationConfig(
+        pcm = sherpa_onnx.OfflinePunctuation(sherpa_onnx.OfflinePunctuationConfig(
             model=sherpa_onnx.OfflinePunctuationModelConfig(ct_transformer=f"{pd}/model.onnx", num_threads=1)))
-        for i, u in enumerate(turns):
+        for i, u in enumerate(units):
             a = clip(u)
             if a is not None:
                 try:
@@ -235,7 +245,7 @@ def asr_shard(k):
                     st.accept_waveform(SR, a)
                     rec.decode_stream(st)
                     txt = re.sub(r"[A-Z][A-Z']+", lambda m: m.group(0) if len(m.group(0)) <= 3 else m.group(0).lower(), st.result.text.strip())
-                    texts[i] = pc.add_punctuation(txt) if txt else ""
+                    texts[i] = pcm.add_punctuation(txt) if txt else ""
                 except Exception:
                     bad += 1
             prog(i)
@@ -244,7 +254,7 @@ def asr_shard(k):
         d = f"{MODELS}/sensevoice"
         rec = sherpa_onnx.OfflineRecognizer.from_sense_voice(model=f"{d}/model.int8.onnx", tokens=f"{d}/tokens.txt", num_threads=os.cpu_count() or 4,
                                                              use_itn=True, language=lang if lang in ("zh", "en", "ja", "ko", "yue") else "auto")
-        for i, u in enumerate(turns):
+        for i, u in enumerate(units):
             a = clip(u)
             if a is not None:
                 try:
@@ -260,7 +270,7 @@ def asr_shard(k):
         wm = WhisperModel(model, device="cpu", compute_type="int8", cpu_threads=os.cpu_count() or 4, download_root=f"{MODELS}/whisper")
         wl = None if lang in ("auto", "") else lang
         prompt = "以下是會議錄音，內容是繁體中文和 English 夾雜。" if wl in (None, "zh") else None
-        for i, u in enumerate(turns):
+        for i, u in enumerate(units):
             a = clip(u)
             if a is not None:
                 try:
@@ -270,21 +280,63 @@ def asr_shard(k):
                 except Exception:
                     bad += 1
             prog(i)
-    put(f"w-asr-{k}.json", {"i0": i0, "texts": texts, "bad": bad})
-    print(f"::notice title=轉文字 {k + 1}/{n_srv}::{len(turns)} 段、{sum(u['e'] - u['s'] for u in turns) / 60:.1f} 分鐘語音，花了 {time.time() - t0:.0f} 秒" + (f"，略過 {bad} 段" if bad else ""), flush=True)
+    put(f"w-asr-{k}.json", {"units": [[round(a + ta, 3), round(b + ta, 3)] for a, b in units], "texts": texts, "pieces": pc, "bad": bad})
+    print(f"::notice title=轉文字 {k + 1}/{n_srv}::{(tb - ta) / 60:.1f} 分鐘錄音、{len(units)} 段發言，花了 {time.time() - t0:.0f} 秒" + (f"，略過 {bad} 段" if bad else ""), flush=True)
 
 
-def build_segs(plan):
-    """合併各台的轉文字結果 → 整理（繁體、去幻聽字幕、講者重新編號）"""
-    if plan.get("segs") is not None and not plan.get("turns"):
-        return [dict(u) for u in plan["segs"]], 0
-    turns = [dict(u) for u in plan["turns"]]
+def gather_turns(plan):
+    """合併各台結果 → 全部聲紋一起分群（每台算出來都一樣）→ 相鄰同一人的發言合併"""
+    import diarize as DZ
+    units, pieces = [], []
     bad = 0
     for k in range(len(plan["asr"])):
         r = get(f"w-asr-{k}.json")
         bad += r.get("bad", 0)
-        for j, t in enumerate(r["texts"]):
-            turns[r["i0"] + j]["text"] = t
+        base = len(units)
+        for (s, e), t in zip(r["units"], r["texts"]):
+            units.append({"s": s, "e": e, "text": t, "P": []})
+        for p in r["pieces"]:
+            p = dict(p)
+            p["u"] = None if p["u"] is None else base + p["u"]
+            pieces.append(p)
+    if not pieces:
+        return [], bad
+    embs = [None if p["emb"] is None else np.array(p["emb"], dtype=np.float32) for p in pieces]
+    labs = DZ.label([(p["s"], p["e"]) for p in pieces], embs, int(plan["job"].get("speakers") or 0), float(plan["job"].get("sens") or 0.65))
+    for p, l in zip(pieces, labs):
+        if p["u"] is not None:
+            units[p["u"]]["P"].append((p["e"] - p["s"], int(l), p["emb"]))
+    turns = []
+    for u in units:
+        if not u["P"]:
+            continue
+        w = {}
+        for d, l, _ in u["P"]:
+            w[l] = w.get(l, 0) + d
+        spk = max(w, key=w.get)
+        E = [x for _, l, x in u["P"] if x is not None and l == spk]
+        t = (u["text"] or "").strip()
+        if turns and turns[-1]["spk"] == spk and u["s"] - turns[-1]["e"] < 0.8 and u["e"] - turns[-1]["s"] < 40:
+            a = turns[-1]
+            sep = " " if a["text"][-1:].isascii() and a["text"][-1:].isalnum() and t[:1].isascii() and t[:1].isalnum() else ""
+            a["text"] = (a["text"] + sep + t) if a["text"] else t
+            a["e"] = u["e"]
+            a["E"] += E
+        else:
+            turns.append({"s": u["s"], "e": u["e"], "spk": spk, "text": t, "E": E})
+    for u in turns:
+        u["emb"] = [round(float(v), 4) for v in np.mean(np.array(u["E"], dtype=np.float32), 0)] if u["E"] else None
+        del u["E"]
+    return turns, bad
+
+
+def build_segs(plan):
+    """合併各台的轉文字結果 → 整理（繁體、去幻聽字幕、講者重新編號）"""
+    if plan.get("segs") is not None and not plan.get("asr"):
+        return [dict(u) for u in plan["segs"]], 0
+    if "_turns" not in plan:
+        plan["_turns"] = gather_turns(plan)
+    turns, bad = [dict(u) for u in plan["_turns"][0]], plan["_turns"][1]
     cc = None
     if plan["job"].get("tw", 1):
         import opencc

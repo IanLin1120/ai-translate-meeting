@@ -130,10 +130,16 @@ def segments_and_embeddings(audio, models, progress=None, threads=4, max_piece=6
         min_duration_on=0.2, min_duration_off=0.3)
     sd = sherpa_onnx.OfflineSpeakerDiarization(cfg)
     cb = (lambda d, n: (progress(d / max(n, 1) * 60), 0)[1]) if progress else None
-    raw = [(r.start, r.end) for r in sd.process(audio, callback=cb).sort_by_start_time()]
+    res = sd.process(audio, callback=cb).sort_by_start_time()
+    raw = [(r.start, r.end) for r in res]
+    raw_spk = [int(r.speaker) for r in res]
     # pyannote 在錄音最後一個視窗（補零的部分）可能回報超出錄音長度的段落 → 截掉，太短的不要
     total = len(audio) / 16000
-    raw = [(s, min(e, total)) for s, e in raw if s < total - 0.05 and min(e, total) - s >= 0.05]
+    keep = [i for i, (s, e) in enumerate(raw) if s < total - 0.05 and min(e, total) - s >= 0.05]
+    raw_spk = [raw_spk[i] for i in keep]
+    raw = [(raw[i][0], min(raw[i][1], total)) for i in keep]
+    segments_and_embeddings.raw_spk = raw_spk
+    segments_and_embeddings.raw = raw  # 給平行化版本用（每段原始發言各自轉文字）
     pieces = []
     for s, e in raw:
         d = e - s
