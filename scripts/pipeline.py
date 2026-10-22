@@ -157,7 +157,7 @@ def prep():
         plan["dur"] = dur
         print(f"音訊長度 {dur / 60:.1f} 分鐘", flush=True)
         # 依錄音長度切成幾段（切在最安靜的地方），每台伺服器各自分辨講者片段＋轉文字，最後再一起分群
-        n = max(1, min(10, math.ceil(dur / float(os.environ.get("SHARD_SEC") or 360)))) if dur >= 0.5 else 0
+        n = max(1, min(12, math.ceil(dur / float(os.environ.get("SHARD_SEC") or 240)))) if dur >= 0.5 else 0
         fr = int(SR * 0.1)
         rms = np.sqrt(np.convolve(np.square(audio[: len(audio) // fr * fr].reshape(-1, fr)).mean(1), np.ones(5) / 5, "same")) if len(audio) >= fr * 5 else np.zeros(1)
         cuts = [0.0]
@@ -180,7 +180,7 @@ def prep():
     plan["asr"] = asr_sh
     # AI 整理的伺服器數：大約每 5 分鐘會議一台（最多 10 台）
     chars = sum(len(u.get("text") or "") for u in plan.get("segs") or [])
-    m = (max(1, min(10, math.ceil(chars / 1500))) if job.get("mode") == "text" else max(1, min(10, math.ceil(plan["dur"] / 300)))) if want_llm else 0
+    m = (max(1, min(10, math.ceil(chars / 1500))) if job.get("mode") == "text" else max(1, min(12, math.ceil(plan["dur"] / 240)))) if want_llm else 0
     plan["llm"] = m
     # 確認模型都在快取裡（已經有快取就跳過）
     if asr_sh and not os.environ.get("HAVE_CACHE"):
@@ -485,6 +485,8 @@ def final():
         if r.get("summary"):
             s = r["summary"]
             print(f"::notice title=AI 重點整理::{s.get('title')}｜章節：" + "／".join(c.get("title", "") for c in s.get("chapters", [])) + f"｜待辦 {len(s.get('actions', []))} 項")
+            for c in s.get("chapters", [])[:2]:
+                print(f"::notice title=章節 {c.get('title')}::{c.get('summary')}｜" + "｜".join(c.get("points", [])))
         elif r.get("llm_error"):
             print(f"::notice title=AI 整理失敗::{r['llm_error']}")
         for u in segs[:8]:
