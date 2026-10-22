@@ -16,6 +16,24 @@ LOCAL_GGUF = [  # 依序嘗試（Hugging Face 上的開源 GGUF）
 ]
 
 
+def fetch_gguf(status=None):
+    """下載開源語言模型（GGUF）到快取資料夾；已經有就直接用"""
+    d = f"{MODELS}/llm"
+    os.makedirs(d, exist_ok=True)
+    for repo, fn in LOCAL_GGUF:
+        p = f"{d}/{fn}"
+        if not (os.path.exists(p) and os.path.getsize(p) > 1e8):
+            if status:
+                status("下載開源語言模型")
+            print(f"::notice title=下載模型::{fn}（快取裡沒有）", flush=True)
+            r = subprocess.run(["curl", "-fsSL", "-o", p, f"https://huggingface.co/{repo}/resolve/main/{fn}"])
+            if r.returncode != 0 and os.path.exists(p):
+                os.remove(p)
+        if os.path.exists(p) and os.path.getsize(p) > 1e8:
+            return p
+    raise RuntimeError("無法下載開源語言模型")
+
+
 class LLM:
     def __init__(self, engine, status=None):
         if engine == "github":
@@ -29,8 +47,6 @@ class LLM:
 
     # ---------- 開源模型：llama.cpp server ----------
     def _start_local(self):
-        d = f"{MODELS}/llm"
-        os.makedirs(d, exist_ok=True)
         try:
             import llama_cpp  # noqa
         except ImportError:
@@ -38,22 +54,13 @@ class LLM:
             subprocess.run([sys.executable, "-m", "pip", "install", "-q", "llama-cpp-python",
                             "--extra-index-url", "https://abetlen.github.io/llama-cpp-python/whl/cpu"], check=True)
         from llama_cpp import Llama
-        gguf = None
-        for repo, fn in LOCAL_GGUF:
-            p = f"{d}/{fn}"
-            if not (os.path.exists(p) and os.path.getsize(p) > 1e8):
-                self.status("下載開源語言模型")
-                print(f"::notice title=下載模型::{fn}（快取裡沒有）", flush=True)
-                r = subprocess.run(["curl", "-fsSL", "-o", p, f"https://huggingface.co/{repo}/resolve/main/{fn}"])
-                if r.returncode != 0 and os.path.exists(p):
-                    os.remove(p)
-            if os.path.exists(p) and os.path.getsize(p) > 1e8:
-                gguf = p
-                break
-        if not gguf:
-            raise RuntimeError("無法下載開源語言模型")
+        gguf = fetch_gguf(self.status)
         self.model = os.path.basename(gguf).replace(".gguf", "")
-        self.llama = Llama(model_path=gguf, n_ctx=16384, n_threads=os.cpu_count() or 4, verbose=False)
+        kw = dict(model_path=gguf, n_ctx=12288, n_threads=os.cpu_count() or 4, n_batch=1024, verbose=False)
+        try:
+            self.llama = Llama(flash_attn=True, **kw)
+        except TypeError:
+            self.llama = Llama(**kw)
 
     def close(self):
         self.llama = None
@@ -181,6 +188,12 @@ def correct(llm, segs, spk_name, progress=None, chunk_chars=1100):
 
 
 def summarize(llm, segs, spk_name, progress=None, chunk_chars=3200):
+    partial = summarize_parts(llm, segs, spk_name, (lambda p: progress(p * 0.8)) if progress else None, chunk_chars)
+    return summarize_merge(llm, partial, (lambda p: progress(80 + p * 0.2)) if progress else None)
+
+
+def summarize_parts(llm, segs, spk_name, progress=None, chunk_chars=3200):
+    """分段整理（可以分給好幾台伺服器同時做）"""
     lines = [f"[{fmt_t(u['s'])}] {spk_name(u)}：{u['text']}" for u in segs]
     parts, cur, n = [], [], 0
     for l in lines:
@@ -196,7 +209,15 @@ def summarize(llm, segs, spk_name, progress=None, chunk_chars=3200):
         r = _json(llm.chat(SUM_PART_SYS, "\n".join(p), max_tokens=2500)) or {}
         partial.append(r)
         if progress:
-            progress((i + 1) / (len(parts) + 1) * 100)
+            progress((i + 1) / len(parts) * 100)
+    return partial
+
+
+def summarize_merge(llm, partial, progress=None):
+    """把各段整理合併成一份分章節的重點整理"""
+    partial = [p for p in partial if p]
+    if not partial:
+        return {}
     # 分段整理太多時，先兩兩合併，避免超過單次輸入上限
     while len(json.dumps(partial, ensure_ascii=False)) > 9000 and len(partial) > 1:
         merged = []

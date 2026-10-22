@@ -25,25 +25,27 @@ permissions:
   models: read
 
 jobs:
-  transcribe:
+  # 1. 準備：下載錄音（下載後立刻從 GitHub 刪除）、分辨講者、分工
+  prep:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 120
+    outputs:
+      rel: ${{ steps.p.outputs.rel }}
+      asr: ${{ steps.p.outputs.asr }}
+      llm: ${{ steps.p.outputs.llm }}
     steps:
       - uses: actions/checkout@v4
         with:
           sparse-checkout: |
             scripts
             tests
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: scripts/requirements-transcribe.txt
-
       - name: 安裝套件
         run: pip install -q -r scripts/requirements-transcribe.txt
-
       - name: 還原 AI 模型快取
         id: mcache
         uses: actions/cache/restore@v4
@@ -51,43 +53,31 @@ jobs:
           path: ~/.cache/aitm
           key: aitm-models-v1-none
           restore-keys: aitm-models-v1-
-
-      - name: 快取內容
-        run: |
-          echo "::notice title=快取::還原 ${{ steps.mcache.outputs.cache-matched-key || '（沒有快取）' }}：$(du -sh ~/.cache/aitm 2>/dev/null | cut -f1)，$(ls ~/.cache/aitm 2>/dev/null | tr '\n' ' ')"
-
       - name: 下載講者辨識模型
         run: |
           M=~/.cache/aitm; mkdir -p $M/seg
-          [ -f $M/seg/model.onnx ] || echo "::notice title=下載模型::講者分段（快取裡沒有）"
-          [ -f $M/emb.onnx ] || echo "::notice title=下載模型::講者聲紋（快取裡沒有）"
-          [ -f $M/sensevoice/model.int8.onnx ] || echo "::notice title=下載模型::SenseVoice（快取裡沒有）"
           [ -f $M/seg/model.onnx ] || (curl -sSL https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2 | tar xj -C /tmp && cp /tmp/sherpa-onnx-pyannote-segmentation-3-0/model.onnx $M/seg/)
           [ -f $M/emb.onnx ] || curl -sSL -o $M/emb.onnx https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx
           if [ ! -f $M/sensevoice/model.int8.onnx ]; then
             mkdir -p $M/sensevoice
             curl -sSL https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2 | tar xj -C /tmp
             cp /tmp/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/{model.int8.onnx,tokens.txt} $M/sensevoice/
-            rm -rf /tmp/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17
           fi
-          ls -la $M $M/seg $M/sensevoice
-          # 清掉快取裡用不到的大檔（llama.cpp 執行檔每次重新下載較小）
           rm -f $M/llm/*.zip
-
-      - name: 轉文字與講者辨識
+      - name: 準備與分辨講者
+        id: p
         env:
           GITHUB_TOKEN: ${{ github.token }}
           RELEASE_ID: ${{ inputs.release }}
           TEST_FILE: ${{ inputs.test }}
           TEST_MODEL: ${{ inputs.test_model }}
           TEST_LLM: ${{ inputs.test_llm }}
-        run: python3 scripts/transcribe.py
-
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: python3 scripts/pipeline.py prep
       - name: 計算模型快取版本
         if: always()
         id: mkey
         run: echo "k=aitm-models-v1-$(cd ~/.cache/aitm 2>/dev/null && find . -type f -size +1k | sort | sha1sum | cut -c1-12)" >> $GITHUB_OUTPUT
-
       - name: 儲存 AI 模型快取（有新模型時）
         if: always() && steps.mkey.outputs.k != steps.mcache.outputs.cache-matched-key
         uses: actions/cache/save@v4
@@ -96,6 +86,120 @@ jobs:
           path: ~/.cache/aitm
           key: ${{ steps.mkey.outputs.k }}
 
+  # 2. 轉文字：好幾台伺服器同時處理，每台負責一部分發言
+  asr:
+    needs: prep
+    if: needs.prep.outputs.asr != '[]' && needs.prep.outputs.asr != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: true
+      matrix:
+        k: ${{ fromJSON(needs.prep.outputs.asr) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts
+            tests
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/requirements-transcribe.txt
+      - name: 安裝套件
+        run: pip install -q -r scripts/requirements-transcribe.txt
+      - name: 還原 AI 模型快取
+        id: mcache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/aitm
+          key: aitm-models-v1-none
+          restore-keys: aitm-models-v1-
+      - name: 轉文字（第 ${{ matrix.k }} 份）
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ inputs.release }}
+          WORK_REL: ${{ needs.prep.outputs.rel }}
+          TEST_FILE: ${{ inputs.test }}
+        run: python3 scripts/pipeline.py asr ${{ matrix.k }}
+
+  # 3. AI 修正錯字＋分段重點：好幾台同時處理
+  llm:
+    needs: [prep, asr]
+    if: ${{ !cancelled() && needs.prep.result == 'success' && needs.asr.result != 'failure' && needs.prep.outputs.llm != '[]' && needs.prep.outputs.llm != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        k: ${{ fromJSON(needs.prep.outputs.llm) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts
+            tests
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/requirements-transcribe.txt
+      - name: 安裝套件
+        run: pip install -q -r scripts/requirements-transcribe.txt
+      - name: 安裝開源語言模型執行環境
+        run: pip install -q llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+      - name: 還原 AI 模型快取
+        id: mcache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/aitm
+          key: aitm-models-v1-none
+          restore-keys: aitm-models-v1-
+      - name: AI 整理（第 ${{ matrix.k }} 份）
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ inputs.release }}
+          WORK_REL: ${{ needs.prep.outputs.rel }}
+          TEST_FILE: ${{ inputs.test }}
+        run: python3 scripts/pipeline.py llm ${{ matrix.k }}
+
+  # 4. 合併、彙整重點、上傳結果、刪除所有中間檔（失敗時也會清除錄音）
+  final:
+    needs: [prep, asr, llm]
+    if: ${{ always() && needs.prep.outputs.rel != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts
+            tests
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/requirements-transcribe.txt
+      - name: 安裝套件
+        run: pip install -q -r scripts/requirements-transcribe.txt
+      - name: 安裝開源語言模型執行環境
+        run: pip install -q llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+      - name: 還原 AI 模型快取
+        id: mcache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/aitm
+          key: aitm-models-v1-none
+          restore-keys: aitm-models-v1-
+      - name: 合併結果
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ inputs.release }}
+          WORK_REL: ${{ needs.prep.outputs.rel }}
+          TEST_FILE: ${{ inputs.test }}
+          NEEDS_OK: ${{ needs.prep.result == 'success' && needs.asr.result != 'failure' && needs.asr.result != 'cancelled' && needs.llm.result != 'cancelled' && '1' || '0' }}
+        run: python3 scripts/pipeline.py final
       - name: 失敗時清除錄音
         if: failure() && inputs.release != ''
         env:
