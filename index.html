@@ -600,7 +600,7 @@ let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.12.0';
+const APP_VER='1.13.0';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -1181,7 +1181,13 @@ async function ghUpload(rel,name,blob,onp){const url=`https://uploads.github.com
 async function ghAssetText(id){if(IS_APP&&NB.req)return await ghApi('GET','/releases/assets/'+id,null,{Accept:'application/octet-stream'});
  const r=await fetch(GHA.api+'/releases/assets/'+id,{headers:ghHeaders({Accept:'application/octet-stream'})});if(!r.ok)throw new Error('下載結果失敗（'+r.status+'）');return r.text()}
 const CLOUD={};
-function cloudSt(m,t,p){m.cs=t+(p!=null?` ${Math.round(p)}%`:'');saveM(m);if(R.m==m&&cur=='meet'){mStatus();if(!m.u.length&&!R.on)mList(m)}if(MD.id==m.id)renderMD();if(cur=='rec')renderRec()}
+/* 通知欄:雲端轉文字進度(App 在背景時由原生服務繼續查詢 GitHub) */
+const CNT={};
+function cloudNote(m,t,p){if(!IS_APP||!NB.cloudWatch)return;const now=Date.now();if(CNT[m.id]&&now-CNT[m.id]<2000&&p!=null&&p<100)return;CNT[m.id]=now;
+ try{NB.cloudWatch(m.id,mTitle(m),GH.user+'/'+GH.repo,S.set.ghTok||'',+(m.cj&&m.cj.rel)||0,t,p==null?-1:Math.round(p),!!(m.cj&&m.cj.disp))}catch(e){}}
+function cloudFin(m,ok,msg){delete CNT[m.id];if(IS_APP&&NB.cloudDone){try{NB.cloudDone(m.id,ok,msg||'')}catch(e){}}}
+window.__openM=id=>{if(id&&MS[id]||S.meets.some(x=>x.id==id))openMD(id)};
+function cloudSt(m,t,p){m.cs=t+(p!=null?` ${Math.round(p)}%`:'');saveM(m);cloudNote(m,t,p);if(R.m==m&&cur=='meet'){mStatus();if(!m.u.length&&!R.on)mList(m)}if(MD.id==m.id)renderMD();if(cur=='rec')renderRec()}
 async function cloudRun(m){if(CLOUD[m.id])return;CLOUD[m.id]=1;
  try{if(!S.set.ghTok){m.st='cloudwait';cloudSt(m,'等待設定 GitHub 權杖（設定 → ☁️ GitHub 雲端）');return}
   m.st='cloud';m.cj=m.cj||{up:{}};
@@ -1203,11 +1209,11 @@ async function cloudRun(m){if(CLOUD[m.id])return;CLOUD[m.id]=1;
    const res=(r.assets||[]).find(a=>a.name=='result.json');
    if(res){cloudSt(m,'下載結果');const txt=await ghAssetText(res.id);cloudApply(m,typeof txt=='string'?JSON.parse(txt):txt);try{await ghApi('DELETE','/releases/'+rel)}catch(e){}
     if(!S.set.keepAud&&!m.imp){for(const a of m.aud)await idel('a',m.id+':'+a.n);m.aud=[]}
-    delete m.cj;m.st='done';m.cs='';saveM(m);toast('☁️ GitHub 轉文字完成：'+m.u.length+' 句、'+m.spk.length+' 位講者',3500);break}
+    delete m.cj;m.st='done';m.cs='';saveM(m);cloudFin(m,1,m.u.length+' 句・'+m.spk.length+' 位講者'+(m.sum?'・含重點整理':''));toast('☁️ GitHub 轉文字完成：'+m.u.length+' 句、'+m.spk.length+' 位講者',3500);break}
    if(b.state=='error')throw new Error('GitHub 處理失敗：'+(b.err||'未知錯誤'));
    if(b.state=='running'){lastT=Date.now();cloudSt(m,'GitHub '+(b.stage||'處理中'),b.p)}
    else{const w=Math.round((Date.now()-m.cj.disp)/1000);cloudSt(m,`等待 GitHub 伺服器啟動（${w} 秒）`);if(w>900)throw new Error('GitHub 伺服器太久沒有開始，請稍後到紀錄頁重試')}}}
- catch(e){m.st='cloudfail';m.cs='❌ '+e.message;saveM(m);toast(m.cs,5000)}
+ catch(e){m.st='cloudfail';m.cs='❌ '+e.message;saveM(m);cloudFin(m,0,e.message);toast(m.cs,5000)}
  finally{delete CLOUD[m.id];if(R.m==m&&cur=='meet')renderMeet();if(MD.id==m.id)renderMD();if(cur=='rec')renderRec()}}
 function aiOpts(){const on=S.set.llm&&S.set.llm!='off';return{llm:on?'local':'',fix:on&&S.set.aifix?1:0,summ:on&&S.set.aisum?1:0}}
 function cloudApply(m,r){m.spk=[];const map={};
@@ -1298,7 +1304,7 @@ async function mLocal(m){toast('讀取錄音中…',60000);m.u=[];m.spk=[];m.seq
   for(const s of segs){const k=m.id+':'+String(++m.seq).padStart(6,'0');await iput('q',k,{mid:m.id,t0:a.t0+s.t0,pcm:f2i(s.a)});MQ.push(k);n++}
   m.dur=Math.max(m.dur||0,a.t0+buf.length/16000)}
  m.st='proc';m.cs='';saveM(m);toast(`開始在手機上辨識 ${n} 段語音`,3000);mPump()}
-async function cloudCancel(m){if(m.cj&&m.cj.rel){try{await ghApi('DELETE','/releases/'+m.cj.rel)}catch(e){}}delete m.cj;m.st='done';m.cs='';saveM(m)}
+async function cloudCancel(m){cloudFin(m,-1,'');if(m.cj&&m.cj.rel){try{await ghApi('DELETE','/releases/'+m.cj.rel)}catch(e){}}delete m.cj;m.st='done';m.cs='';saveM(m)}
 
 /* ================= 會議詳細頁 ================= */
 const MD={id:null,m:null,q:'',pl:-1,tab:'t',raw:0};
@@ -1319,56 +1325,83 @@ function zipStore(files){const te=new TextEncoder(),parts=[],cen=[];let off=0;
  const cs=cen.reduce((a,x)=>a+x.length,0),e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
  return new Blob([...parts,...cen,new Uint8Array(e.buffer)],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'})}
 const xe=s=>String(s==null?'':s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-function buildDocx(m,opt={}){const s=m.sum,A=x=>Array.isArray(x)?x:[],C='2F5674',C2='5B7F99',GR='6B7280',body=[];
- const hex=c=>{c=String(c||'').replace('#','');return /^[0-9a-f]{6}$/i.test(c)?c.toUpperCase():/^[0-9a-f]{3}$/i.test(c)?c.split('').map(x=>x+x).join('').toUpperCase():'555555'};
- const run=(t,o={})=>{const rp=(o.b?'<w:b/>':'')+(o.i?'<w:i/>':'')+(o.c?`<w:color w:val="${o.c}"/>`:'')+(o.sz?`<w:sz w:val="${o.sz}"/><w:szCs w:val="${o.sz}"/>`:'');
+/* Word 版面仿照 App：圓角卡片（DrawingML 圓角矩形文字方塊）、標籤膠囊、講者圓形頭像 */
+function buildDocx(m,opt={}){const s=m.sum,A=x=>Array.isArray(x)?x:[],body=[];
+ const ACC='3F6079',ACC2='4A7593',INK='2B2F33',SUB='767B83',CARD='FBFAF7',LINE='E2DDD4',CHIP='F3F0EA',PAGE='F4F1EC';
+ const W=9026,EMU=635;let did=1;
+ const hex=c=>{c=String(c||'').replace('#','');return /^[0-9a-f]{6}$/i.test(c)?c.toUpperCase():/^[0-9a-f]{3}$/i.test(c)?c.split('').map(x=>x+x).join('').toUpperCase():'888888'};
+ const units=t=>{let u=0;for(const ch of String(t||''))u+=/[⺀-￯]/.test(ch)?1:/[A-Z0-9]/.test(ch)?.62:.52;return u};
+ /* 文字 run:sz 為半點 */
+ const run=(t,o={})=>{const rp=(o.b?'<w:b/><w:bCs/>':'')+(o.i?'<w:i/>':'')+(o.c?`<w:color w:val="${o.c}"/>`:'')+(o.sz?`<w:sz w:val="${o.sz}"/><w:szCs w:val="${o.sz}"/>`:'');
   return String(t==null?'':t).split('\n').map((x,i)=>`<w:r>${rp?`<w:rPr>${rp}</w:rPr>`:''}${i?'<w:br/>':''}<w:t xml:space="preserve">${xe(x)}</w:t></w:r>`).join('')};
- const P=(runs,o={})=>`<w:p><w:pPr>${o.st?`<w:pStyle w:val="${o.st}"/>`:''}${o.num?'<w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>':''}${o.keep?'<w:keepNext/>':''}${o.jc?`<w:jc w:val="${o.jc}"/>`:''}${o.sp!=null?`<w:spacing w:before="${o.sp[0]}" w:after="${o.sp[1]}"/>`:''}</w:pPr>${runs}</w:p>`;
- const cell=(w,inner,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.fill?`<w:shd w:val="clear" w:color="auto" w:fill="${o.fill}"/>`:''}<w:vAlign w:val="${o.va||'top'}"/></w:tcPr>${inner||'<w:p/>'}</w:tc>`;
- const table=(ws,rows,o={})=>`<w:tbl><w:tblPr><w:tblW w:w="${ws.reduce((a,b)=>a+b,0)}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders>${['top','bottom','insideH'].map(k=>`<w:${k} w:val="single" w:sz="4" w:space="0" w:color="D5DDE5"/>`).join('')}${['left','right','insideV'].map(k=>`<w:${k} w:val="${o.grid?'single':'nil'}" w:sz="4" w:space="0" w:color="D5DDE5"/>`).join('')}</w:tblBorders><w:tblCellMar><w:top w:w="70" w:type="dxa"/><w:left w:w="110" w:type="dxa"/><w:bottom w:w="70" w:type="dxa"/><w:right w:w="110" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${ws.map(w=>`<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${rows.join('')}</w:tbl>`;
- const tr=(cells,head)=>`<w:tr>${head?'<w:trPr><w:tblHeader/><w:cantSplit/></w:trPr>':'<w:trPr><w:cantSplit/></w:trPr>'}${cells}</w:tr>`;
- const HC=t=>P(run(t,{b:1,c:'FFFFFF',sz:20}),{sp:[0,0]});
- /* 封面資訊 */
- body.push(P(run(mTitle(m)),{st:'Title'}));
- const meta=[...(m.client?[['客戶',m.client]]:[]),...(m.room?[['會議室',m.room]]:[]),['日期',fmtD(m.ts)],['會議長度',fmtT(m.dur)],['講者',m.spk.filter(x=>m.u.some(u=>u.s==x.id)).map(x=>x.name).join('、')||'—'],['句數',m.u.length+' 句']];
- if(s&&A(s.keywords).length)meta.push(['關鍵字',A(s.keywords).join('、')]);
- body.push(table([1800,7226],meta.map(([k,v])=>tr(cell(1800,P(run(k,{b:1,c:C,sz:20}),{sp:[0,0]}),{fill:'EEF3F7'})+cell(7226,P(run(v,{sz:20}),{sp:[0,0]}))))));
- /* 重點整理 */
- if(s&&opt.sum!==0){body.push(P(run('重點整理'),{st:'Heading1'}));
-  if(s.title&&s.title!==mTitle(m))body.push(P(run(s.title,{b:1,sz:26,c:C})));
-  if(s.overview)body.push(table([9026],[tr(cell(9026,P(run('摘要',{b:1,c:C,sz:20}),{sp:[0,60]})+P(run(s.overview),{sp:[0,0]}),{fill:'F3F6F9'}))]));
-  A(s.chapters).forEach((c,i)=>{body.push(P(run(`${i+1}. ${c.title||'第 '+(i+1)+' 章'}`)+(c.start?run(`　${c.start}${c.end?' – '+c.end:''}`,{c:GR,sz:20,b:0}):''),{st:'Heading2',keep:1}));
-   if(c.summary)body.push(P(run(c.summary,{i:1,c:'374151'})));A(c.points).forEach(x=>body.push(P(run(x),{num:1})))});
-  if(A(s.decisions).length){body.push(P(run('✅ 決議事項'),{st:'Heading2',keep:1}));A(s.decisions).forEach(x=>body.push(P(run(x),{num:1})))}
-  if(A(s.actions).length){body.push(P(run('📌 待辦事項'),{st:'Heading2',keep:1}));
-   body.push(table([2000,5226,1800],[tr(cell(2000,HC('負責人'),{fill:C})+cell(5226,HC('待辦事項'),{fill:C})+cell(1800,HC('期限'),{fill:C}),1),
-    ...A(s.actions).map((a,i)=>tr(cell(2000,P(run(a.owner||'未指定',{b:1}),{sp:[0,0]}),{fill:i%2?'F7F9FB':''})+cell(5226,P(run(a.task||''),{sp:[0,0]}),{fill:i%2?'F7F9FB':''})+cell(1800,P(run(a.due||'—',{c:GR}),{sp:[0,0]}),{fill:i%2?'F7F9FB':''})))],{grid:0}))}
-  body.push(P(run(s.edited?'本重點整理已手動編輯。':'本重點整理由 AI 產生，內容可能有誤，請以逐字稿為準。',{i:1,c:GR,sz:18}),{sp:[160,0]}))}
- /* 逐字稿 */
- if(opt.tr!==0&&m.u.length){body.push(`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`+P(run('逐字稿'),{st:'Heading1'}));
-  const rows=[tr(cell(1150,HC('時間'),{fill:C})+cell(1500,HC('講者'),{fill:C})+cell(6376,HC('內容'),{fill:C}),1)];
-  m.u.forEach((u,i)=>{const sp=spkOf(m,u.s),f=i%2?'F7F9FB':'';
-   rows.push(tr(cell(1150,P(run(fmtT(u.t0),{c:GR,sz:18}),{sp:[0,0]}),{fill:f})+cell(1500,P(run(sp.name,{b:1,c:hex(sp.c),sz:20}),{sp:[0,0]}),{fill:f})+cell(6376,P(run(u.text,{sz:21}),{sp:[0,0]})+(u.tr?P(run(u.tr,{c:GR,i:1,sz:19}),{sp:[40,0]}):''),{fill:f})))});
-  body.push(table([1150,1500,6376],rows))}
+ const P=(runs,o={})=>`<w:p><w:pPr>${o.st?`<w:pStyle w:val="${o.st}"/>`:''}${o.num?'<w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>':''}${o.keep?'<w:keepNext/>':''}<w:spacing w:before="${o.b4||0}" w:after="${o.af==null?0:o.af}"${o.ln?` w:line="${o.ln}" w:lineRule="${o.lr||'exact'}"`:''}/>${o.ind?`<w:ind w:left="${o.ind}" w:hanging="${o.hang||0}"/>`:''}${o.jc?`<w:jc w:val="${o.jc}"/>`:''}</w:pPr>${runs}</w:p>`;
+ /* 估算文字方塊高度(twips) */
+ const H=(t,sz,w,ln,b4=0,af=0)=>{const cap=Math.max(1,w/(sz*10));let n=0;String(t||'').split('\n').forEach(x=>n+=Math.max(1,Math.ceil(units(x)/cap)));return n*ln+b4+af};
+ /* 圖形(圓角卡片、膠囊、圓形) */
+ const shape=(cx,cy,inner,o={})=>{const id=did++;return `<w:r><mc:AlternateContent><mc:Choice Requires="wps"><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="${o.gap||0}"><wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="${o.shd?19050:0}" b="${o.shd?25400:0}"/><wp:docPr id="${id}" name="Shape ${id}"/><wp:cNvGraphicFramePr/><a:graphic><a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:wsp><wps:cNvSpPr/><wps:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="${o.geom||'roundRect'}"><a:avLst>${o.geom=='ellipse'?'':`<a:gd name="adj" fmla="val ${o.adj||8000}"/>`}</a:avLst></a:prstGeom><a:solidFill><a:srgbClr val="${o.fill||CARD}"/></a:solidFill>${o.line===0?'<a:ln><a:noFill/></a:ln>':`<a:ln w="9525"><a:solidFill><a:srgbClr val="${o.line||LINE}"/></a:solidFill></a:ln>`}${o.shd?'<a:effectLst><a:outerShdw blurRad="76200" dist="19050" dir="5400000" algn="t" rotWithShape="0"><a:srgbClr val="5A4A3A"><a:alpha val="13000"/></a:srgbClr></a:outerShdw></a:effectLst>':''}</wps:spPr><wps:txbx><w:txbxContent>${inner}</w:txbxContent></wps:txbx><wps:bodyPr rot="0" vert="horz" wrap="${o.nowrap?'none':'square'}" lIns="${o.ins!=null?o.ins[0]:180000}" tIns="${o.ins!=null?o.ins[1]:144000}" rIns="${o.ins!=null?o.ins[0]:180000}" bIns="${o.ins!=null?o.ins[1]:144000}" anchor="${o.anchor||'t'}" anchorCtr="0"><a:${o.fit===0?'noAutofit':'spAutoFit'}/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:inline></w:drawing></mc:Choice></mc:AlternateContent></w:r>`};
+ const cardW=W*EMU,inTw=W-2*Math.round(180000/EMU)-40;
+ /* 卡片:items = [{t:runs, h:估計高度}] */
+ const card=(items,o={})=>{const hTw=items.reduce((a,x)=>a+x.h,0)+2*Math.round(144000/EMU);return P(shape(cardW,Math.round(hTw*EMU*1.06)+20000,items.map(x=>x.p).join(''),{shd:1,fill:o.fill,line:o.line,adj:o.adj||(hTw>4000?3500:7000)}),{af:200,keep:o.keep})};
+ const chip=(text,o={})=>{const sz=o.sz||18,w=Math.round(units(text)*sz*10+300),h=Math.round(sz*10*1.5+120);
+  return shape(w*EMU,h*EMU,P(run(text,{sz,c:o.c||INK,b:o.b}),{jc:'center',ln:Math.round(sz*10*1.3)}),{nowrap:1,fill:o.fill||CHIP,line:o.line||LINE,adj:50000,ins:[45720,22860],anchor:'ctr',gap:72000,fit:0})};
+ /* 膠囊自己分行(避免自動換行時重疊) */
+ const chipW=(text,sz)=>Math.round(units(text)*sz*10+300)+113;
+ const chips=(list,sz,o={},af=200)=>{const rows=[[]];let w=0;list.forEach(x=>{const cw=chipW(x.t,sz);if(w+cw>W-60&&rows.at(-1).length){rows.push([]);w=0}rows.at(-1).push(x);w+=cw});return rows.map((r,i)=>P(r.map(x=>chip(x.t,{sz,...o,...x.o})).join('<w:r><w:rPr><w:sz w:val="14"/></w:rPr><w:t xml:space="preserve"> </w:t></w:r>'),{af:i==rows.length-1?af:90,ln:Math.round(sz*10*1.5+200)})).join('')};
+ const avatar=(sp,sz=430)=>shape(sz*EMU,sz*EMU,P(run(String(sp.name||'?').slice(-1),{b:1,c:'FFFFFF',sz:20}),{jc:'center',ln:260}),{geom:'ellipse',fill:hex(sp.c),line:0,ins:[0,0],anchor:'ctr',fit:0});
+ const pill=(text)=>P(shape(cardW,Math.round(620*EMU),P(run(text,{b:1,c:'FFFFFF',sz:24}),{jc:'center',ln:330}),{fill:ACC,line:0,adj:50000,ins:[91440,45720],anchor:'ctr',fit:0}),{b4:240,af:220,keep:1});
+ const bullet=(t,sz=21)=>({p:`<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr><w:spacing w:before="40" w:after="40" w:line="${Math.round(sz*10*1.5)}" w:lineRule="exact"/><w:ind w:left="380" w:hanging="260"/></w:pPr>${run(t,{sz,c:INK})}</w:p>`,h:H(t,sz,inTw-380,Math.round(sz*10*1.5),40,40)});
+ const line=(runs,txt,sz,o={})=>{const ln=Math.round(sz*10*(o.lm||1.45));return{p:P(runs,{ln,b4:o.b4||0,af:o.af==null?60:o.af,keep:1}),h:H(txt,sz,inTw,ln,o.b4||0,o.af==null?60:o.af)}};
+ const used=m.spk.filter(x=>m.u.some(u=>u.s==x.id));
+ /* ---- 頁首 ---- */
+ body.push(P(run(mTitle(m),{b:1,sz:40,c:INK}),{af:120,ln:640}));
+ const info=[m.client?'🏢 '+m.client:'',m.room?'🚪 '+m.room:''].filter(Boolean);
+ if(info.length)body.push(chips(info.map(x=>({t:x})),19,{b:1,fill:'FFFFFF'},120));
+ body.push(P(run(`📅 ${fmtD(m.ts)}　·　⏱ ${fmtT(m.dur)}　·　${m.u.length} 句　·　👥 ${used.map(x=>x.name).join('、')||'—'}`,{sz:19,c:SUB}),{af:120}));
+ /* ---- 重點整理 ---- */
+ if(s&&opt.sum!==0){body.push(pill('✨ 重點整理'));
+  if(s.title)body.push(P(run(s.title,{b:1,sz:32,c:INK}),{af:100,ln:500}));
+  if(s.overview)body.push(P(run(s.overview,{sz:22,c:SUB}),{af:160,ln:400}));
+  if(A(s.keywords).length)body.push(chips(A(s.keywords).map(k=>({t:k})),18,{},220));
+  const MAXH=12600;
+  A(s.chapters).forEach((c,i)=>{const head=line(run(c.title||'第 '+(i+1)+' 章',{b:1,sz:24,c:INK})+(c.start?run(`　▶ ${c.start}${c.end?'–'+c.end:''}`,{b:1,sz:20,c:ACC2}):''),(c.title||'')+'　▶ 00:00–00:00',24,{af:80});
+   const sum=c.summary?line(run(c.summary,{sz:20,c:SUB}),c.summary,20,{af:100,lm:1.5}):null;
+   let items=[head].concat(sum?[sum]:[]),hh=items.reduce((a,x)=>a+x.h,0);
+   for(const pt of A(c.points)){const b=bullet(pt);if(hh+b.h>MAXH){body.push(card(items));items=[line(run((c.title||'')+'（續）',{b:1,sz:22,c:SUB}),'續',22,{af:60})];hh=items[0].h}items.push(b);hh+=b.h}
+   body.push(card(items))});
+  if(A(s.decisions).length){const it=[line(run('✅ 決議事項',{b:1,sz:24,c:INK}),'決議事項',24,{af:80}),...A(s.decisions).map(x=>bullet(x))];body.push(card(it))}
+  if(A(s.actions).length){const tw=inTw,c1=Math.round(tw*.24),c3=Math.round(tw*.18),c2=tw-c1-c3;
+   const cell=(w,inner,f)=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${f?`<w:shd w:val="clear" w:color="auto" w:fill="${f}"/>`:''}<w:vAlign w:val="center"/></w:tcPr>${inner}</w:tc>`;
+   const rows=A(s.actions).map((a,i)=>`<w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(c1,P(run(a.owner||'未指定',{b:1,sz:20,c:INK}),{ln:300,b4:40,af:40}))}${cell(c2,P(run(a.task||'',{sz:20,c:INK}),{ln:300,b4:40,af:40}))}${cell(c3,P(run(a.due||'—',{sz:19,c:SUB}),{ln:300,b4:40,af:40,jc:'right'}))}</w:tr>`).join('');
+   const tbl=`<w:tbl><w:tblPr><w:tblW w:w="${tw}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="${LINE}"/><w:insideV w:val="nil"/></w:tblBorders><w:tblCellMar><w:top w:w="60" w:type="dxa"/><w:left w:w="60" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${c1}"/><w:gridCol w:w="${c2}"/><w:gridCol w:w="${c3}"/></w:tblGrid>${rows}</w:tbl>`;
+   const th=A(s.actions).reduce((a,x)=>a+Math.max(H(x.task,20,c2-120,300,40,40),H(x.owner,20,c1-120,300,40,40))+130,0);
+   body.push(card([line(run('📌 待辦事項',{b:1,sz:24,c:INK}),'待辦事項',24,{af:80}),{p:tbl+P('',{ln:40}),h:th+40}]))}
+  body.push(P(run(s.edited?'✏️ 本重點整理已手動編輯':'本重點整理由 AI 產生，內容可能有誤，請以逐字稿為準',{i:1,c:SUB,sz:17}),{b4:60,jc:'center'}))}
+ /* ---- 逐字稿 ---- */
+ if(opt.tr!==0&&m.u.length){if(s&&opt.sum!==0)body.push('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');body.push(pill('📝 逐字稿'));
+  body.push(chips(used.map(sp=>({t:`● ${sp.name}・${m.u.filter(u=>u.s==sp.id).length}`,o:{c:hex(sp.c)}})),18,{b:1,fill:'FFFFFF'},200));
+  const aw=760,tw=W,bw=tw-aw;
+  const cell=(w,inner,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:tcBorders>${o.first?`<w:top w:val="nil"/>`:''}${o.last?`<w:bottom w:val="nil"/>`:''}</w:tcBorders><w:shd w:val="clear" w:color="auto" w:fill="${o.fill||CARD}"/><w:tcMar><w:top w:w="150" w:type="dxa"/><w:bottom w:w="150" w:type="dxa"/><w:left w:w="${o.l||120}" w:type="dxa"/><w:right w:w="${o.r||200}" w:type="dxa"/></w:tcMar></w:tcPr>${inner}</w:tc>`;
+  const rows=m.u.map((u,i)=>{const sp=spkOf(m,u.s);
+   return `<w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(aw,P(avatar(sp),{jc:'center'}),{l:200,r:0})}${cell(bw,P(run(sp.name,{b:1,sz:21,c:INK})+run('　'+fmtS(u.t0),{sz:18,c:SUB}),{af:40,keep:1})+P(run(u.text,{sz:22,c:INK}),{ln:390})+(u.tr?P(run(u.tr,{sz:20,c:ACC2}),{b4:40,ln:340}):''),{l:80})}</w:tr>`}).join('');
+  body.push(`<w:tbl><w:tblPr><w:tblW w:w="${tw}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders><w:top w:val="single" w:sz="6" w:space="0" w:color="${LINE}"/><w:left w:val="single" w:sz="6" w:space="0" w:color="${LINE}"/><w:bottom w:val="single" w:sz="6" w:space="0" w:color="${LINE}"/><w:right w:val="single" w:sz="6" w:space="0" w:color="${LINE}"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="${LINE}"/><w:insideV w:val="nil"/></w:tblBorders><w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${aw}"/><w:gridCol w:w="${bw}"/></w:tblGrid>${rows}</w:tbl>`)}
  const font='<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Microsoft JhengHei" w:cs="Calibri"/>';
  const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-<w:docDefaults><w:rPrDefault><w:rPr>${font}<w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="en-US" w:eastAsia="zh-TW"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="100" w:line="300" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
+<w:docDefaults><w:rPrDefault><w:rPr>${font}<w:color w:val="${INK}"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="en-US" w:eastAsia="zh-TW"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="300" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
 <w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>
-<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:qFormat/><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="12" w:space="6" w:color="${C}"/></w:pBdr><w:spacing w:after="240"/></w:pPr><w:rPr><w:b/><w:color w:val="${C}"/><w:sz w:val="44"/><w:szCs w:val="44"/></w:rPr></w:style>
-<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:pBdr><w:left w:val="single" w:sz="24" w:space="8" w:color="${C}"/></w:pBdr><w:spacing w:before="360" w:after="160"/><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:b/><w:color w:val="${C}"/><w:sz w:val="32"/><w:szCs w:val="32"/></w:rPr></w:style>
-<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="240" w:after="80"/><w:outlineLvl w:val="1"/></w:pPr><w:rPr><w:b/><w:color w:val="${C2}"/><w:sz w:val="26"/><w:szCs w:val="26"/></w:rPr></w:style>
-<w:style w:type="paragraph" w:styleId="Footer"><w:name w:val="footer"/><w:basedOn w:val="Normal"/><w:pPr><w:jc w:val="center"/></w:pPr><w:rPr><w:color w:val="9CA3AF"/><w:sz w:val="18"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Footer"><w:name w:val="footer"/><w:basedOn w:val="Normal"/><w:pPr><w:jc w:val="center"/></w:pPr><w:rPr><w:color w:val="9CA3AF"/><w:sz w:val="17"/></w:rPr></w:style>
 <w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style></w:styles>`;
- const numbering=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:abstractNum w:abstractNumId="0"><w:multiLevelType w:val="singleLevel"/><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="•"/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="480" w:hanging="300"/></w:pPr><w:rPr><w:color w:val="${C}"/></w:rPr></w:lvl></w:abstractNum><w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num></w:numbering>`;
+ const numbering=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:abstractNum w:abstractNumId="0"><w:multiLevelType w:val="singleLevel"/><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="●"/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="380" w:hanging="260"/></w:pPr><w:rPr><w:color w:val="${ACC2}"/><w:sz w:val="14"/></w:rPr></w:lvl></w:abstractNum><w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num></w:numbering>`;
  const footer=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:pStyle w:val="Footer"/></w:pPr>${run(mTitle(m)+'　·　第 ')}<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>1</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>${run(' 頁')}</w:p></w:ftr>`;
- const doc=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${body.join('')}<w:sectPr><w:footerReference w:type="default" r:id="rId3"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1300" w:right="1440" w:bottom="1300" w:left="1440" w:header="708" w:footer="600" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+ const NS='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" mc:Ignorable="w14 wp14"';
+ const doc=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${NS}><w:background w:color="${PAGE}"/><w:body>${body.join('')}<w:sectPr><w:footerReference w:type="default" r:id="rId3"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1200" w:right="1440" w:bottom="1200" w:left="1440" w:header="708" w:footer="560" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+ const settings=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:displayBackgroundShape/><w:defaultTabStop w:val="480"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>`;
  const now=new Date().toISOString().replace(/\.\d+Z$/,'Z');
  return zipStore([
-  ['[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>'],
+  ['[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>'],
   ['_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>'],
   ['docProps/core.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${xe(mTitle(m))}</dc:title><dc:creator>AI翻譯會議</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">${now}</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">${now}</dcterms:modified></cp:coreProperties>`],
-  ['word/_rels/document.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>'],
-  ['word/document.xml',doc],['word/styles.xml',styles],['word/numbering.xml',numbering],['word/footer1.xml',footer]])}
+  ['word/_rels/document.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/></Relationships>'],
+  ['word/document.xml',doc],['word/styles.xml',styles],['word/settings.xml',settings],['word/numbering.xml',numbering],['word/footer1.xml',footer]])}
 async function mDocx(m,opt){const b=buildDocx(m,opt);await dl(mTitle(m).replace(/[\\/:*?"<>|]/g,'_')+'.docx','',b.type,b);toast('已匯出 Word 檔',2500)}
 
 /* ================= 重點整理：編輯 ================= */
@@ -2003,5 +2036,5 @@ addEventListener('beforeunload',e=>{if(R.on){e.preventDefault();e.returnValue=''
   if(k=='go')mPump();else if(k=='drop'){for(const x of ks)await idel('q',x);MQ=[];for(const x of S.meets)if(x.st=='proc'){const m=await getM(x.id);if(m){m.st='done';saveM(m)}}toast('已捨棄')}else toast('可以到「會議記錄」頁按「繼續辨識」',3000)},1500)}
  if(IS_APP){try{NB.ready()}catch(e){}}if(IS_APP&&S.set.autoUpd)setTimeout(()=>checkUpd(0),3000);
  if(S.set.sync)setTimeout(()=>syncNow(0),4000);
- setTimeout(async()=>{for(const x of S.meets)if(x.st=='cloud'){const m=await getM(x.id);if(m)cloudRun(m)}},2000);if(!S.set.onb)setTimeout(()=>$('#pm').classList.add('on'),700)})();
+ setTimeout(async()=>{for(const x of S.meets)if(x.st=='cloud'){const m=await getM(x.id);if(m)cloudRun(m)}},2000);setTimeout(()=>{try{const id=IS_APP&&NB.openMeeting&&NB.openMeeting();if(id)window.__openM(id)}catch(e){}},2600);if(!S.set.onb)setTimeout(()=>$('#pm').classList.add('on'),700)})();
 </script></body></html>

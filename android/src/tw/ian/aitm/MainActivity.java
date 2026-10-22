@@ -71,6 +71,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        try { pendingOpen = getIntent() != null ? getIntent().getStringExtra("openMeeting") : null; } catch (Exception ignored) {}
         Window w = getWindow();
         w.setStatusBarColor(Color.TRANSPARENT);
         w.setNavigationBarColor(Color.TRANSPARENT);
@@ -189,7 +190,20 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        CloudService.appVisible = true;
         js("window.__resume&&__resume()");
+    }
+
+    @Override
+    protected void onPause() { CloudService.appVisible = false; super.onPause(); }
+
+    /* 點通知 → 開啟那場會議 */
+    String pendingOpen = null;
+    @Override
+    protected void onNewIntent(Intent i) {
+        super.onNewIntent(i);
+        String mid = i != null ? i.getStringExtra("openMeeting") : null;
+        if (mid != null && !mid.isEmpty()) js("window.__openM&&__openM(" + JSONObject.quote(mid) + ")");
     }
 
     @Override
@@ -407,6 +421,9 @@ public class MainActivity extends Activity {
             } catch (Exception e) { return "{}"; }
         }
         @JavascriptInterface public String perm() { return permJson(); }
+        @JavascriptInterface public void cloudWatch(String mid, String title, String repo, String tok, double rel, String text, int pct, boolean disp) { CloudService.watch(MainActivity.this, mid, title, repo, tok, (long) rel, text, pct, disp); }
+        @JavascriptInterface public void cloudDone(String mid, int ok, String msg) { CloudService.done(MainActivity.this, mid, ok, msg, !CloudService.appVisible); }
+        @JavascriptInterface public String openMeeting() { String s = pendingOpen; pendingOpen = null; return s == null ? "" : s; }
         @JavascriptInterface public void setIso(boolean on) { getSharedPreferences("p", 0).edit().putBoolean("iso", on).apply(); }
         @JavascriptInterface public void requestPerms(String k) { ui.post(() -> MainActivity.this.requestPerms(k)); }
         @JavascriptInterface public void openAppSettings() { ui.post(MainActivity.this::openAppSettings); }
