@@ -129,6 +129,10 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 .mmode{display:inline-flex;align-items:center;gap:5px;font-size:.76em;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--glass);border:1px solid var(--edge);color:var(--sub);cursor:pointer;white-space:nowrap}
 .mmode.gh{color:var(--ac)}
 .mhead{display:flex;align-items:center;gap:8px}
+.mi-row{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}.mi-c{font-size:.82em;padding:5px 11px;border-radius:999px;border:1px dashed var(--edge);color:var(--sub);cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mi-c.on{border-style:solid;color:var(--tx,inherit);background:var(--glass);font-weight:600}
+.mc{position:relative}.mc-ed{position:absolute;right:8px;top:8px;opacity:.75}.mc>b{padding-right:34px}.mc-i{display:block;color:var(--ac);margin-top:2px}
+.ie-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.ie-chips span{font-size:.8em;padding:4px 10px;border-radius:999px;background:var(--glass);border:1px solid var(--edge);cursor:pointer}
+#mdt{cursor:pointer}.mdh{flex-wrap:wrap}.mdh .mi-row{flex-basis:100%;width:100%;margin:0 0 4px}
 .mhead .mtt{flex:1;min-width:0}
 .mst.err{color:#c0392b}[data-dk="1"] .mst.err{color:#ff8a7a}
 .mclock{font-size:2.4em;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:.03em;text-align:center;margin:8px 0 2px}
@@ -338,7 +342,7 @@ html[data-surf="paper"] .seg.glass,html[data-surf="paper"] .lbar.glass{backgroun
 <!-- 會議 -->
 <section class="view" id="v-meet"><div class="in"><div id="mwrap">
  <div id="mside"><div class="mtop glass">
-  <div class="mhead"><input class="mtt" id="mtitle" placeholder="會議名稱（可留白）"><span class="mmode" id="mmode"></span></div>
+  <div class="mhead"><input class="mtt" id="mtitle" placeholder="✏️ 會議名稱（點這裡輸入）"><span class="mmode" id="mmode"></span></div><div class="mi-row" id="minfo"></div>
   <div class="mrow"><label class="mfld"><small>辨識語言</small><select class="slc" id="mlang"></select></label><label class="mfld"><small>同步翻譯</small><select class="slc" id="mtrl"></select></label></div>
   <div class="mclock" id="mclock">00:00:00</div>
   <div class="mst" id="mst">準備就緒・可以錄很久，不限時間</div>
@@ -358,7 +362,7 @@ html[data-surf="paper"] .seg.glass,html[data-surf="paper"] .lbar.glass{backgroun
 <!-- 紀錄 -->
 <section class="view" id="v-rec"><div class="in">
  <div class="seg glass" id="rsg"><b class="on" data-s="m">🎙 會議記錄</b><b data-s="t">🌐 翻譯紀錄</b></div>
- <input class="sb" id="rq" placeholder="🔍 搜尋標題、內容、講者">
+ <input class="sb" id="rq" placeholder="🔍 搜尋標題、客戶、會議室、內容">
  <div id="rlist"></div>
 </div></section>
 
@@ -368,7 +372,7 @@ html[data-surf="paper"] .seg.glass,html[data-surf="paper"] .lbar.glass{backgroun
 <nav id="nav" class="glass"></nav>
 
 <!-- 會議詳細 -->
-<div class="sheet" id="md"><div class="pn"><div class="eh"><button class="ib" id="mdx">✕</button><b id="mdt"></b><button class="ib" id="mdm" title="更多">⋯</button></div><div class="eb" id="mdb"></div></div></div>
+<div class="sheet" id="md"><div class="pn"><div class="eh"><button class="ib" id="mdx">✕</button><b id="mdt" title="點一下修改會議資訊"></b><button class="ib" id="mdm" title="更多">⋯</button></div><div class="eb" id="mdb"></div></div></div>
 <!-- 學習卡片 -->
 <div class="sheet" id="lc"><div class="pn"><div class="eh"><button class="ib" id="lcx">✕</button><b id="lct"></b><button class="ib" id="lcb" title="上一張">↩</button></div><div class="eb" id="lcb2"></div></div></div>
 <!-- 動作選單 -->
@@ -567,12 +571,12 @@ const ASRM={tiny:{r:'onnx-community/whisper-tiny',n:'Whisper Tiny',s:'約 40 MB�
 const MTE={auto:{n:'自動選擇',s:'中↔英用 Opus-MT，其他語言用 NLLB-200'},opus:{n:'Opus-MT（中↔英）',s:'Helsinki-NLP・各約 100 MB・最快'},nllb:{n:'NLLB-200（200 種語言）',s:'Meta・約 900 MB・非商業授權'},m2m:{n:'M2M100（100 種語言）',s:'Meta・約 1 GB・MIT 授權'},q05:{n:'Qwen2.5 0.5B（LLM 翻譯）',s:'阿里巴巴・約 500 MB・語氣較自然，建議 WebGPU',r:'onnx-community/Qwen2.5-0.5B-Instruct'},q15:{n:'Qwen2.5 1.5B（LLM 翻譯）',s:'約 1.2 GB・品質最好，需要 WebGPU',r:'onnx-community/Qwen2.5-1.5B-Instruct'}};
 const HFS=[['https://huggingface.co/','Hugging Face 官方'],['https://hf-mirror.com/','hf-mirror 鏡像（官方連不上時）']];
 const DEF={theme:'sea',mode:'auto',font:16,blur:18,glass:.4,ui:'auto',surf:'paper',onb:0,src:'auto',tgt:'zh-TW',eng:'auto',asr:'base',asrc:'',dev:'wasm',hf:'https://huggingface.co/',
- mlang:'zh',mtr:'',thr:.8,maxSpk:0,fine:1,hall:1,keepAud:1,tw:1,lvtts:1,lvm:'one',lvA:'zh-TW',lvB:'en',lvSil:.7,tsub:'text',msrc:'gh',autoUpd:1,mcloud:'gh',cmodel:'firered',ghTok:'',thr2:3,v13:0,v15:0,v16:0,llm:'local',aifix:1,aisum:1,sync:0,syncPw:'',tomb:{},lastSync:0};
+ mlang:'zh',mtr:'',thr:.8,maxSpk:0,fine:1,hall:1,keepAud:1,tw:1,lvtts:1,lvm:'one',lvA:'zh-TW',lvB:'en',lvSil:.7,tsub:'text',msrc:'gh',autoUpd:1,mcloud:'gh',cmodel:'firered',ghTok:'',thr2:3,v13:0,v15:0,v16:0,llm:'local',aifix:1,aisum:1,sync:0,syncPw:'',tomb:{},lastSync:0,fcli:1,froom:1,clients:[],rooms:[]};
 let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.10.0';
+const APP_VER='1.11.0';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -948,11 +952,39 @@ const R={on:0,paused:0,m:null,cap:null,mr:null,mrN:0,mrT0:0,mrChunks:[],timer:0,
 let MQ=[],mBusy=0;  /* 待處理語音片段的 key */
 const MS={}; /* 載入中的會議 */
 async function getM(id){if(MS[id])return MS[id];const m=await iget('m',id);if(m)MS[id]=m;return m}
-let msT={};function saveM(m,keepUp){if(!keepUp&&m.st!='rec'){m.up=Date.now();if(S.set.sync&&m.st=='done')syncSoon()}clearTimeout(msT[m.id]);msT[m.id]=setTimeout(()=>iput('m',m.id,m),400);const i=S.meets.findIndex(x=>x.id==m.id),ix={id:m.id,title:m.title,ts:m.ts,dur:m.dur,n:m.u.length,st:m.st,cs:m.cs||'',up:m.up||m.ts,sum:m.sum?1:0,ra:m.aud&&m.aud.length?1:0,spk:m.spk.length,pv:m.u.slice(0,3).map(u=>u.text).join(' ').slice(0,120)};i<0?S.meets.unshift(ix):S.meets[i]=ix;save()}
+let msT={};function saveM(m,keepUp){if(!keepUp&&m.st!='rec'){m.up=Date.now();if(S.set.sync&&m.st=='done')syncSoon()}clearTimeout(msT[m.id]);msT[m.id]=setTimeout(()=>iput('m',m.id,m),400);const i=S.meets.findIndex(x=>x.id==m.id),ix={id:m.id,title:m.title,client:m.client||'',room:m.room||'',ts:m.ts,dur:m.dur,n:m.u.length,st:m.st,cs:m.cs||'',up:m.up||m.ts,sum:m.sum?1:0,ra:m.aud&&m.aud.length?1:0,spk:m.spk.length,pv:m.u.slice(0,3).map(u=>u.text).join(' ').slice(0,120)};i<0?S.meets.unshift(ix):S.meets[i]=ix;save()}
 const mTitle=m=>m.title||'會議 '+fmtD(m.ts);
 function spkOf(m,id){return m.spk.find(s=>s.id==id)||{id,name:'講者 ?',c:'#888'}}
+/* ================= 會議資訊：標題、客戶名稱、會議室 ================= */
+const MI={cli:'',room:''};
+const infoOn=()=>({cli:S.set.fcli!==0,room:S.set.froom!==0});
+function infoList(k){const a=S.set[k=='cli'?'clients':'rooms'];return Array.isArray(a)?a:[]}
+function infoUse(k,v){v=String(v||'').trim();if(!v)return;const key=k=='cli'?'clients':'rooms';S.set[key]=[v,...infoList(k).filter(x=>x!==v)].slice(0,60);save()}
+const INFO_N={cli:['🏢','客戶'],room:['🚪','會議室']};
+/* 選擇客戶／會議室:常用清單＋新增＋不指定 */
+async function infoPick(k,cur){const L=infoList(k),[ic,n]=INFO_N[k];
+ const v=await menu(`${ic} 選擇${n}`,[...L.map(x=>['v:'+x,(x==cur?'✔ ':'')+x]),['new','＋ 新增'+n+'…'],...(cur?[['none','不指定']]:[])]);
+ if(!v)return null;if(v=='none')return'';if(v=='new'){const t=prompt('輸入'+n+'名稱',cur||'');if(t==null||!t.trim())return null;infoUse(k,t);return t.trim()}
+ const x=v.slice(2);infoUse(k,x);return x}
+function infoChips(o){const on=infoOn();return (on.cli?`<span class="mi-c${o.client?' on':''}" data-pick="cli">${INFO_N.cli[0]} ${esc(o.client||'客戶：未指定')}</span>`:'')+(on.room?`<span class="mi-c${o.room?' on':''}" data-pick="room">${INFO_N.room[0]} ${esc(o.room||'會議室：未指定')}</span>`:'')}
+function infoLine(m){return [m.client?'🏢 '+m.client:'',m.room?'🚪 '+m.room:''].filter(Boolean).join('・')}
+/* 完整的「編輯會議資訊」視窗 */
+function infoEdit(m){return new Promise(done=>{const s=$('#act'),on=infoOn();
+ const field=(k,v)=>{const L=infoList(k),[ic,n]=INFO_N[k];return `<div class="sl"><label>${ic} ${n}</label><input class="ti" id="ie-${k}" value="${esc(v||'')}" placeholder="可留白" list="ie-dl-${k}" autocomplete="off"><datalist id="ie-dl-${k}">${L.map(x=>`<option value="${esc(x)}">`).join('')}</datalist>${L.length?`<div class="ie-chips">${L.slice(0,10).map(x=>`<span data-fill="${k}">${esc(x)}</span>`).join('')}</div>`:''}</div>`};
+ $('#actb').innerHTML=`<div class="pmb" style="padding-bottom:0"><h3 style="font-size:1em">✏️ 會議資訊</h3></div><div class="grp" style="padding:4px 14px 10px">
+  <div class="sl"><label>📝 會議標題</label><input class="ti" id="ie-title" value="${esc(m.title||'')}" placeholder="${esc('會議 '+fmtD(m.ts))}"></div>
+  ${on.cli?field('cli',m.client):''}${on.room?field('room',m.room):''}
+  ${!on.cli||!on.room?`<small style="color:var(--sub)">可以到「設定 → 🏷 會議資訊欄位」開啟${!on.cli?'客戶名稱':''}${!on.cli&&!on.room?'、':''}${!on.room?'會議室':''}欄位</small>`:''}</div>
+  <div class="pmb pr" style="padding-top:6px"><button class="btn" data-ie="0" style="flex:1">取消</button><button class="btn on" data-ie="1" style="flex:1">💾 儲存</button></div>`;
+ s.classList.add('on');setTimeout(()=>{const t=$('#ie-title');t&&t.focus()},150);
+ const close=v=>{s.classList.remove('on');s.onclick=null;done(v)};
+ s.onclick=e=>{const f=e.target.closest('[data-fill]');if(f){$('#ie-'+f.dataset.fill).value=f.textContent;return}
+  const b=e.target.closest('[data-ie]');if(b){if(b.dataset.ie=='0')return close(0);
+   m.title=$('#ie-title').value.trim();if(on.cli){m.client=$('#ie-cli').value.trim();infoUse('cli',m.client)}if(on.room){m.room=$('#ie-room').value.trim();infoUse('room',m.room)}
+   saveM(m);if(R.m&&R.m.id==m.id){MI.cli=m.client||'';MI.room=m.room||''}toast('✅ 已儲存',1500);return close(1)}
+  if(e.target==s)close(0)}})}
 function renderMeet(){
- langOptsM();const m=R.m;$('#mtitle').value=m?m.title:'';
+ langOptsM();const m=R.m;$('#mtitle').value=m?m.title:'';if(m){MI.cli=m.client||'';MI.room=m.room||''}$('#minfo').innerHTML=infoChips({client:MI.cli,room:MI.room});
  $('#mbtn').innerHTML=R.on?`<button class="btn" id="mpause">${R.paused?'▶ 繼續':'⏸ 暫停'}</button><button class="btn rec" id="mstop">■ 結束</button>`:`<button class="btn rec" id="mstart">● 開始錄音</button>`+(m?`<button class="btn" id="mopen">📄 完整記錄</button>`:'')+(MQ.length&&!mBusy?`<button class="btn" id="mresume">▶ 繼續辨識 ${MQ.length} 段</button>`:'')+(m&&!R.on&&(m.st=='cloudfail'||m.st=='cloudwait')?`<button class="btn on" id="mretry">↻ 重新上傳</button>`:'');
  mStatus();mSpk();if(!R.on&&!m){$('#mlist').innerHTML='<p class="emp">按「● 開始錄音」後，逐字稿會即時出現在這裡<br><small>自動分辨不同講者・中英夾雜也能辨識・不限錄音時間</small></p>'}else if(m)mList(m)}
 function langOptsM(){$('#mlang').innerHTML=MLANG.map(([k,n])=>`<option value="${k}">🗣 ${n}</option>`).join('');$('#mlang').value=S.set.mlang;
@@ -961,6 +993,7 @@ function langOptsM(){$('#mlang').innerHTML=MLANG.map(([k,n])=>`<option value="${
 $('#mmode').onclick=()=>{if(R.on)return toast('錄音中無法切換');show('set')};
 $('#mlang').onchange=e=>{S.set.mlang=e.target.value;save()};$('#mtrl').onchange=e=>{S.set.mtr=e.target.value;save();if(R.m){R.m.tr=S.set.mtr;saveM(R.m)}};
 $('#mtitle').onchange=e=>{if(R.m){R.m.title=e.target.value.trim();saveM(R.m)}};
+$('#minfo').onclick=async e=>{const c=e.target.closest('[data-pick]');if(!c)return;const k=c.dataset.pick,v=await infoPick(k,MI[k]);if(v==null)return;MI[k]=v;if(R.m){R.m[k=='cli'?'client':'room']=v;saveM(R.m)}renderMeet()};
 $('#mbtn').onclick=e=>{const b=e.target.closest('button');if(!b)return;({mstart:mStart,mstop:mStop,mpause:mPause,mopen:()=>R.m&&openMD(R.m.id),mresume:()=>{mPump();renderMeet()},mretry:()=>{if(!S.set.ghTok)return toast('請先到「設定 → ☁️ GitHub 雲端轉文字」填入 GitHub 權杖',3500);R.m.st='cloud';cloudRun(R.m);renderMeet()}})[b.id]?.()};
 function mStatus(){const n=MQ.length+(mBusy?1:0);$('#mst').classList.toggle('err',!!(R.m&&R.m.st=='cloudfail'));if(R.m&&R.m.cloud&&(R.on||R.m.st=='cloud'||R.m.st=='cloudwait'||R.m.st=='cloudfail')){$('#mst').textContent=R.on?(R.paused?'⏸ 已暫停':'● 錄音中')+'・結束後上傳到 GitHub 轉文字':(R.m.st=='cloudfail'?'':'☁️ ')+(R.m.cs||'GitHub 處理中');$('#mclock').textContent=fmtT(R.on&&R.cap?R.m.off+R.cap.time:R.m.dur);return}
  $('#mst').textContent=R.on?(R.paused?'⏸ 已暫停':'● 錄音中')+(n?`・待辨識 ${n} 段`:'・即時辨識中'):n?`辨識剩下的 ${n} 段語音…`:R.m?`已完成・${R.m.u.length} 句・${R.m.spk.length} 位講者`:'準備就緒・可以錄很久，不限時間';
@@ -976,7 +1009,7 @@ $('#mlist').onclick=e=>{const a=e.target.closest('[data-av]');if(a&&R.m){utSpk(R
 
 async function mStart(){if(R.on)return;if(!await needPerm('mic'))return;if(IS_APP){const P=perm();if(P&&P.notif=='no')NB.requestPerms('notif')}
  const cloud=cloudOn();if(cloud&&!S.set.ghTok){toast('雲端轉文字需要 GitHub 權杖：請到「設定 → ☁️ GitHub 雲端」填入（也可以先錄，之後再上傳）',4500)}
- const m={id:uid(),title:$('#mtitle').value.trim(),ts:Date.now(),dur:0,off:0,lang:S.set.mlang,tr:S.set.mtr,spk:[],u:[],aud:[],st:'rec',seq:0,cloud:cloud?1:0};
+ const m={id:uid(),title:$('#mtitle').value.trim(),client:MI.cli,room:MI.room,ts:Date.now(),dur:0,off:0,lang:S.set.mlang,tr:S.set.mtr,spk:[],u:[],aud:[],st:'rec',seq:0,cloud:cloud?1:0};
  R.m=m;MS[m.id]=m;
  try{R.cap=await new Cap().start({hang:.65,max:25,onLevel:(r,sp)=>{$('#mlv').style.width=Math.min(100,r*900)+'%';$('#mlv').style.background=sp?'#3c9d5d':'var(--sub)'},onSeg:s=>{if(!m.cloud)mSeg(m,s)}})}
  catch(e){toast('無法使用麥克風：'+e.message,3500);R.m=null;return}
@@ -1083,13 +1116,13 @@ async function utSpk(m,i,done){const u=m.u[i];const k=await menu('這句話是�
 
 /* ---- 匯入音檔轉文字 ---- */
 $('#mfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;if(R.on)return toast('請先結束目前的錄音');
- if(cloudOn()){const m={id:uid(),title:f.name.replace(/\.[^.]+$/,''),ts:f.lastModified||Date.now(),dur:await mediaDur(f),off:0,lang:S.set.mlang,tr:S.set.mtr,spk:[],u:[],aud:[{n:0,t0:0,ty:f.type,nm:f.name}],st:'cloud',cs:'準備上傳',seq:0,imp:1,cloud:1};
+ if(cloudOn()){const m={id:uid(),title:f.name.replace(/\.[^.]+$/,''),client:MI.cli,room:MI.room,ts:f.lastModified||Date.now(),dur:await mediaDur(f),off:0,lang:S.set.mlang,tr:S.set.mtr,spk:[],u:[],aud:[{n:0,t0:0,ty:f.type,nm:f.name}],st:'cloud',cs:'準備上傳',seq:0,imp:1,cloud:1};
   MS[m.id]=m;R.m=m;await iput('a',m.id+':0',f);saveM(m);renderMeet();cloudRun(m);return}
  toast('讀取音檔中…',60000);let buf;
  try{const ab=await f.arrayBuffer();const ac=new (window.AudioContext||window.webkitAudioContext)();const dec=await ac.decodeAudioData(ab);ac.close();
   const n=Math.ceil(dec.duration*16000),oc=new OfflineAudioContext(1,n,16000),src=oc.createBufferSource();src.buffer=dec;src.connect(oc.destination);src.start();buf=(await oc.startRendering()).getChannelData(0)}
  catch(err){return toast('無法讀取這個音檔（格式不支援或檔案太大）',4000)}
- const m={id:uid(),title:f.name.replace(/\.[^.]+$/,''),ts:f.lastModified||Date.now(),dur:buf.length/16000,off:0,lang:S.set.mlang,tr:S.set.mtr,spk:[],u:[],aud:[],st:'proc',seq:0,imp:1};
+ const m={id:uid(),title:f.name.replace(/\.[^.]+$/,''),client:MI.cli,room:MI.room,ts:f.lastModified||Date.now(),dur:buf.length/16000,off:0,lang:S.set.mlang,tr:S.set.mtr,spk:[],u:[],aud:[],st:'proc',seq:0,imp:1};
  MS[m.id]=m;R.m=m;await iput('a',m.id+':0',f);m.aud.push({n:0,t0:0,ty:f.type});saveM(m);
  const v=new VAD({hang:.65,max:25,onSeg:s=>segs.push(s)}),segs=[];for(let i=0;i<buf.length;i+=16000)v.push(buf.subarray(i,i+16000));v.flush();
  for(const s of segs){const k=m.id+':'+String(++m.seq).padStart(6,'0');await iput('q',k,{mid:m.id,t0:s.t0,pcm:f2i(s.a)});MQ.push(k)}
@@ -1198,7 +1231,7 @@ async function syPut(path,txt,sha,msg){const r=await ghApi('PUT','/contents/'+pa
 async function syDel(path,sha){try{await ghApi('DELETE','/contents/'+path,{message:'刪除會議',sha,branch:'notes'})}catch(e){}}
 function syncSoon(){clearTimeout(SY.t);SY.t=setTimeout(()=>syncNow(0),6000)}
 /* 會議要上傳的內容:不含錄音、不含聲紋向量 */
-function syPack(m){return{id:m.id,title:m.title,ts:m.ts,dur:m.dur,lang:m.lang,tr:m.tr,up:m.up,cm:m.cm,sum:m.sum,llm:m.llm,spk:m.spk.map(({v,...s})=>s),u:m.u.map(({e,...u})=>u)}}
+function syPack(m){return{id:m.id,title:m.title,client:m.client||'',room:m.room||'',ts:m.ts,dur:m.dur,lang:m.lang,tr:m.tr,up:m.up,cm:m.cm,sum:m.sum,llm:m.llm,spk:m.spk.map(({v,...s})=>s),u:m.u.map(({e,...u})=>u)}}
 async function syncNow(manual){if(!S.set.sync||!S.set.ghTok||!S.set.syncPw){if(manual)toast(!S.set.ghTok?'請先設定 GitHub 權杖':'請先設定同步密碼',3000);return}
  if(SY.busy)return;SY.busy=1;let up=0,down=0,del=0;const say=t=>{SY.msg=t;const el=$('#syst');el&&(el.textContent=t)};
  try{say('同步中…');
@@ -1273,7 +1306,7 @@ function buildDocx(m,opt={}){const s=m.sum,A=x=>Array.isArray(x)?x:[],C='2F5674'
  const HC=t=>P(run(t,{b:1,c:'FFFFFF',sz:20}),{sp:[0,0]});
  /* 封面資訊 */
  body.push(P(run(mTitle(m)),{st:'Title'}));
- const meta=[['日期',fmtD(m.ts)],['會議長度',fmtT(m.dur)],['講者',m.spk.filter(x=>m.u.some(u=>u.s==x.id)).map(x=>x.name).join('、')||'—'],['句數',m.u.length+' 句']];
+ const meta=[...(m.client?[['客戶',m.client]]:[]),...(m.room?[['會議室',m.room]]:[]),['日期',fmtD(m.ts)],['會議長度',fmtT(m.dur)],['講者',m.spk.filter(x=>m.u.some(u=>u.s==x.id)).map(x=>x.name).join('、')||'—'],['句數',m.u.length+' 句']];
  if(s&&A(s.keywords).length)meta.push(['關鍵字',A(s.keywords).join('、')]);
  body.push(table([1800,7226],meta.map(([k,v])=>tr(cell(1800,P(run(k,{b:1,c:C,sz:20}),{sp:[0,0]}),{fill:'EEF3F7'})+cell(7226,P(run(v,{sz:20}),{sp:[0,0]}))))));
  /* 重點整理 */
@@ -1356,13 +1389,13 @@ function sumText(m){const s=m.sum;if(!s)return'';const L=x=>Array.isArray(x)?x:[
  L(s.chapters).forEach((c,i)=>{o.push(`${i+1}. ${c.title||''}${c.start?`（${c.start}${c.end?'–'+c.end:''}）`:''}`);if(c.summary)o.push('   '+c.summary);L(c.points).forEach(p=>o.push('   • '+p))});
  if(L(s.decisions).length){o.push('','決議事項：');L(s.decisions).forEach(d=>o.push('   • '+d))}
  if(L(s.actions).length){o.push('','待辦事項：');L(s.actions).forEach(a=>o.push(`   • ${a.owner||'未指定'}：${a.task||''}${a.due?'（'+a.due+'）':''}`))}return o.join('\n')}
-function renderMD(){const m=MD.m;if(!m)return;$('#mdt').textContent=mTitle(m);const q=MD.q.toLowerCase();
+function renderMD(){const m=MD.m;if(!m)return;$('#mdt').textContent=mTitle(m)+' ✏️';const q=MD.q.toLowerCase();
  const L=m.u.map((u,i)=>[u,i]).filter(([u])=>!q||(u.text+' '+(u.tr||'')+' '+spkOf(m,u.s).name).toLowerCase().includes(q));
  const pend=MQ.filter(k=>k.startsWith(m.id)).length+(mBusy&&m.st=='proc'?1:0);
- $('#mdb').innerHTML=`<div class="mdh"><small>📅 ${fmtD(m.ts)}・⏱ ${fmtT(m.dur)}・${m.u.length} 句${pend?`・<b style="color:var(--ac)">辨識中 ${pend} 段</b>`:''}</small></div>
+ $('#mdb').innerHTML=`<div class="mdh">${infoOn().cli||infoOn().room||m.client||m.room?`<div class="mi-row" data-a="info">${infoChips(m)}</div>`:''}<small>📅 ${fmtD(m.ts)}・⏱ ${fmtT(m.dur)}・${m.u.length} 句${pend?`・<b style="color:var(--ac)">辨識中 ${pend} 段</b>`:''}</small></div>
  ${m.cloud&&m.st!='done'?`<div class="prog glass"><b>☁️ GitHub 雲端轉文字</b><div>${esc(m.cs||'')}</div><div class="pr" style="margin-top:8px;justify-content:flex-start">${m.st=='cloudfail'||m.st=='cloudwait'?'<button class="btn sm on" data-a="cretry">↻ 重試</button>':''}<button class="btn sm" data-a="clocal">📱 改用手機辨識</button><button class="btn sm dng" data-a="ccancel">✕ 取消雲端工作</button></div></div>`:''}
  <div class="mdtab glass"><b data-tab="s" class="${MD.tab=='s'?'on':''}">✨ 重點整理</b><b data-tab="t" class="${MD.tab=='t'?'on':''}">📝 逐字稿</b></div>
- ${MD.tab=='s'?sumHTML(m):`<div class="mtb">${m.aud.length?'<button class="btn sm" data-a="play">▶ 從頭播放</button>':''}<button class="btn sm" data-a="aifix">✨ AI 修正錯字</button>${m.u.some(u=>u.raw)?`<button class="btn sm${MD.raw?' on':''}" data-a="raw">${MD.raw?'顯示修正後':'對照原始辨識'}</button>`:''}${m.aud.length&&(m.st=='done'||!m.cloud)?'<button class="btn sm" data-a="cre">☁️ GitHub 重新轉文字</button>':''}<button class="btn sm" data-a="exp">⬇ 匯出</button><button class="btn sm" data-a="cp">⧉ 複製全文</button><button class="btn sm" data-a="tr">🌐 翻譯全文</button><button class="btn sm" data-a="rc">👥 重新分辨講者</button><button class="btn sm" data-a="ren">✏️ 改標題</button></div>${m.as&&AIJ[m.id]?`<div class="prog glass">✨ ${esc(m.as)}</div>`:''}
+ ${MD.tab=='s'?sumHTML(m):`<div class="mtb">${m.aud.length?'<button class="btn sm" data-a="play">▶ 從頭播放</button>':''}<button class="btn sm" data-a="aifix">✨ AI 修正錯字</button>${m.u.some(u=>u.raw)?`<button class="btn sm${MD.raw?' on':''}" data-a="raw">${MD.raw?'顯示修正後':'對照原始辨識'}</button>`:''}${m.aud.length&&(m.st=='done'||!m.cloud)?'<button class="btn sm" data-a="cre">☁️ GitHub 重新轉文字</button>':''}<button class="btn sm" data-a="exp">⬇ 匯出</button><button class="btn sm" data-a="cp">⧉ 複製全文</button><button class="btn sm" data-a="tr">🌐 翻譯全文</button><button class="btn sm" data-a="rc">👥 重新分辨講者</button><button class="btn sm" data-a="ren">✏️ 標題・客戶・會議室</button></div>${m.as&&AIJ[m.id]?`<div class="prog glass">✨ ${esc(m.as)}</div>`:''}
  <div class="spks">${m.spk.map(s=>`<span class="spk" data-sid="${s.id}"><i style="background:${s.c}">${esc(s.name.slice(-1))}</i>${esc(s.name)}・${m.u.filter(u=>u.s==s.id).length}</span>`).join('')}</div>
  <input class="sb" id="mdq" placeholder="🔍 搜尋這場會議" value="${esc(MD.q)}">
  <div class="mlw glass" id="mdl">${L.map(([u,i])=>utHTML(m,u,i)).join('')||'<p class="emp">'+(pend?'辨識中…':'沒有內容')+'</p>'}</div>`}`;
@@ -1387,7 +1420,7 @@ $('#mdb').addEventListener('click',async e=>{const m=MD.m;if(!m)return;
   if(k=='cp')copy(mText(m));
   if(k=='tr'){const tl=await menu('翻譯成哪種語言？',Object.entries(LANG).map(([k,l])=>[k,l.n]));if(!tl)return;m.tr=tl;let i=0;for(const u of m.u){i++;toast(`翻譯中 ${i}/${m.u.length}…`,60000);try{u.tr=(await translate(u.text,'auto',tl)).t}catch(err){toast('翻譯失敗：'+err.message,3000);break}if(i%5==0)renderMD()}saveM(m);renderMD();toast('翻譯完成')}
   if(k=='rc'){const k2=await menu('重新分辨講者',[['a','依目前靈敏度重新分群（'+Math.round(S.set.thr*100)+'%）'],['n','指定講者人數…']]);if(!k2)return;let old=S.set.maxSpk;if(k2=='n'){const n=parseInt(prompt('這場會議有幾個人說話？','2'));if(!(n>0))return;S.set.maxSpk=n}recluster(m);S.set.maxSpk=old;renderMD();if(R.m==m)renderMeet();toast('已重新分群：'+m.spk.length+' 位講者')}
-  if(k=='ren'){const t=prompt('會議標題',m.title||'');if(t!=null){m.title=t.trim();saveM(m);renderMD()}}
+  if(k=='ren'||k=='info'){if(await infoEdit(m))renderMD()}
   return}
  const sp=e.target.closest('[data-sid]');if(sp)return spkMenu(m,+sp.dataset.sid);
  const av=e.target.closest('[data-av]');if(av)return utSpk(m,+av.dataset.av,renderMD);
@@ -1396,17 +1429,18 @@ $('#mdb').addEventListener('click',async e=>{const m=MD.m;if(!m)return;
   if(k=='play')audPlay(m,i);if(k=='ed'){const t=prompt('修改文字',u.text);if(t!=null){u.text=t.trim();saveM(m);renderMD()}}if(k=='sp')utSpk(m,i,renderMD);
   if(k=='tr'){const tl=m.tr||(isZh(S.set.tgt)?'en':S.set.tgt);try{u.tr=(await translate(u.text,'auto',tl)).t;saveM(m);renderMD()}catch(err){toast(err.message)}}
   if(k=='cp')copy(u.text);if(k=='del'&&confirm('刪除這句？')){m.u.splice(i,1);saveM(m);renderMD()}}});
-$('#mdm').onclick=async()=>{const m=MD.m;if(!m)return;const k=await menu(mTitle(m),[['exp','⬇ 匯出逐字稿'],['aud','🎵 匯出錄音檔'],['sh','↗ 分享文字'],['del','🗑 刪除這場會議']]);
+$('#mdt').onclick=async()=>{const m=MD.m;if(m&&await infoEdit(m))renderMD()};
+$('#mdm').onclick=async()=>{const m=MD.m;if(!m)return;const k=await menu(mTitle(m),[['info','✏️ 編輯標題・客戶・會議室'],['exp','⬇ 匯出逐字稿'],['aud','🎵 匯出錄音檔'],['sh','↗ 分享文字'],['del','🗑 刪除這場會議']]);
  if(k=='exp')mExport(m);if(k=='sh')share(mText(m),mTitle(m));if(k=='aud')mAudExp(m);if(k=='del'&&confirm('刪除「'+mTitle(m)+'」？錄音與逐字稿都會刪除')){await mDel(m.id);closeMD()}};
 async function mDel(id,fromSync){if(!fromSync&&S.set.sync){(S.set.tomb=S.set.tomb||{})[id]=Date.now();syncSoon()}const m=await getM(id);if(m)for(const a of m.aud)await idel('a',id+':'+a.n);(await ikeys('q')||[]).filter(k=>String(k).startsWith(id)).forEach(k=>idel('q',k));MQ=MQ.filter(k=>!k.startsWith(id));await idel('m',id);delete MS[id];S.meets=S.meets.filter(x=>x.id!=id);if(R.m&&R.m.id==id&&!R.on)R.m=null;save()}
 function mText(m,fmt){const sp=u=>spkOf(m,u.s).name,L=[];
- if(fmt=='md'){L.push('# '+mTitle(m),'',`- 日期：${fmtD(m.ts)}`,`- 長度：${fmtT(m.dur)}`,`- 講者：${m.spk.map(s=>s.name).join('、')}`,'');
+ if(fmt=='md'){L.push('# '+mTitle(m),'',...(m.client?[`- 客戶：${m.client}`]:[]),...(m.room?[`- 會議室：${m.room}`]:[]),`- 日期：${fmtD(m.ts)}`,`- 長度：${fmtT(m.dur)}`,`- 講者：${m.spk.map(s=>s.name).join('、')}`,'');
   if(m.sum){const s=m.sum,A=x=>Array.isArray(x)?x:[];L.push('## 重點整理','');if(s.overview)L.push(s.overview,'');A(s.chapters).forEach((c,i)=>{L.push(`### ${i+1}. ${c.title||''}${c.start?`（${c.start}${c.end?'–'+c.end:''}）`:''}`,'');if(c.summary)L.push(c.summary,'');A(c.points).forEach(p=>L.push('- '+p));L.push('')});
    if(A(s.decisions).length){L.push('### 決議事項','');A(s.decisions).forEach(d=>L.push('- '+d));L.push('')}
    if(A(s.actions).length){L.push('### 待辦事項','','| 負責人 | 事項 | 期限 |','|---|---|---|');A(s.actions).forEach(a=>L.push(`| ${a.owner||'未指定'} | ${a.task||''} | ${a.due||''} |`));L.push('')}}
   L.push('## 逐字稿','');m.u.forEach(u=>{L.push(`**${sp(u)}**（${fmtS(u.t0)}）：${u.text}`+(u.tr?`  \n> ${u.tr}`:''),'')});return L.join('\n')}
  if(fmt=='srt'){const st=s=>{const ms=Math.round(s*1000);return pad(Math.floor(ms/3600000))+':'+pad(Math.floor(ms%3600000/60000))+':'+pad(Math.floor(ms%60000/1000))+','+String(ms%1000).padStart(3,'0')};return m.u.map((u,i)=>`${i+1}\n${st(u.t0)} --> ${st(Math.max(u.t1,u.t0+.5))}\n${sp(u)}：${u.text}${u.tr?'\n'+u.tr:''}\n`).join('\n')}
- L.push(mTitle(m),`${fmtD(m.ts)}・${fmtT(m.dur)}・講者：${m.spk.map(s=>s.name).join('、')}`,'');if(m.sum)L.push('＝＝ 重點整理 ＝＝',sumText(m),'','＝＝ 逐字稿 ＝＝');m.u.forEach(u=>{L.push(`[${fmtT(u.t0)}] ${sp(u)}：${u.text}`+(u.tr?`\n           → ${u.tr}`:''))});return L.join('\n')}
+ L.push(mTitle(m),...(infoLine(m)?[infoLine(m).replace(/[🏢🚪] /gu,'')]:[]),`${fmtD(m.ts)}・${fmtT(m.dur)}・講者：${m.spk.map(s=>s.name).join('、')}`,'');if(m.sum)L.push('＝＝ 重點整理 ＝＝',sumText(m),'','＝＝ 逐字稿 ＝＝');m.u.forEach(u=>{L.push(`[${fmtT(u.t0)}] ${sp(u)}：${u.text}`+(u.tr?`\n           → ${u.tr}`:''))});return L.join('\n')}
 async function mExport(m){const k=await menu('匯出格式',[['docx','📘 Word 文件 .docx（精美排版：重點＋逐字稿）'],...(m.sum?[['docxs','📘 Word：只有重點整理']]:[]),['docxt','📘 Word：只有逐字稿'],['txt','📄 純文字 .txt'],['md','📝 Markdown .md'],['srt','🎬 字幕 .srt'],['json','🗂 完整資料 .json']]);if(!k)return;if(k.startsWith('docx'))return mDocx(m,k=='docxs'?{tr:0}:k=='docxt'?{sum:0}:{});const n=mTitle(m).replace(/[\\/:*?"<>|]/g,'_');
  if(k=='json')return dl(n+'.json',JSON.stringify({...m,spk:m.spk.map(({v,...s})=>s),u:m.u.map(({e,...u})=>u)},null,1),'application/json');
  dl(n+'.'+k,'﻿'+mText(m,k),k=='md'?'text/markdown':'text/plain')}
@@ -1432,11 +1466,12 @@ function rsub(k){RS=k;$$('#rsg b').forEach(b=>b.classList.toggle('on',b.dataset.
 $('#rsg').onclick=e=>{const b=e.target.closest('b');b&&rsub(b.dataset.s)};$('#rq').oninput=renderRec;
 function renderRec(){const q=$('#rq').value.trim().toLowerCase();
  if(RS=='m'&&S.set.sync&&!SY.busy&&Date.now()-(SY.lastPull||0)>60000){SY.lastPull=Date.now();syncNow(0)}
- if(RS=='m'){const L=S.meets.filter(m=>!q||((m.title||'')+' '+m.pv+' '+fmtD(m.ts)).toLowerCase().includes(q));
-  $('#rlist').innerHTML=L.map(m=>{const busy=MQ.some(k=>k.startsWith(m.id))||(R.on&&R.m&&R.m.id==m.id);const cs=m.st=='cloud'||m.st=='cloudwait'?'<span class="tag w">☁️ GitHub 處理中</span>':m.st=='cloudfail'?'<span class="tag" style="background:#c0392b">☁️ 失敗・點開重試</span>':'';return`<div class="mc glass" data-m="${m.id}"><b>${esc(m.title||'會議 '+fmtD(m.ts))}${R.on&&R.m&&R.m.id==m.id?'<span class="tag" style="background:#d9433a">錄音中</span>':busy?'<span class="tag w">辨識中</span>':cs}</b><small>📅 ${fmtD(m.ts)}・⏱ ${fmtT(m.dur)}・👥 ${m.spk} 人・${m.n} 句${m.sum?'・✨ 重點整理':''}${S.set.sync&&!m.ra&&m.st=='done'?'・🔄 同步':''}</small>${m.cs&&cs?`<small style="display:block">☁️ ${esc(m.cs)}</small>`:''}${m.pv?`<p>${esc(m.pv)}</p>`:''}</div>`}).join('')||'<p class="emp">還沒有會議記錄<br><small>到「🎙 會議記錄」按開始錄音，或匯入音檔</small></p>'}
+ if(RS=='m'){const L=S.meets.filter(m=>!q||((m.title||'')+' '+(m.client||'')+' '+(m.room||'')+' '+m.pv+' '+fmtD(m.ts)).toLowerCase().includes(q));
+  $('#rlist').innerHTML=L.map(m=>{const busy=MQ.some(k=>k.startsWith(m.id))||(R.on&&R.m&&R.m.id==m.id);const cs=m.st=='cloud'||m.st=='cloudwait'?'<span class="tag w">☁️ GitHub 處理中</span>':m.st=='cloudfail'?'<span class="tag" style="background:#c0392b">☁️ 失敗・點開重試</span>':'';return`<div class="mc glass" data-m="${m.id}"><button class="ib mc-ed" data-ed="${m.id}" title="編輯標題、客戶、會議室">✏️</button><b>${esc(m.title||'會議 '+fmtD(m.ts))}${R.on&&R.m&&R.m.id==m.id?'<span class="tag" style="background:#d9433a">錄音中</span>':busy?'<span class="tag w">辨識中</span>':cs}</b><small>📅 ${fmtD(m.ts)}・⏱ ${fmtT(m.dur)}・👥 ${m.spk} 人・${m.n} 句${m.sum?'・✨ 重點整理':''}${S.set.sync&&!m.ra&&m.st=='done'?'・🔄 同步':''}</small>${infoLine(m)?`<small class="mc-i">${esc(infoLine(m))}</small>`:''}${m.cs&&cs?`<small style="display:block">☁️ ${esc(m.cs)}</small>`:''}${m.pv?`<p>${esc(m.pv)}</p>`:''}</div>`}).join('')||'<p class="emp">還沒有會議記錄<br><small>到「🎙 會議記錄」按開始錄音，或匯入音檔</small></p>'}
  else{const L=S.hist.filter(h=>!q||(h.a+' '+h.b).toLowerCase().includes(q)).slice(0,200);const ic={text:'✍️',img:'🖼',live:'🎤'};
   $('#rlist').innerHTML=L.length?`<div class="grp glass">${L.map(h=>`<div class="ml" data-h="${h.id}"><b>${ic[h.k]||''} ${esc(h.b.slice(0,80))}<span>${fmtD(h.ts).slice(5)}</span></b><small>${esc(h.a.slice(0,90))}</small></div>`).join('')}</div><button class="btn dng" id="hclr" style="width:100%;margin-top:10px">清除翻譯紀錄</button>`:'<p class="emp">還沒有翻譯紀錄</p>'}}
 $('#rlist').onclick=async e=>{if(e.target.id=='hclr'){if(confirm('清除所有翻譯紀錄？')){S.hist=[];save();renderRec()}return}
+ const ed=e.target.closest('[data-ed]');if(ed){const mm=await getM(ed.dataset.ed);if(mm&&await infoEdit(mm))renderRec();return}
  const m=e.target.closest('[data-m]');if(m)return openMD(m.dataset.m);
  const h=e.target.closest('[data-h]');if(h){const x=S.hist.find(z=>z.id==h.dataset.h);if(!x)return;const k=await menu(x.b.slice(0,40),[['cp','⧉ 複製譯文'],['sp','🔊 朗讀'],['ed','✍️ 帶到文字翻譯'],['del','🗑 刪除']]);
   if(k=='cp')copy(x.b);if(k=='sp')speak(x.b,x.g);if(k=='ed'){S.set.src=x.s||'auto';S.set.tgt=x.g;show('tr');tsub('text');$('#tin').value=x.a;tcnt();TOUT=x.b;$('#tout').classList.remove('ph');$('#tout').textContent=x.b}if(k=='del'){S.hist=S.hist.filter(z=>z!==x);save();renderRec()}}};
@@ -1454,6 +1489,8 @@ function renderSet(){const s=S.set,sg=(id,a,v)=>`<div class="seg glass" id="${id
  h+=sec('👥 講者辨識'+(s.mcloud=='gh'?'（GitHub：pyannote＋3D-Speaker 聲紋）':'（手機：pyannote＋WavLM 聲紋）'),`<div class="grp glass"><div class="sl"><label>同一人判定門檻<span id="o_thr">${Math.round(s.thr*100)}%</span></label><input type="range" min="60" max="95" value="${Math.round(s.thr*100)}" data-r="thr"><small>講者被拆成太多人 → 調低；不同人被當成同一人 → 調高</small></div>
   <div class="sl"><label>預期講者人數<span>${s.maxSpk?'最多 '+s.maxSpk+' 人':'自動'}</span></label><input type="range" min="0" max="10" value="${s.maxSpk}" data-r="maxSpk"><small>知道開會人數時設定，分得會更準（0＝自動）</small></div>
   ${tg('fine','精細切換講者','同一段話裡換人講話也能切開（多用一點運算）')}</div>`);
+ const mgr=k=>{const L=infoList(k),[ic,n]=INFO_N[k];return `<div class="sl"><label>${ic} 常用${n}<span>${L.length} 個</span></label><div class="ie-chips">${L.map((x,i)=>`<span class="ie-x" data-ix="${k}:${i}">${esc(x)} ✕</span>`).join('')}<span data-iadd="${k}">＋ 新增</span></div></div>`};
+ h+=sec('🏷 會議資訊欄位',`<div class="grp glass">${tg('fcli','客戶名稱','錄音前或之後可以選擇／輸入客戶，會顯示在紀錄、Word 匯出')}${s.fcli?mgr('cli'):''}${tg('froom','會議室','可以選擇在哪間會議室開會')}${s.froom?mgr('room'):''}<div class="sl"><small>常用清單會依使用順序自動排列；點 ✕ 刪除</small></div></div>`);
  h+=sec('📝 逐字稿',`<div class="grp glass">${tg('tw','中文輸出為繁體（台灣用語）','Whisper 預設常輸出簡體，自動用 OpenCC 轉成繁體')}${tg('hall','過濾「幻聽」字幕','移除「請訂閱」「字幕由…提供」這類模型亂補的句子')}${tg('keepAud','保存錄音檔','可以從逐字稿任一句直接播放原音（約 15 MB／小時）')}</div>`);
  h+=sec('🌐 翻譯引擎',`<div class="grp glass">${Object.entries(MTE).map(([k,e])=>`<div class="row${s.eng==k?' on':''}" data-eng="${k}"><b>${e.n}<small>${e.s}</small></b><span class="ck">✔</span></div>`).join('')}</div>`);
  let G=sec('☁️ GitHub 雲端轉文字',`<div class="grp glass"><div class="sl"><label>會議錄音・音檔轉文字在哪裡運算</label>${sg('smcloud',[['gh','GitHub 雲端'],['local','這支手機']],s.mcloud)}<small>${s.mcloud=='gh'?'錄音上傳到你 GitHub 的草稿 Release（只有你看得到）→ GitHub 伺服器辨識 → 錄音立刻從 GitHub 刪除 → 結果傳回手機。手機不用下載語音模型。':'在手機上辨識，不需要網路，但要下載模型、比較耗電。'}</small></div>${s.mcloud=='gh'?`<div class="sl"><label>GitHub 權杖<span id="tokst">${s.ghTok?'已設定':'未設定'}</span></label><input class="ti" id="ghtok" type="password" value="${esc(s.ghTok)}" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false"><small>建立方式：GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token → Repository access 只選 <b>${GH.repo}</b> → Permissions 把 <b>Contents</b> 和 <b>Actions</b> 設成 Read and write。權杖只存在這支手機裡。</small><div class="pr" style="margin-top:8px"><button class="btn sm" data-a="tokmk">🔑 到 GitHub 建立權杖</button><button class="btn sm on" data-a="toktest">測試連線</button></div></div><div class="sl"><label>雲端語音模型</label>${sg('scm',[['firered','FireRed 最準'],['sensevoice','SenseVoice 最快'],['large-v3-turbo','Whisper 多語']],s.cmodel)}<small>${s.cmodel=='firered'?'小紅書 FireRedASR：中文、中英夾雜辨識最準（AISHELL-1 錯誤率約 0.6%），比較慢，1 小時會議約 1～1.5 小時':s.cmodel=='sensevoice'?'阿里巴巴 SenseVoice：中英日韓粵語，速度最快（1 小時會議約 5～10 分鐘），準確度略低於 FireRedASR':'OpenAI Whisper：支援約 100 種語言，但中文準確度較低、速度較慢'}</small></div>`:''}</div>`);
@@ -1478,7 +1515,8 @@ function renderSet(){const s=S.set,sg=(id,a,v)=>`<div class="seg glass" id="${id
  ghInfo();
  $('#se').innerHTML=G+h+`<p style="grid-column:1/-1;text-align:center;color:var(--sub);font-size:.8em;margin-top:20px">AI 翻譯會議 v${APP_VER}${I?'（APK '+I.ver+'）':''} · 所有 AI 都在這台裝置上運算</p>`;
  AI.call('info',{}).then(r=>{const g=$('#gpuinfo');g&&(g.textContent=(r.gpu?'✅ 這台裝置支援 WebGPU（GPU 加速）':'⚠️ 這台裝置不支援 WebGPU，會用 CPU 運算（較慢，建議用 Base 以下的語音模型）')+'・Transformers.js '+r.ver+'（'+(r.lib=='jsdelivr'?'jsDelivr':IS_APP?'App 內建':'GitHub')+'）'+(r.thr>1?'・多執行緒 '+r.thr:''))}).catch(e=>{const g=$('#gpuinfo');g&&(g.textContent='⚠️ AI 模組無法載入：'+e.message+'（請確認網路）')})}
-$('#se').onclick=async e=>{const s=S.set,b=e.target.closest('b[data-k]'),r=e.target.closest('[data-th]'),a=e.target.closest('[data-a]'),_m=a&&a.dataset.a=='mthr'&&(setMthr(!MTHR()),1),pr=e.target.closest('[data-p]'),t=e.target.closest('[data-tg]'),as=e.target.closest('[data-asr]'),en=e.target.closest('[data-eng]');
+$('#se').onclick=async e=>{const _ix=e.target.closest('[data-ix]'),_ia=e.target.closest('[data-iadd]');if(_ix||_ia){if(_ix){const [k,i]=_ix.dataset.ix.split(':');const key=k=='cli'?'clients':'rooms';S.set[key].splice(+i,1)}else{const k=_ia.dataset.iadd,v=prompt('新增'+INFO_N[k][1]+'名稱');if(v&&v.trim()){const key=k=='cli'?'clients':'rooms';S.set[key]=[...infoList(k).filter(x=>x!==v.trim()),v.trim()]}}save();renderSet();return}
+ const s=S.set,b=e.target.closest('b[data-k]'),r=e.target.closest('[data-th]'),a=e.target.closest('[data-a]'),_m=a&&a.dataset.a=='mthr'&&(setMthr(!MTHR()),1),pr=e.target.closest('[data-p]'),t=e.target.closest('[data-tg]'),as=e.target.closest('[data-asr]'),en=e.target.closest('[data-eng]');
  if(b){const p=b.parentNode.id;const key={sm:'mode',su:'ui',sf:'surf',sdev:'dev',shf:'hf',smsrc:'msrc',smcloud:'mcloud',scm:'cmodel',sllm:'llm'}[p];if(!key)return;s[key]=b.dataset.k;if(key=='dev'||key=='hf'||key=='msrc'){if(AI.w){AI.w.terminate();AI.w=null}}lastW=0;layout();apply();save();renderSet()}
  else if(r){s.theme=r.dataset.th;apply();save();renderSet()}
  else if(t){s[t.dataset.tg]=s[t.dataset.tg]?0:1;save();renderSet();if(t.dataset.tg=='sync'&&s.sync){setTimeout(()=>{const p=$('#sypw');p&&p.focus()},100);toast('請設定同步密碼（每台裝置要一樣）',3000)}}
