@@ -600,7 +600,7 @@ let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.13.0';
+const APP_VER='1.14.0';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -1140,13 +1140,13 @@ async function utSpk(m,i,done){const u=m.u[i];const k=await menu('這句話是�
 
 /* ---- 匯入音檔轉文字 ---- */
 $('#mfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;if(R.on)return toast('請先結束目前的錄音');
- if(cloudOn()){const m={id:uid(),title:f.name.replace(/\.[^.]+$/,''),client:MI.cli,room:MI.room,ts:f.lastModified||Date.now(),dur:await mediaDur(f),off:0,lang:S.set.mlang,tr:S.set.mtr,spk:[],u:[],aud:[{n:0,t0:0,ty:f.type,nm:f.name}],st:'cloud',cs:'準備上傳',seq:0,imp:1,cloud:1};
-  MS[m.id]=m;R.m=m;await iput('a',m.id+':0',f);saveM(m);renderMeet();cloudRun(m);return}
+ if(cloudOn()){const m={id:uid(),title:f.name.replace(/\.[^.]+$/,''),client:MI.cli,room:MI.room,ts:0,dur:await mediaDur(f),off:0,lang:S.set.mlang,tr:S.set.mtr,spk:[],u:[],aud:[{n:0,t0:0,ty:f.type,nm:f.name}],st:'cloud',cs:'準備上傳',seq:0,imp:1,cloud:1};
+  m.ts=(f.lastModified||Date.now())-Math.round((m.dur||0)*1000);m.tsAdj=1;MS[m.id]=m;R.m=m;await iput('a',m.id+':0',f);saveM(m);renderMeet();cloudRun(m);return}
  toast('讀取音檔中…',60000);let buf;
  try{const ab=await f.arrayBuffer();const ac=new (window.AudioContext||window.webkitAudioContext)();const dec=await ac.decodeAudioData(ab);ac.close();
   const n=Math.ceil(dec.duration*16000),oc=new OfflineAudioContext(1,n,16000),src=oc.createBufferSource();src.buffer=dec;src.connect(oc.destination);src.start();buf=(await oc.startRendering()).getChannelData(0)}
  catch(err){return toast('無法讀取這個音檔（格式不支援或檔案太大）',4000)}
- const m={id:uid(),title:f.name.replace(/\.[^.]+$/,''),client:MI.cli,room:MI.room,ts:f.lastModified||Date.now(),dur:buf.length/16000,off:0,lang:S.set.mlang,tr:S.set.mtr,spk:[],u:[],aud:[],st:'proc',seq:0,imp:1};
+ const m={id:uid(),title:f.name.replace(/\.[^.]+$/,''),client:MI.cli,room:MI.room,ts:(f.lastModified||Date.now())-Math.round(buf.length/16),tsAdj:1,dur:buf.length/16000,off:0,lang:S.set.mlang,tr:S.set.mtr,spk:[],u:[],aud:[],st:'proc',seq:0,imp:1};
  MS[m.id]=m;R.m=m;await iput('a',m.id+':0',f);m.aud.push({n:0,t0:0,ty:f.type});saveM(m);
  const v=new VAD({hang:.65,max:25,onSeg:s=>segs.push(s)}),segs=[];for(let i=0;i<buf.length;i+=16000)v.push(buf.subarray(i,i+16000));v.flush();
  for(const s of segs){const k=m.id+':'+String(++m.seq).padStart(6,'0');await iput('q',k,{mid:m.id,t0:s.t0,pcm:f2i(s.a)});MQ.push(k)}
@@ -1325,76 +1325,59 @@ function zipStore(files){const te=new TextEncoder(),parts=[],cen=[];let off=0;
  const cs=cen.reduce((a,x)=>a+x.length,0),e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
  return new Blob([...parts,...cen,new Uint8Array(e.buffer)],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'})}
 const xe=s=>String(s==null?'':s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-/* Word 版面仿照 App：圓角卡片（DrawingML 圓角矩形文字方塊）、標籤膠囊、講者圓形頭像 */
-function buildDocx(m,opt={}){const s=m.sum,A=x=>Array.isArray(x)?x:[],body=[];
- const ACC='3F6079',ACC2='4A7593',INK='2B2F33',SUB='767B83',CARD='FBFAF7',LINE='E2DDD4',CHIP='F3F0EA',PAGE='F4F1EC';
- const W=9026,EMU=635;let did=1;
+/* Word 匯出：App 的配色與風格；卡片用表格做（文字一定完整顯示、會自動長高、可以跨頁），只放重點 */
+function spkNames(m,str){/* 重點整理裡的「講者 N」換成你改好的名字 */
+ return String(str==null?'':str).replace(/講者\s?(\d+)(?!\d)/g,(x,n)=>{const s=m.spk.find(z=>z.id==+n);return s&&s.name&&!/^講者\s?\d+$/.test(s.name)?s.name:x})}
+function sumNamed(m){if(!m.sum)return null;const f=v=>typeof v=='string'?spkNames(m,v):Array.isArray(v)?v.map(f):v&&typeof v=='object'?Object.fromEntries(Object.entries(v).map(([k,x])=>[k,f(x)])):v;return f(m.sum)}
+function buildDocx(m,opt={}){const s=sumNamed(m),A=x=>Array.isArray(x)?x:[],body=[];
+ const ACC='3F6079',ACC2='4A7593',INK='262A2E',SUB='6E737B',CARD='FAF8F4',LINE='E3DDD3',SOFT='EFEBE4';
+ const W=9026;
  const hex=c=>{c=String(c||'').replace('#','');return /^[0-9a-f]{6}$/i.test(c)?c.toUpperCase():/^[0-9a-f]{3}$/i.test(c)?c.split('').map(x=>x+x).join('').toUpperCase():'888888'};
- const units=t=>{let u=0;for(const ch of String(t||''))u+=/[⺀-￯]/.test(ch)?1:/[A-Z0-9]/.test(ch)?.62:.52;return u};
- /* 文字 run:sz 為半點 */
- const run=(t,o={})=>{const rp=(o.b?'<w:b/><w:bCs/>':'')+(o.i?'<w:i/>':'')+(o.c?`<w:color w:val="${o.c}"/>`:'')+(o.sz?`<w:sz w:val="${o.sz}"/><w:szCs w:val="${o.sz}"/>`:'');
+ const run=(t,o={})=>{const rp=(o.f?`<w:rFonts w:ascii="${o.f}" w:hAnsi="${o.f}"/>`:'')+(o.b?'<w:b/><w:bCs/>':'')+(o.i?'<w:i/>':'')+(o.c?`<w:color w:val="${o.c}"/>`:'')+(o.sz?`<w:sz w:val="${o.sz}"/><w:szCs w:val="${o.sz}"/>`:'')+(o.sp?`<w:spacing w:val="${o.sp}"/>`:'')+(o.shd?`<w:shd w:val="clear" w:color="auto" w:fill="${o.shd}"/>`:'');
   return String(t==null?'':t).split('\n').map((x,i)=>`<w:r>${rp?`<w:rPr>${rp}</w:rPr>`:''}${i?'<w:br/>':''}<w:t xml:space="preserve">${xe(x)}</w:t></w:r>`).join('')};
- const P=(runs,o={})=>`<w:p><w:pPr>${o.st?`<w:pStyle w:val="${o.st}"/>`:''}${o.num?'<w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>':''}${o.keep?'<w:keepNext/>':''}<w:spacing w:before="${o.b4||0}" w:after="${o.af==null?0:o.af}"${o.ln?` w:line="${o.ln}" w:lineRule="${o.lr||'exact'}"`:''}/>${o.ind?`<w:ind w:left="${o.ind}" w:hanging="${o.hang||0}"/>`:''}${o.jc?`<w:jc w:val="${o.jc}"/>`:''}</w:pPr>${runs}</w:p>`;
- /* 估算文字方塊高度(twips) */
- const H=(t,sz,w,ln,b4=0,af=0)=>{const cap=Math.max(1,w/(sz*10));let n=0;String(t||'').split('\n').forEach(x=>n+=Math.max(1,Math.ceil(units(x)/cap)));return n*ln+b4+af};
- /* 圖形(圓角卡片、膠囊、圓形) */
- const shape=(cx,cy,inner,o={})=>{const id=did++;return `<w:r><mc:AlternateContent><mc:Choice Requires="wps"><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="${o.gap||0}"><wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="${o.shd?19050:0}" b="${o.shd?25400:0}"/><wp:docPr id="${id}" name="Shape ${id}"/><wp:cNvGraphicFramePr/><a:graphic><a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:wsp><wps:cNvSpPr/><wps:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="${o.geom||'roundRect'}"><a:avLst>${o.geom=='ellipse'?'':`<a:gd name="adj" fmla="val ${o.adj||8000}"/>`}</a:avLst></a:prstGeom><a:solidFill><a:srgbClr val="${o.fill||CARD}"/></a:solidFill>${o.line===0?'<a:ln><a:noFill/></a:ln>':`<a:ln w="9525"><a:solidFill><a:srgbClr val="${o.line||LINE}"/></a:solidFill></a:ln>`}${o.shd?'<a:effectLst><a:outerShdw blurRad="76200" dist="19050" dir="5400000" algn="t" rotWithShape="0"><a:srgbClr val="5A4A3A"><a:alpha val="13000"/></a:srgbClr></a:outerShdw></a:effectLst>':''}</wps:spPr><wps:txbx><w:txbxContent>${inner}</w:txbxContent></wps:txbx><wps:bodyPr rot="0" vert="horz" wrap="${o.nowrap?'none':'square'}" lIns="${o.ins!=null?o.ins[0]:180000}" tIns="${o.ins!=null?o.ins[1]:144000}" rIns="${o.ins!=null?o.ins[0]:180000}" bIns="${o.ins!=null?o.ins[1]:144000}" anchor="${o.anchor||'t'}" anchorCtr="0"><a:${o.fit===0?'noAutofit':'spAutoFit'}/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:inline></w:drawing></mc:Choice></mc:AlternateContent></w:r>`};
- const cardW=W*EMU,inTw=W-2*Math.round(180000/EMU)-40;
- /* 卡片:items = [{t:runs, h:估計高度}] */
- const card=(items,o={})=>{const hTw=items.reduce((a,x)=>a+x.h,0)+2*Math.round(144000/EMU);return P(shape(cardW,Math.round(hTw*EMU*1.06)+20000,items.map(x=>x.p).join(''),{shd:1,fill:o.fill,line:o.line,adj:o.adj||(hTw>4000?3500:7000)}),{af:200,keep:o.keep})};
- const chip=(text,o={})=>{const sz=o.sz||18,w=Math.round(units(text)*sz*10+300),h=Math.round(sz*10*1.5+120);
-  return shape(w*EMU,h*EMU,P(run(text,{sz,c:o.c||INK,b:o.b}),{jc:'center',ln:Math.round(sz*10*1.3)}),{nowrap:1,fill:o.fill||CHIP,line:o.line||LINE,adj:50000,ins:[45720,22860],anchor:'ctr',gap:72000,fit:0})};
- /* 膠囊自己分行(避免自動換行時重疊) */
- const chipW=(text,sz)=>Math.round(units(text)*sz*10+300)+113;
- const chips=(list,sz,o={},af=200)=>{const rows=[[]];let w=0;list.forEach(x=>{const cw=chipW(x.t,sz);if(w+cw>W-60&&rows.at(-1).length){rows.push([]);w=0}rows.at(-1).push(x);w+=cw});return rows.map((r,i)=>P(r.map(x=>chip(x.t,{sz,...o,...x.o})).join('<w:r><w:rPr><w:sz w:val="14"/></w:rPr><w:t xml:space="preserve"> </w:t></w:r>'),{af:i==rows.length-1?af:90,ln:Math.round(sz*10*1.5+200)})).join('')};
- const avatar=(sp,sz=430)=>shape(sz*EMU,sz*EMU,P(run(String(sp.name||'?').slice(-1),{b:1,c:'FFFFFF',sz:20}),{jc:'center',ln:260}),{geom:'ellipse',fill:hex(sp.c),line:0,ins:[0,0],anchor:'ctr',fit:0});
- const pill=(text)=>P(shape(cardW,Math.round(620*EMU),P(run(text,{b:1,c:'FFFFFF',sz:24}),{jc:'center',ln:330}),{fill:ACC,line:0,adj:50000,ins:[91440,45720],anchor:'ctr',fit:0}),{b4:240,af:220,keep:1});
- const bullet=(t,sz=21)=>({p:`<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr><w:spacing w:before="40" w:after="40" w:line="${Math.round(sz*10*1.5)}" w:lineRule="exact"/><w:ind w:left="380" w:hanging="260"/></w:pPr>${run(t,{sz,c:INK})}</w:p>`,h:H(t,sz,inTw-380,Math.round(sz*10*1.5),40,40)});
- const line=(runs,txt,sz,o={})=>{const ln=Math.round(sz*10*(o.lm||1.45));return{p:P(runs,{ln,b4:o.b4||0,af:o.af==null?60:o.af,keep:1}),h:H(txt,sz,inTw,ln,o.b4||0,o.af==null?60:o.af)}};
+ const P=(runs,o={})=>`<w:p><w:pPr>${o.st?`<w:pStyle w:val="${o.st}"/>`:''}${o.num?'<w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>':''}${o.keep?'<w:keepNext/>':''}${o.bd?`<w:pBdr><w:bottom w:val="single" w:sz="${o.bd}" w:space="4" w:color="${o.bdc||LINE}"/></w:pBdr>`:''}<w:spacing w:before="${o.b4||0}" w:after="${o.af==null?0:o.af}" w:line="${o.ln||300}" w:lineRule="auto"/>${o.ind?`<w:ind w:left="${o.ind}" w:hanging="${o.hang||0}"/>`:''}${o.jc?`<w:jc w:val="${o.jc}"/>`:''}</w:pPr>${runs}</w:p>`;
+ const bdr=(o={})=>`<w:tblBorders><w:top w:val="single" w:sz="6" w:space="0" w:color="${LINE}"/><w:left w:val="single" w:sz="${o.lw||6}" w:space="0" w:color="${o.lc||LINE}"/><w:bottom w:val="single" w:sz="6" w:space="0" w:color="${LINE}"/><w:right w:val="single" w:sz="6" w:space="0" w:color="${LINE}"/><w:insideH w:val="${o.ih?'single':'nil'}" w:sz="4" w:space="0" w:color="${LINE}"/><w:insideV w:val="nil"/></w:tblBorders>`;
+ /* 卡片：一格表格，淡色底、細框、左側主色線 */
+ const card=(inner,o={})=>`<w:tbl><w:tblPr><w:tblW w:w="${W}" w:type="dxa"/><w:tblLayout w:type="fixed"/>${bdr({lw:o.accent?24:6,lc:o.accent?(o.lc||ACC):LINE})}<w:tblCellMar><w:top w:w="170" w:type="dxa"/><w:left w:w="260" w:type="dxa"/><w:bottom w:w="170" w:type="dxa"/><w:right w:w="260" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${W}"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w="${W}" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${o.fill||CARD}"/></w:tcPr>${inner}</w:tc></w:tr></w:tbl>`+P('',{af:o.gap==null?160:o.gap,ln:240});
+ const H2=t=>P(run(t,{b:1,sz:30,c:ACC}),{b4:360,af:200,keep:1,bd:8,bdc:'C9D3DC'});
+ const bullet=(t,sz=21)=>`<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr><w:spacing w:before="30" w:after="30" w:line="320" w:lineRule="auto"/><w:ind w:left="400" w:hanging="260"/></w:pPr>${run(t,{sz,c:INK})}</w:p>`;
  const used=m.spk.filter(x=>m.u.some(u=>u.s==x.id));
- /* ---- 頁首 ---- */
- body.push(P(run(mTitle(m),{b:1,sz:40,c:INK}),{af:120,ln:640}));
- const info=[m.client?'🏢 '+m.client:'',m.room?'🚪 '+m.room:''].filter(Boolean);
- if(info.length)body.push(chips(info.map(x=>({t:x})),19,{b:1,fill:'FFFFFF'},120));
- body.push(P(run(`📅 ${fmtD(m.ts)}　·　⏱ ${fmtT(m.dur)}　·　${m.u.length} 句　·　👥 ${used.map(x=>x.name).join('、')||'—'}`,{sz:19,c:SUB}),{af:120}));
+ const d0=new Date(m.ts),d1=new Date(m.ts+(m.dur||0)*1000),hm=d=>pad(d.getHours())+':'+pad(d.getMinutes());
+ /* ---- 標題與會議資訊 ---- */
+ body.push(P(run(mTitle(m),{b:1,sz:44,c:INK}),{af:80,ln:276}));
+ body.push(P(run('會議記錄',{sz:20,c:SUB,sp:20}),{af:260}));
+ const info=[...(m.client?[['客戶',m.client]]:[]),...(m.room?[['會議室',m.room]]:[]),['日期',`${d0.getFullYear()}/${pad(d0.getMonth()+1)}/${pad(d0.getDate())}`],['時間',`${hm(d0)} – ${hm(d1)}（${fmtT(m.dur)}）`],['與會者',used.map(x=>x.name).join('、')||'—']];
+ const iw=1500,vw=W-iw-520;
+ body.push(card(`<w:tbl><w:tblPr><w:tblW w:w="${W-520}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders><w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${iw}"/><w:gridCol w:w="${vw}"/></w:tblGrid>${info.map(([k,v])=>`<w:tr><w:tc><w:tcPr><w:tcW w:w="${iw}" w:type="dxa"/></w:tcPr>${P(run(k,{sz:20,c:SUB}))}</w:tc><w:tc><w:tcPr><w:tcW w:w="${vw}" w:type="dxa"/></w:tcPr>${P(run(v,{sz:21,c:INK,b:1}))}</w:tc></w:tr>`).join('')}</w:tbl>`+P('',{ln:120}),{fill:'FFFFFF',gap:120}));
  /* ---- 重點整理 ---- */
- if(s&&opt.sum!==0){body.push(pill('✨ 重點整理'));
-  if(s.title)body.push(P(run(s.title,{b:1,sz:32,c:INK}),{af:100,ln:500}));
-  if(s.overview)body.push(P(run(s.overview,{sz:22,c:SUB}),{af:160,ln:400}));
-  if(A(s.keywords).length)body.push(chips(A(s.keywords).map(k=>({t:k})),18,{},220));
-  const MAXH=12600;
-  A(s.chapters).forEach((c,i)=>{const head=line(run(c.title||'第 '+(i+1)+' 章',{b:1,sz:24,c:INK})+(c.start?run(`　▶ ${c.start}${c.end?'–'+c.end:''}`,{b:1,sz:20,c:ACC2}):''),(c.title||'')+'　▶ 00:00–00:00',24,{af:80});
-   const sum=c.summary?line(run(c.summary,{sz:20,c:SUB}),c.summary,20,{af:100,lm:1.5}):null;
-   let items=[head].concat(sum?[sum]:[]),hh=items.reduce((a,x)=>a+x.h,0);
-   for(const pt of A(c.points)){const b=bullet(pt);if(hh+b.h>MAXH){body.push(card(items));items=[line(run((c.title||'')+'（續）',{b:1,sz:22,c:SUB}),'續',22,{af:60})];hh=items[0].h}items.push(b);hh+=b.h}
-   body.push(card(items))});
-  if(A(s.decisions).length){const it=[line(run('✅ 決議事項',{b:1,sz:24,c:INK}),'決議事項',24,{af:80}),...A(s.decisions).map(x=>bullet(x))];body.push(card(it))}
-  if(A(s.actions).length){const tw=inTw,c1=Math.round(tw*.24),c3=Math.round(tw*.18),c2=tw-c1-c3;
-   const cell=(w,inner,f)=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${f?`<w:shd w:val="clear" w:color="auto" w:fill="${f}"/>`:''}<w:vAlign w:val="center"/></w:tcPr>${inner}</w:tc>`;
-   const rows=A(s.actions).map((a,i)=>`<w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(c1,P(run(a.owner||'未指定',{b:1,sz:20,c:INK}),{ln:300,b4:40,af:40}))}${cell(c2,P(run(a.task||'',{sz:20,c:INK}),{ln:300,b4:40,af:40}))}${cell(c3,P(run(a.due||'—',{sz:19,c:SUB}),{ln:300,b4:40,af:40,jc:'right'}))}</w:tr>`).join('');
-   const tbl=`<w:tbl><w:tblPr><w:tblW w:w="${tw}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="${LINE}"/><w:insideV w:val="nil"/></w:tblBorders><w:tblCellMar><w:top w:w="60" w:type="dxa"/><w:left w:w="60" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${c1}"/><w:gridCol w:w="${c2}"/><w:gridCol w:w="${c3}"/></w:tblGrid>${rows}</w:tbl>`;
-   const th=A(s.actions).reduce((a,x)=>a+Math.max(H(x.task,20,c2-120,300,40,40),H(x.owner,20,c1-120,300,40,40))+130,0);
-   body.push(card([line(run('📌 待辦事項',{b:1,sz:24,c:INK}),'待辦事項',24,{af:80}),{p:tbl+P('',{ln:40}),h:th+40}]))}
-  body.push(P(run(s.edited?'✏️ 本重點整理已手動編輯':'本重點整理由 AI 產生，內容可能有誤，請以逐字稿為準',{i:1,c:SUB,sz:17}),{b4:60,jc:'center'}))}
+ if(s&&opt.sum!==0){body.push(H2('重點整理'));
+  if(s.title||s.overview)body.push(card((s.title?P(run(s.title,{b:1,sz:26,c:INK}),{af:s.overview?100:0}):'')+(s.overview?P(run(s.overview,{sz:21,c:'44494F'}),{ln:340}):''),{accent:1,fill:'F2F5F8'}));
+  if(A(s.keywords).length)body.push(P(A(s.keywords).map(k=>run('\u00A0\u00A0'+k+'\u00A0\u00A0',{sz:19,c:ACC,shd:SOFT})+run('\u00A0\u00A0 ',{sz:19})).join(''),{af:220,ln:380}));
+  A(s.chapters).forEach((c,i)=>{body.push(card(P(run(`${i+1}　`,{b:1,sz:24,c:ACC2})+run(c.title||'第 '+(i+1)+' 章',{b:1,sz:24,c:INK}),{af:c.summary||A(c.points).length?80:0,keep:1})+(c.summary?P(run(c.summary,{sz:20,c:SUB}),{af:A(c.points).length?80:0,ln:320}):'')+A(c.points).map(x=>bullet(x)).join('')))});
+  if(A(s.decisions).length)body.push(card(P(run('決議事項',{b:1,sz:24,c:INK}),{af:80,keep:1})+A(s.decisions).map(x=>bullet(x)).join(''),{accent:1,lc:'4E9A72'}));
+  if(A(s.actions).length){const tw=W-520,c1=Math.round(tw*.26),c2=tw-c1;
+   const rows=A(s.actions).map(a=>`<w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="${c1}" w:type="dxa"/></w:tcPr>${P(run(a.owner||'未指定',{b:1,sz:20,c:ACC}))}</w:tc><w:tc><w:tcPr><w:tcW w:w="${c2}" w:type="dxa"/></w:tcPr>${P(run(a.task||'',{sz:21,c:INK}),{ln:320})}</w:tc></w:tr>`).join('');
+   body.push(card(P(run('待辦事項',{b:1,sz:24,c:INK}),{af:100,keep:1})+`<w:tbl><w:tblPr><w:tblW w:w="${tw}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="${LINE}"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="${LINE}"/><w:insideV w:val="nil"/></w:tblBorders><w:tblCellMar><w:top w:w="90" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="90" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${c1}"/><w:gridCol w:w="${c2}"/></w:tblGrid>${rows}</w:tbl>`+P('',{ln:80}),{accent:1,lc:'C08A3E'}))}}
  /* ---- 逐字稿 ---- */
- if(opt.tr!==0&&m.u.length){if(s&&opt.sum!==0)body.push('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');body.push(pill('📝 逐字稿'));
-  body.push(chips(used.map(sp=>({t:`● ${sp.name}・${m.u.filter(u=>u.s==sp.id).length}`,o:{c:hex(sp.c)}})),18,{b:1,fill:'FFFFFF'},200));
-  const aw=760,tw=W,bw=tw-aw;
-  const cell=(w,inner,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:tcBorders>${o.first?`<w:top w:val="nil"/>`:''}${o.last?`<w:bottom w:val="nil"/>`:''}</w:tcBorders><w:shd w:val="clear" w:color="auto" w:fill="${o.fill||CARD}"/><w:tcMar><w:top w:w="150" w:type="dxa"/><w:bottom w:w="150" w:type="dxa"/><w:left w:w="${o.l||120}" w:type="dxa"/><w:right w:w="${o.r||200}" w:type="dxa"/></w:tcMar></w:tcPr>${inner}</w:tc>`;
-  const rows=m.u.map((u,i)=>{const sp=spkOf(m,u.s);
-   return `<w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(aw,P(avatar(sp),{jc:'center'}),{l:200,r:0})}${cell(bw,P(run(sp.name,{b:1,sz:21,c:INK})+run('　'+fmtS(u.t0),{sz:18,c:SUB}),{af:40,keep:1})+P(run(u.text,{sz:22,c:INK}),{ln:390})+(u.tr?P(run(u.tr,{sz:20,c:ACC2}),{b4:40,ln:340}):''),{l:80})}</w:tr>`}).join('');
-  body.push(`<w:tbl><w:tblPr><w:tblW w:w="${tw}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders><w:top w:val="single" w:sz="6" w:space="0" w:color="${LINE}"/><w:left w:val="single" w:sz="6" w:space="0" w:color="${LINE}"/><w:bottom w:val="single" w:sz="6" w:space="0" w:color="${LINE}"/><w:right w:val="single" w:sz="6" w:space="0" w:color="${LINE}"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="${LINE}"/><w:insideV w:val="nil"/></w:tblBorders><w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${aw}"/><w:gridCol w:w="${bw}"/></w:tblGrid>${rows}</w:tbl>`)}
- const font='<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Microsoft JhengHei" w:cs="Calibri"/>';
+ if(opt.tr!==0&&m.u.length){body.push((s&&opt.sum!==0?'<w:p><w:r><w:br w:type="page"/></w:r></w:p>':'')+H2('逐字稿'));
+  const aw=820,bw=W-aw;
+  const cell=(w,inner,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${CARD}"/><w:tcMar><w:top w:w="140" w:type="dxa"/><w:bottom w:w="140" w:type="dxa"/><w:left w:w="${o.l||120}" w:type="dxa"/><w:right w:w="${o.r||220}" w:type="dxa"/></w:tcMar></w:tcPr>${inner}</w:tc>`;
+  /* 講者頭像：圓形（固定大小，裡面只有一個字，不會被切到） */
+  let did=1;const avatar=sp=>{const id=did++,E=Math.round(440*635);return `<w:r><mc:AlternateContent><mc:Choice Requires="wps"><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${E}" cy="${E}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="${id}" name="Avatar ${id}"/><wp:cNvGraphicFramePr/><a:graphic><a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:wsp><wps:cNvSpPr/><wps:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${E}" cy="${E}"/></a:xfrm><a:prstGeom prst="ellipse"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="${hex(sp.c)}"/></a:solidFill><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent>${P(run(String(sp.name||'?').slice(-1),{b:1,c:'FFFFFF',sz:18}),{jc:'center',ln:240})}</w:txbxContent></wps:txbx><wps:bodyPr rot="0" vert="horz" wrap="none" lIns="0" tIns="0" rIns="0" bIns="0" anchor="ctr" anchorCtr="0"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:inline></w:drawing></mc:Choice><mc:Fallback>${run('●',{c:hex(sp.c),sz:28}).replace(/^<w:r>|<\/w:r>$/g,'')}</mc:Fallback></mc:AlternateContent></w:r>`};
+  const rows=m.u.map(u=>{const sp=spkOf(m,u.s);
+   return `<w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(aw,P(avatar(sp),{jc:'center'}),{l:180,r:0})}${cell(bw,P(run(sp.name,{b:1,sz:21,c:INK})+run('　'+fmtS(u.t0),{sz:17,c:SUB}),{af:40,keep:1})+P(run(u.text,{sz:22,c:INK}),{ln:340})+(u.tr?P(run(u.tr,{sz:20,c:ACC2}),{b4:40,ln:320}):''),{l:60})}</w:tr>`}).join('');
+  body.push(`<w:tbl><w:tblPr><w:tblW w:w="${W}" w:type="dxa"/><w:tblLayout w:type="fixed"/>${bdr({ih:1})}<w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${aw}"/><w:gridCol w:w="${bw}"/></w:tblGrid>${rows}</w:tbl>`)}
+ const font='<w:rFonts w:ascii="Segoe UI" w:hAnsi="Segoe UI" w:eastAsia="Microsoft JhengHei" w:cs="Segoe UI"/>';
  const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-<w:docDefaults><w:rPrDefault><w:rPr>${font}<w:color w:val="${INK}"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="en-US" w:eastAsia="zh-TW"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="300" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
+<w:docDefaults><w:rPrDefault><w:rPr>${font}<w:color w:val="${INK}"/><w:sz w:val="21"/><w:szCs w:val="21"/><w:lang w:val="en-US" w:eastAsia="zh-TW"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="300" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
 <w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>
-<w:style w:type="paragraph" w:styleId="Footer"><w:name w:val="footer"/><w:basedOn w:val="Normal"/><w:pPr><w:jc w:val="center"/></w:pPr><w:rPr><w:color w:val="9CA3AF"/><w:sz w:val="17"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Footer"><w:name w:val="footer"/><w:basedOn w:val="Normal"/><w:pPr><w:jc w:val="center"/></w:pPr><w:rPr><w:color w:val="9CA3AF"/><w:sz w:val="16"/></w:rPr></w:style>
 <w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style></w:styles>`;
- const numbering=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:abstractNum w:abstractNumId="0"><w:multiLevelType w:val="singleLevel"/><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="●"/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="380" w:hanging="260"/></w:pPr><w:rPr><w:color w:val="${ACC2}"/><w:sz w:val="14"/></w:rPr></w:lvl></w:abstractNum><w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num></w:numbering>`;
- const footer=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:pStyle w:val="Footer"/></w:pPr>${run(mTitle(m)+'　·　第 ')}<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>1</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>${run(' 頁')}</w:p></w:ftr>`;
+ const numbering=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:abstractNum w:abstractNumId="0"><w:multiLevelType w:val="singleLevel"/><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="●"/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="400" w:hanging="260"/></w:pPr><w:rPr><w:color w:val="${ACC2}"/><w:sz w:val="12"/></w:rPr></w:lvl></w:abstractNum><w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num></w:numbering>`;
+ const footer=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:pStyle w:val="Footer"/></w:pPr>${run(mTitle(m)+'　·　')}<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>1</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:ftr>`;
  const NS='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" mc:Ignorable="w14 wp14"';
- const doc=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${NS}><w:background w:color="${PAGE}"/><w:body>${body.join('')}<w:sectPr><w:footerReference w:type="default" r:id="rId3"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1200" w:right="1440" w:bottom="1200" w:left="1440" w:header="708" w:footer="560" w:gutter="0"/></w:sectPr></w:body></w:document>`;
- const settings=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:displayBackgroundShape/><w:defaultTabStop w:val="480"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>`;
+ const doc=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${NS}><w:body>${body.join('')}<w:sectPr><w:footerReference w:type="default" r:id="rId3"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1300" w:right="1440" w:bottom="1200" w:left="1440" w:header="708" w:footer="560" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+ const settings=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:defaultTabStop w:val="480"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>`;
  const now=new Date().toISOString().replace(/\.\d+Z$/,'Z');
  return zipStore([
   ['[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>'],
@@ -1419,7 +1402,7 @@ function seRead(){const d=SE.d,v=k=>{const el=$('#mdb').querySelector(`[data-f="
  if(v('title')==null)return d;d.title=v('title').trim();d.overview=v('overview').trim();d.keywords=v('keywords').split(/[、,，;；]/).map(s=>s.trim()).filter(Boolean);
  d.chapters.forEach((c,i)=>{c.title=v('c'+i+'.title').trim();c.start=v('c'+i+'.start').trim();c.end=v('c'+i+'.end').trim();c.summary=v('c'+i+'.summary').trim();c.points=lines(v('c'+i+'.points'))});
  d.decisions=lines(v('decisions'));d.actions.forEach((a,i)=>{a.owner=v('a'+i+'.owner').trim();a.task=v('a'+i+'.task').trim();a.due=v('a'+i+'.due').trim()});return d}
-function seAct(m,k,i){if(k=='se-edit'){SE.on=1;SE.d=JSON.parse(JSON.stringify(m.sum||seNew()));['keywords','chapters','decisions','actions'].forEach(x=>{if(!Array.isArray(SE.d[x]))SE.d[x]=[]});if(!SE.d.chapters.length)SE.d.chapters.push(seNew().chapters[0]);renderMD();return 1}
+function seAct(m,k,i){if(k=='se-edit'){SE.on=1;SE.d=JSON.parse(JSON.stringify(sumNamed(m)||seNew()));['keywords','chapters','decisions','actions'].forEach(x=>{if(!Array.isArray(SE.d[x]))SE.d[x]=[]});if(!SE.d.chapters.length)SE.d.chapters.push(seNew().chapters[0]);renderMD();return 1}
  if(!SE.on||!k.startsWith('se-'))return 0;const d=seRead(),C=d.chapters;
  if(k=='se-addc')C.push({title:'',start:'',end:'',summary:'',points:[]});
  if(k=='se-del'&&confirm('刪除第 '+(i+1)+' 章？'))C.splice(i,1);
@@ -1430,7 +1413,7 @@ function seAct(m,k,i){if(k=='se-edit'){SE.on=1;SE.d=JSON.parse(JSON.stringify(m.
  if(k=='se-cancel'){SE.on=0;SE.d=null}
  if(k=='se-save'){d.chapters=C.filter(c=>c.title||c.summary||c.points.length);d.actions=d.actions.filter(a=>a.task||a.owner);d.edited=Date.now();m.sum=d;m.sumEd=1;SE.on=0;SE.d=null;saveM(m);toast('✅ 已儲存重點整理',2000)}
  const y=$('#mdb').scrollTop;renderMD();if(k!='se-save'&&k!='se-cancel')$('#mdb').scrollTop=y;return 1}
-function sumHTML(m){if(SE.on)return seHTML();const s=m.sum;const busy=AIJ[m.id]||m.as;
+function sumHTML(m){if(SE.on)return seHTML();const s=sumNamed(m);const busy=AIJ[m.id]||m.as;
  const btn=busy?`<div class="prog glass">✨ ${esc(m.as||'AI 整理中…')}</div>`:'';
  if(!s)return btn+`<div class="emp">✨ 還沒有重點整理<br><small>用 AI 把逐字稿整理成分章節的重點、決議和待辦事項</small><div class="pr" style="justify-content:center;margin-top:12px"><button class="btn on" data-a="aisum">✨ 產生重點整理</button><button class="btn" data-a="se-edit">✍️ 自己寫重點</button></div></div>`;
  const tt=v=>{const p=String(v||'').split(':').map(Number);return p.length==3?p[0]*3600+p[1]*60+p[2]:p.length==2?p[0]*60+p[1]:null};
@@ -1442,7 +1425,7 @@ function sumHTML(m){if(SE.on)return seHTML();const s=m.sum;const busy=AIJ[m.id]|
  ${L(s.actions).length?`<div class="sm-l glass"><b>📌 待辦事項</b><div class="sm-a">${L(s.actions).map(a=>`<span>${esc(a.owner||'未指定')}</span><span>${esc(a.task||'')}</span><span>${esc(a.due||'')}</span>`).join('')}</div></div>`:''}
  <p style="color:var(--sub);font-size:.78em;text-align:center">${s.edited?'✏️ 已手動編輯（'+fmtD(s.edited)+'）':'由 '+esc(m.llm&&m.llm.model||'AI')+' 整理・內容可能有誤，請以逐字稿為準'}</p>
  <div class="pr" style="justify-content:center;margin-bottom:10px;flex-wrap:wrap"><button class="btn sm on" data-a="se-edit">✏️ 編輯</button><button class="btn sm" data-a="docx">📘 匯出 Word</button><button class="btn sm" data-a="aisum">✨ 重新整理</button><button class="btn sm" data-a="cpsum">⧉ 複製重點</button></div>`}
-function sumText(m){const s=m.sum;if(!s)return'';const L=x=>Array.isArray(x)?x:[];const o=[];if(s.title)o.push('【'+s.title+'】');if(s.overview)o.push(s.overview,'');
+function sumText(m){const s=sumNamed(m);if(!s)return'';const L=x=>Array.isArray(x)?x:[];const o=[];if(s.title)o.push('【'+s.title+'】');if(s.overview)o.push(s.overview,'');
  L(s.chapters).forEach((c,i)=>{o.push(`${i+1}. ${c.title||''}${c.start?`（${c.start}${c.end?'–'+c.end:''}）`:''}`);if(c.summary)o.push('   '+c.summary);L(c.points).forEach(p=>o.push('   • '+p))});
  if(L(s.decisions).length){o.push('','決議事項：');L(s.decisions).forEach(d=>o.push('   • '+d))}
  if(L(s.actions).length){o.push('','待辦事項：');L(s.actions).forEach(a=>o.push(`   • ${a.owner||'未指定'}：${a.task||''}${a.due?'（'+a.due+'）':''}`))}return o.join('\n')}
@@ -1462,7 +1445,7 @@ $('#mdb').addEventListener('click',async e=>{const m=MD.m;if(!m)return;
  const jp=e.target.closest('[data-jump]');if(jp){const t=+jp.dataset.jump;let i=0;m.u.forEach((u,j)=>{if(u.t0<=t+1)i=j});MD.tab='t';MD.q='';renderMD();setTimeout(()=>{const el=$('#mdb').querySelector(`.ut[data-i="${i}"]`);if(el){el.scrollIntoView({block:'center'});el.classList.add('pl');setTimeout(()=>el.classList.remove('pl'),2500)}},60);return}
  const a=e.target.closest('[data-a]');
  if(a){const k=a.dataset.a;if(seAct(m,k,+a.dataset.i))return;
-  if(k=='docx'){if(SE.on)return;mDocx(m);return}
+  if(k=='docx'){if(SE.on)return;mDocx(m,{tr:0});return}
   if(k=='play'){if(AUD.m&&AUD.m.id==m.id&&AUD.url){apShow(1);apUpd();if($('#aud').paused)$('#aud').play().catch(()=>{})}else audPlay(m,-1)}
   if(k=='cretry'){if(!S.set.ghTok)return toast('請先到「設定 → ☁️ GitHub 雲端」填入 GitHub 權杖',3500);m.cloud=1;m.st='cloud';cloudRun(m);renderMD()}
   if(k=='cre'){if(!S.set.ghTok)return toast('請先到「設定 → ☁️ GitHub 雲端」填入 GitHub 權杖',3500);if(m.u.length&&!confirm('用 GitHub 重新轉文字？目前的逐字稿會被取代'))return;m.cloud=1;m.st='cloud';m.cj=null;cloudRun(m);renderMD()}
@@ -1492,13 +1475,13 @@ $('#mdm').onclick=async()=>{const m=MD.m;if(!m)return;const k=await menu(mTitle(
 async function mDel(id,fromSync){if(!fromSync&&S.set.sync){(S.set.tomb=S.set.tomb||{})[id]=Date.now();syncSoon()}const m=await getM(id);if(m)for(const a of m.aud)await idel('a',id+':'+a.n);(await ikeys('q')||[]).filter(k=>String(k).startsWith(id)).forEach(k=>idel('q',k));MQ=MQ.filter(k=>!k.startsWith(id));await idel('m',id);delete MS[id];S.meets=S.meets.filter(x=>x.id!=id);if(R.m&&R.m.id==id&&!R.on)R.m=null;save()}
 function mText(m,fmt){const sp=u=>spkOf(m,u.s).name,L=[];
  if(fmt=='md'){L.push('# '+mTitle(m),'',...(m.client?[`- 客戶：${m.client}`]:[]),...(m.room?[`- 會議室：${m.room}`]:[]),`- 日期：${fmtD(m.ts)}`,`- 長度：${fmtT(m.dur)}`,`- 講者：${m.spk.map(s=>s.name).join('、')}`,'');
-  if(m.sum){const s=m.sum,A=x=>Array.isArray(x)?x:[];L.push('## 重點整理','');if(s.overview)L.push(s.overview,'');A(s.chapters).forEach((c,i)=>{L.push(`### ${i+1}. ${c.title||''}${c.start?`（${c.start}${c.end?'–'+c.end:''}）`:''}`,'');if(c.summary)L.push(c.summary,'');A(c.points).forEach(p=>L.push('- '+p));L.push('')});
+  if(m.sum){const s=sumNamed(m),A=x=>Array.isArray(x)?x:[];L.push('## 重點整理','');if(s.overview)L.push(s.overview,'');A(s.chapters).forEach((c,i)=>{L.push(`### ${i+1}. ${c.title||''}${c.start?`（${c.start}${c.end?'–'+c.end:''}）`:''}`,'');if(c.summary)L.push(c.summary,'');A(c.points).forEach(p=>L.push('- '+p));L.push('')});
    if(A(s.decisions).length){L.push('### 決議事項','');A(s.decisions).forEach(d=>L.push('- '+d));L.push('')}
    if(A(s.actions).length){L.push('### 待辦事項','','| 負責人 | 事項 | 期限 |','|---|---|---|');A(s.actions).forEach(a=>L.push(`| ${a.owner||'未指定'} | ${a.task||''} | ${a.due||''} |`));L.push('')}}
   L.push('## 逐字稿','');m.u.forEach(u=>{L.push(`**${sp(u)}**（${fmtS(u.t0)}）：${u.text}`+(u.tr?`  \n> ${u.tr}`:''),'')});return L.join('\n')}
  if(fmt=='srt'){const st=s=>{const ms=Math.round(s*1000);return pad(Math.floor(ms/3600000))+':'+pad(Math.floor(ms%3600000/60000))+':'+pad(Math.floor(ms%60000/1000))+','+String(ms%1000).padStart(3,'0')};return m.u.map((u,i)=>`${i+1}\n${st(u.t0)} --> ${st(Math.max(u.t1,u.t0+.5))}\n${sp(u)}：${u.text}${u.tr?'\n'+u.tr:''}\n`).join('\n')}
  L.push(mTitle(m),...(infoLine(m)?[infoLine(m).replace(/[🏢🚪] /gu,'')]:[]),`${fmtD(m.ts)}・${fmtT(m.dur)}・講者：${m.spk.map(s=>s.name).join('、')}`,'');if(m.sum)L.push('＝＝ 重點整理 ＝＝',sumText(m),'','＝＝ 逐字稿 ＝＝');m.u.forEach(u=>{L.push(`[${fmtT(u.t0)}] ${sp(u)}：${u.text}`+(u.tr?`\n           → ${u.tr}`:''))});return L.join('\n')}
-async function mExport(m){const k=await menu('匯出格式',[['docx','📘 Word 文件 .docx（精美排版：重點＋逐字稿）'],...(m.sum?[['docxs','📘 Word：只有重點整理']]:[]),['docxt','📘 Word：只有逐字稿'],['txt','📄 純文字 .txt'],['md','📝 Markdown .md'],['srt','🎬 字幕 .srt'],['json','🗂 完整資料 .json']]);if(!k)return;if(k.startsWith('docx'))return mDocx(m,k=='docxs'?{tr:0}:k=='docxt'?{sum:0}:{});const n=mTitle(m).replace(/[\\/:*?"<>|]/g,'_');
+async function mExport(m){const k=await menu('匯出格式',[...(m.sum?[['docxs','📘 Word：會議重點（建議）']]:[]),['docx','📘 Word：重點＋完整逐字稿'],['docxt','📘 Word：只有逐字稿'],['txt','📄 純文字 .txt'],['md','📝 Markdown .md'],['srt','🎬 字幕 .srt'],['json','🗂 完整資料 .json']]);if(!k)return;if(k.startsWith('docx'))return mDocx(m,k=='docxs'?{tr:0}:k=='docxt'?{sum:0}:{});const n=mTitle(m).replace(/[\\/:*?"<>|]/g,'_');
  if(k=='json')return dl(n+'.json',JSON.stringify({...m,spk:m.spk.map(({v,...s})=>s),u:m.u.map(({e,...u})=>u)},null,1),'application/json');
  dl(n+'.'+k,'﻿'+mText(m,k),k=='md'?'text/markdown':'text/plain')}
 async function mAudExp(m){if(!m.aud.length)return toast('這場會議沒有保存錄音');for(const a of m.aud){const b=await iget('a',m.id+':'+a.n);if(b){const ext=/mp4/.test(b.type)?'m4a':/ogg/.test(b.type)?'ogg':'webm';await dl(mTitle(m).replace(/[\\/:*?"<>|]/g,'_')+(m.aud.length>1?'-'+(a.n+1):'')+'.'+(m.imp?(b.name||'').split('.').pop()||ext:ext),'',b.type,b)}}}
@@ -2036,5 +2019,6 @@ addEventListener('beforeunload',e=>{if(R.on){e.preventDefault();e.returnValue=''
   if(k=='go')mPump();else if(k=='drop'){for(const x of ks)await idel('q',x);MQ=[];for(const x of S.meets)if(x.st=='proc'){const m=await getM(x.id);if(m){m.st='done';saveM(m)}}toast('已捨棄')}else toast('可以到「會議記錄」頁按「繼續辨識」',3000)},1500)}
  if(IS_APP){try{NB.ready()}catch(e){}}if(IS_APP&&S.set.autoUpd)setTimeout(()=>checkUpd(0),3000);
  if(S.set.sync)setTimeout(()=>syncNow(0),4000);
- setTimeout(async()=>{for(const x of S.meets)if(x.st=='cloud'){const m=await getM(x.id);if(m)cloudRun(m)}},2000);setTimeout(()=>{try{const id=IS_APP&&NB.openMeeting&&NB.openMeeting();if(id)window.__openM(id)}catch(e){}},2600);if(!S.set.onb)setTimeout(()=>$('#pm').classList.add('on'),700)})();
+ setTimeout(async()=>{if(!S.set.v114){/* 舊版匯入的音檔用的是「錄完的時間」→ 改成開始時間 */for(const x of S.meets){const m=await getM(x.id);if(m&&m.imp&&!m.tsAdj&&m.dur){m.ts-=Math.round(m.dur*1000);m.tsAdj=1;saveM(m)}}S.set.v114=1;save();if(cur=='rec')renderRec()}
+  for(const x of S.meets)if(x.st=='cloud'){const m=await getM(x.id);if(m)cloudRun(m)}},2000);setTimeout(()=>{try{const id=IS_APP&&NB.openMeeting&&NB.openMeeting();if(id)window.__openM(id)}catch(e){}},2600);if(!S.set.onb)setTimeout(()=>$('#pm').classList.add('on'),700)})();
 </script></body></html>
