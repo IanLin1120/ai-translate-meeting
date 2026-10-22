@@ -296,7 +296,7 @@ def asr(job, files, t_start):
         if u["E"]:
             item["emb"] = [round(float(x), 4) for x in np.mean(np.stack(u["E"]), 0)]
         res.append(item)
-    ids = sorted({u["spk"] for u in res})
+    ids = list(dict.fromkeys(u["spk"] for u in res))
     remap = {k: i + 1 for i, k in enumerate(ids)}
     for u in res:
         u["spk"] = remap[u["spk"]]

@@ -161,8 +161,8 @@ def prep():
                 del u["E"]
             print(f"發言 {len(turns)} 段、講者 {len(set(u['spk'] for u in turns))} 位", flush=True)
         plan["turns"] = turns
-        # 轉文字的伺服器數：大約每 8 分鐘錄音一台（最多 8 台）
-        n = max(1, min(8, math.ceil(dur / 480))) if turns else 0
+        # 轉文字的伺服器數：大約每 6 分鐘錄音一台（最多 10 台）
+        n = max(1, min(10, math.ceil(dur / 360))) if turns else 0
         asr_sh = split_by_weight([u["e"] - u["s"] + 0.6 for u in turns], n) if n else []
         if asr_sh:
             T.status("上傳給轉文字伺服器")
@@ -173,8 +173,8 @@ def prep():
             put("w-audio.flac", open(fl, "rb").read(), "audio/flac")
             del audio
     plan["asr"] = asr_sh
-    # AI 整理的伺服器數：大約每 7 分鐘會議一台（最多 8 台）
-    m = max(1, min(8, math.ceil(plan["dur"] / 420))) if want_llm else 0
+    # AI 整理的伺服器數：大約每 5 分鐘會議一台（最多 10 台）
+    m = max(1, min(10, math.ceil(plan["dur"] / 300))) if want_llm else 0
     plan["llm"] = m
     # 確認模型都在快取裡
     if asr_sh:
@@ -300,7 +300,7 @@ def build_segs(plan):
         if u.get("emb"):
             item["emb"] = u["emb"]
         res.append(item)
-    ids = sorted({u["spk"] for u in res})
+    ids = list(dict.fromkeys(u["spk"] for u in res))  # 依第一次發言的順序編號（和 App 的「講者 N」一致）
     remap = {k: i + 1 for i, k in enumerate(ids)}
     for u in res:
         u["spk"] = remap[u["spk"]]
@@ -409,11 +409,13 @@ def final():
         print(f"::notice title=略過的段落::{bad} 段音訊無法辨識（已略過，其他內容正常）", flush=True)
     print(f"::notice title=完成::{len(segs)} 句、{r['speakers']} 位講者，全部花了 {r['took'] / 60:.1f} 分鐘", flush=True)
     if T.TEST:
-        for u in segs:
-            print(f"::notice title=講者{u['spk']} {u['s']:.1f}s::{u['text']}" + (f"  〔原：{u['raw']}〕" if u.get("raw") else ""))
         if r.get("summary"):
             s = r["summary"]
-            print(f"::notice title=AI 重點整理::{s.get('title')}｜章節：" + "／".join(c.get("title", "") for c in s.get("chapters", [])))
+            print(f"::notice title=AI 重點整理::{s.get('title')}｜章節：" + "／".join(c.get("title", "") for c in s.get("chapters", [])) + f"｜待辦 {len(s.get('actions', []))} 項")
+        elif r.get("llm_error"):
+            print(f"::notice title=AI 整理失敗::{r['llm_error']}")
+        for u in segs[:8]:
+            print(f"::notice title=講者{u['spk']} {u['s']:.1f}s::{u['text']}" + (f"  〔原：{u['raw']}〕" if u.get("raw") else ""))
         clean_work(keep_result=False)
         T.gh("DELETE", f"/releases/{T.REL}")
         return
