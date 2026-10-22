@@ -160,14 +160,15 @@ def prep():
             del audio
     plan["asr"] = asr_sh
     # AI 整理的伺服器數：大約每 5 分鐘會議一台（最多 10 台）
-    m = max(1, min(10, math.ceil(plan["dur"] / 300))) if want_llm else 0
+    chars = sum(len(u.get("text") or "") for u in plan.get("segs") or [])
+    m = (max(1, min(10, math.ceil(chars / 1500))) if job.get("mode") == "text" else max(1, min(10, math.ceil(plan["dur"] / 300)))) if want_llm else 0
     plan["llm"] = m
-    # 確認模型都在快取裡
-    if asr_sh:
+    # 確認模型都在快取裡（已經有快取就跳過）
+    if asr_sh and not os.environ.get("HAVE_CACHE"):
         if model == "firered":
             T.fetch_model("firered", "asr-models/sherpa-onnx-fire-red-asr-large-zh_en-2025-02-16.tar.bz2", ["encoder.int8.onnx", "decoder.int8.onnx", "tokens.txt"])
             T.fetch_model("punct", "punctuation-models/sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12.tar.bz2", ["model.onnx"])
-    if m:
+    if m and not os.environ.get("HAVE_CACHE"):
         import llm as L
         L.fetch_gguf(T.status)
     put("w-plan.json", plan)

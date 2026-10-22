@@ -137,7 +137,8 @@ FIX_SYS = """你是會議逐字稿校對員。輸入是語音辨識（ASR）產�
 SUM_PART_SYS = """你是會議記錄整理助理。輸入是一段會議逐字稿，每行格式為「[時間] 講者：內容」。
 請整理這一段的重點，只輸出 JSON：
 {"topics":[{"title":"主題（10 字內）","start":"開始時間","end":"結束時間","points":["重點（完整一句話，含誰說了什麼、數字、日期）"]}],
- "decisions":["已決定的事項"],"actions":[{"owner":"負責人（不知道就寫 未指定）","task":"待辦事項","due":"期限（沒有就空字串）"}]}
+ "decisions":["已決定的事項"],"actions":[{"owner":"負責人（不知道就寫 未指定）","task":"待辦事項","due":"期限"}]}
+due（期限）只有在逐字稿明確說出期限時才填，照原話寫（例如「下週五」「十一月底」）；不要自己推算或編造日期，也不要填逐字稿的時間戳記；沒有提到就填空字串。
 使用台灣繁體中文；講者用逐字稿上的名稱；不要編造逐字稿沒有的內容。"""
 
 SUM_FINAL_SYS = """你是會議記錄整理助理。輸入是同一場會議依時間順序的分段整理（JSON）。
@@ -213,33 +214,95 @@ def summarize_parts(llm, segs, spk_name, progress=None, chunk_chars=3200):
     return partial
 
 
+SUM_GROUP_SYS = """你是會議記錄整理助理。輸入是一場會議依時間順序列出的主題（每行：編號｜時間｜主題｜重點摘要）。
+請把相關的主題合併成章節，只輸出 JSON：
+{"title":"會議標題（15 字內）","overview":"整場會議摘要（3～5 句）","keywords":["關鍵字（5～10 個）"],
+ "chapters":[{"title":"章節標題（12 字內）","summary":"本章摘要（1～2 句）","topics":[主題編號,...]}]}
+每個主題編號都要放進剛好一個章節，章節依時間排序（通常 3～8 章）；使用台灣繁體中文；不要編造內容。"""
+
+_DUE_BAD = re.compile(r"^\s*\d{1,2}[:：]\d{2}(\s*[-–~]\s*\d{1,2}[:：]\d{2})?\s*$|^\s*(未指定|無|沒有|n/?a|none|—|-)\s*$", re.I)
+
+
+def clean_due(d):
+    """期限：只留逐字稿真的提到的說法；時間戳記（14:51）或模型自己編的過去年份日期一律清掉"""
+    d = str(d or "").strip()
+    if not d or _DUE_BAD.match(d):
+        return ""
+    y = re.search(r"(20\d\d)", d)
+    if y and int(y.group(1)) < time.localtime().tm_year:
+        return ""
+    return d
+
+
+def _norm(s):
+    return re.sub(r"[\s，。、,.!！?？：:；;「」『』（）()]", "", str(s or ""))
+
+
+def _dedupe(items, key=lambda x: x):
+    out, seen = [], []
+    for x in items:
+        k = _norm(key(x))
+        if not k or any(k == s or (len(k) > 6 and (k in s or s in k)) for s in seen):
+            continue
+        seen.append(k)
+        out.append(x)
+    return out
+
+
 def summarize_merge(llm, partial, progress=None):
-    """把各段整理合併成一份分章節的重點整理"""
+    """把各段整理合併成一份分章節的重點整理（只讓模型做分組與摘要，重點內容直接沿用，速度快很多）"""
     partial = [p for p in partial if p]
     if not partial:
         return {}
-    # 分段整理太多時，先兩兩合併，避免超過單次輸入上限
-    while len(json.dumps(partial, ensure_ascii=False)) > 9000 and len(partial) > 1:
-        merged = []
-        for i in range(0, len(partial), 2):
-            grp = partial[i:i + 2]
-            if len(grp) == 1:
-                merged.append(grp[0])
+    topics = []
+    for p in partial:
+        for t in p.get("topics", []) or []:
+            if isinstance(t, dict) and (t.get("title") or t.get("points")):
+                topics.append(t)
+    decisions = _dedupe([d for p in partial for d in (p.get("decisions") or []) if isinstance(d, str)])
+    actions = _dedupe([a for p in partial for a in (p.get("actions") or []) if isinstance(a, dict) and a.get("task")], key=lambda a: a.get("task"))
+    for a in actions:
+        a["due"] = clean_due(a.get("due"))
+        a["owner"] = a.get("owner") or "未指定"
+    lines = []
+    for i, t in enumerate(topics):
+        pts = "；".join(str(x) for x in (t.get("points") or [])[:2])[:90]
+        lines.append(f"{i + 1}｜{t.get('start', '')}–{t.get('end', '')}｜{t.get('title', '')}｜{pts}")
+    g = {}
+    try:
+        g = _json(llm.chat(SUM_GROUP_SYS, "\n".join(lines)[:9000], max_tokens=1200)) or {}
+    except RuntimeError:
+        raise
+    except Exception:
+        g = {}
+    chapters, used = [], set()
+    for c in g.get("chapters", []) or []:
+        ids = []
+        for x in c.get("topics", []) or []:
+            try:
+                x = int(x) - 1
+            except Exception:
                 continue
-            r = _json(llm.chat(SUM_PART_SYS.replace("一段會議逐字稿，每行格式為「[時間] 講者：內容」", "同一場會議相鄰兩段的整理（JSON）"),
-                               json.dumps(grp, ensure_ascii=False), max_tokens=2500)) or {}
-            merged.append(r)
-        partial = merged
-    final = _json(llm.chat(SUM_FINAL_SYS, json.dumps(partial, ensure_ascii=False), max_tokens=3500)) or {}
+            if 0 <= x < len(topics) and x not in used:
+                ids.append(x)
+                used.add(x)
+        if not ids:
+            continue
+        ts = [topics[i] for i in ids]
+        pts = _dedupe([p for t in ts for p in (t.get("points") or []) if isinstance(p, str)])
+        chapters.append({"title": c.get("title") or ts[0].get("title", ""), "start": ts[0].get("start", ""), "end": ts[-1].get("end", ""),
+                         "summary": c.get("summary", ""), "points": pts})
+    # 模型漏掉的主題自己成一章
+    for i, t in enumerate(topics):
+        if i not in used:
+            chapters.append({"title": t.get("title", ""), "start": t.get("start", ""), "end": t.get("end", ""), "summary": "", "points": t.get("points") or []})
+    def tkey(c):
+        try:
+            return [int(x) for x in str(c.get("start") or "99:99:99").split(":")]
+        except Exception:
+            return [99]
+    chapters.sort(key=lambda c: (len(tkey(c)), tkey(c)))
     if progress:
         progress(100)
-    if not final.get("chapters"):
-        # 合併失敗 → 直接用分段結果
-        ch = []
-        for p in partial:
-            for t in p.get("topics", []):
-                ch.append({"title": t.get("title", ""), "start": t.get("start", ""), "end": t.get("end", ""), "summary": "", "points": t.get("points", [])})
-        final = {"title": "", "overview": "", "chapters": ch,
-                 "decisions": sum([p.get("decisions", []) for p in partial], []),
-                 "actions": sum([p.get("actions", []) for p in partial], []), "keywords": []}
-    return final
+    return {"title": g.get("title", ""), "overview": g.get("overview", ""), "chapters": chapters, "decisions": decisions,
+            "actions": actions, "keywords": [k for k in (g.get("keywords") or []) if isinstance(k, str)][:12]}

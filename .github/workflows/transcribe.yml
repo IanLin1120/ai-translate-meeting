@@ -53,7 +53,9 @@ jobs:
           path: ~/.cache/aitm
           key: aitm-models-v1-none
           restore-keys: aitm-models-v1-
+          lookup-only: true   # 準備階段用不到模型：有快取就不下載（省 1～2 分鐘），沒有才下載並存起來
       - name: 下載講者辨識模型
+        if: steps.mcache.outputs.cache-matched-key == ''
         run: |
           M=~/.cache/aitm; mkdir -p $M/seg
           [ -f $M/seg/model.onnx ] || (curl -sSL https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2 | tar xj -C /tmp && cp /tmp/sherpa-onnx-pyannote-segmentation-3-0/model.onnx $M/seg/)
@@ -73,13 +75,14 @@ jobs:
           TEST_MODEL: ${{ inputs.test_model }}
           TEST_LLM: ${{ inputs.test_llm }}
           GITHUB_RUN_ID: ${{ github.run_id }}
+          HAVE_CACHE: ${{ steps.mcache.outputs.cache-matched-key }}
         run: python3 scripts/pipeline.py prep
       - name: 計算模型快取版本
-        if: always()
+        if: always() && steps.mcache.outputs.cache-matched-key == ''
         id: mkey
         run: echo "k=aitm-models-v1-$(cd ~/.cache/aitm 2>/dev/null && find . -type f -size +1k | sort | sha1sum | cut -c1-12)" >> $GITHUB_OUTPUT
       - name: 儲存 AI 模型快取（有新模型時）
-        if: always() && steps.mkey.outputs.k != steps.mcache.outputs.cache-matched-key
+        if: always() && steps.mkey.outputs.k != '' && steps.mkey.outputs.k != steps.mcache.outputs.cache-matched-key
         uses: actions/cache/save@v4
         continue-on-error: true
         with:
