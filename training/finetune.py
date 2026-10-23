@@ -234,6 +234,8 @@ def main():
     hf_dir, ct_dir = os.path.join(tmp, "hf"), os.path.join(tmp, "ct2")
     model.save_pretrained(hf_dir)
     proc.save_pretrained(hf_dir)
+    from transformers import WhisperTokenizerFast  # faster-whisper 需要 tokenizer.json
+    WhisperTokenizerFast.from_pretrained(a.base, language="zh", task="transcribe").save_pretrained(hf_dir)
     import ctranslate2.converters
     ctranslate2.converters.TransformersConverter(hf_dir, copy_files=["tokenizer.json", "preprocessor_config.json"]).convert(ct_dir, quantization="int8_float16" if device == "cuda" else "int8", force=True)
     json.dump(metrics, open(os.path.join(ct_dir, "metrics.json"), "w"), ensure_ascii=False)
