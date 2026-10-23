@@ -126,13 +126,17 @@ def fmt_t(s):
     return f"{s // 3600:02d}:{s % 3600 // 60:02d}:{s % 60:02d}" if s >= 3600 else f"{s // 60:02d}:{s % 60:02d}"
 
 
-FIX_SYS = """你是會議逐字稿校對員。輸入是語音辨識（ASR）產生的逐字稿，每行格式為「編號|講者|內容」。
-請根據上下文修正辨識錯誤：同音或近音錯字、斷錯的詞、專有名詞與英文術語的拼寫、明顯漏掉或多餘的字、標點。
+FIX_SYS = """你是台灣的會議逐字稿校對員。輸入是語音辨識（ASR）產生的逐字稿，每行格式為「編號|講者|內容」。
+語音辨識常把發音相近的詞聽錯，請像真人校對一樣，讀起來不通順、不合常理的地方都要依上下文和發音推敲出正確的詞：
+- 人名、台灣地名（縣市、鄉鎮，例如「彰化和美」）、學校與科系名稱（例如「化學工程學系」）、公司、產品、法規、文件編號
+- 同音或近音錯字、斷錯的詞、英文術語的拼寫與大小寫（ok → OK、iphone → iPhone）
+- 明顯漏掉或多餘的字、標點
 規則：
-1. 只修正錯誤，保留原本的語意、語氣與口語用詞，不要改寫、不要摘要、不要刪掉內容。
-2. 使用台灣繁體中文與台灣慣用詞；英文單字保持英文（必要時修正大小寫，例如 ok → OK、iphone → iPhone）。
-3. 不確定的地方維持原樣。
-4. 只輸出 JSON 物件：{"編號": "修正後內容", ...}，只列出有修改的行；沒有修改就輸出 {}。"""
+1. 只修正辨識錯誤，保留原本的語意、語氣與口語用詞，不要改寫成書面語、不要摘要、不要刪掉內容。
+2. 使用台灣繁體中文與台灣慣用詞；英文單字保持英文。
+3. 如果有提供「專有名詞」或「常見辨識錯誤」，遇到發音相近的詞請優先改成那些正確寫法。
+4. 完全無法判斷時才維持原樣。
+5. 只輸出 JSON 物件：{"編號": "修正後內容", ...}，只列出有修改的行；沒有修改就輸出 {}。"""
 
 SUM_PART_SYS = """你是專業的會議記錄撰寫人。輸入是一段會議逐字稿（已經人工校對過），每行格式為「[時間] 講者：內容」。
 請整理這一段的重點，只輸出 JSON：
@@ -154,7 +158,24 @@ SUM_FINAL_SYS = """你是會議記錄整理助理。輸入是同一場會議依�
 章節數依內容而定（通常 3～8 章）；使用台灣繁體中文；不要編造內容。"""
 
 
-def correct(llm, segs, spk_name, progress=None, chunk_chars=1100):
+def hints(job):
+    """使用者的詞庫（專有名詞、從編輯學到的常見錯誤）＋會議資訊 → 給 AI 參考"""
+    v = job.get("vocab") or {}
+    L = []
+    info = "、".join(x for x in [job.get("title"), job.get("client") and "客戶：" + job["client"], job.get("room") and "地點：" + job["room"]] if x)
+    if info:
+        L.append("會議資訊：" + info)
+    names = [n for n in (job.get("names") or {}).values() if n and not re.match(r"^講者\s?\d+$", n)]
+    terms = list(dict.fromkeys([*(v.get("terms") or []), *names]))[:150]
+    if terms:
+        L.append("專有名詞（正確寫法）：" + "、".join(terms))
+    fx = [f"{a}→{b}" for a, b in (v.get("fixes") or [])[:150] if a and b]
+    if fx:
+        L.append("常見辨識錯誤（左邊是聽錯的，右邊是正確的）：" + "；".join(fx))
+    return "\n".join(L)
+
+
+def correct(llm, segs, spk_name, progress=None, chunk_chars=1100, hints=""):
     """逐批校對；回傳 {索引: 修正後文字}"""
     out = {}
     batches, cur, n = [], [], 0
@@ -173,7 +194,7 @@ def correct(llm, segs, spk_name, progress=None, chunk_chars=1100):
         ctx_before = [f"(上文) {spk_name(segs[j])}：{segs[j]['text']}" for j in range(max(0, ids[0] - 2), ids[0])]
         user = ("\n".join(ctx_before) + "\n" if ctx_before else "") + "\n".join(l for _, l in b)
         try:
-            r = _json(llm.chat(FIX_SYS, user, max_tokens=min(4000, int(len(user) * 1.6) + 200), temperature=0.1)) or {}
+            r = _json(llm.chat(FIX_SYS + ("\n\n" + hints if hints else ""), user, max_tokens=min(4000, int(len(user) * 1.6) + 200), temperature=0.1)) or {}
             for k, v in r.items():
                 try:
                     k = int(k)
@@ -198,7 +219,7 @@ def summarize(llm, segs, spk_name, progress=None, chunk_chars=3200):
     return summarize_merge(llm, partial, (lambda p: progress(80 + p * 0.2)) if progress else None)
 
 
-def summarize_parts(llm, segs, spk_name, progress=None, chunk_chars=3200):
+def summarize_parts(llm, segs, spk_name, progress=None, chunk_chars=3200, hints=""):
     """分段整理（可以分給好幾台伺服器同時做）"""
     lines = [f"[{fmt_t(u['s'])}] {spk_name(u)}：{u['text']}" for u in segs]
     parts, cur, n = [], [], 0
@@ -212,7 +233,7 @@ def summarize_parts(llm, segs, spk_name, progress=None, chunk_chars=3200):
         parts.append(cur)
     partial = []
     for i, p in enumerate(parts):
-        r = _json(llm.chat(SUM_PART_SYS, "\n".join(p), max_tokens=2500)) or {}
+        r = _json(llm.chat(SUM_PART_SYS + ("\n\n" + hints if hints else ""), "\n".join(p), max_tokens=2500)) or {}
         partial.append(r)
         if progress:
             progress((i + 1) / len(parts) * 100)

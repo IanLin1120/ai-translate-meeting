@@ -316,6 +316,11 @@ def fetch_model(name, rel_path, files):
     status("下載語音模型")
     print(f"::notice title=下載模型::{name}（快取裡沒有）", flush=True)
     os.makedirs(d, exist_ok=True)
+    import fcntl  # 同一台機器同時下載時避免互相覆蓋
+    lk = open(f"{d}/.lock", "w")
+    fcntl.flock(lk, fcntl.LOCK_EX)
+    if all(os.path.exists(f"{d}/{f}") for f in files):
+        return d
     tmpd = tempfile.mkdtemp()
     subprocess.run(f"curl -sSL https://github.com/k2-fsa/sherpa-onnx/releases/download/{rel_path} | tar xj -C {tmpd}", shell=True, check=True)
     for f in files:

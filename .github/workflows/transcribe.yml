@@ -51,8 +51,8 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ~/.cache/aitm
-          key: aitm-models-v1-none
-          restore-keys: aitm-models-v1-
+          key: aitm-models-v2-none
+          restore-keys: aitm-models-v2-
           lookup-only: true   # 準備階段用不到模型：有快取就不下載（省 1～2 分鐘），沒有才下載並存起來
       - name: 下載講者辨識模型
         if: steps.mcache.outputs.cache-matched-key == ''
@@ -80,7 +80,7 @@ jobs:
       - name: 計算模型快取版本
         if: always() && steps.mcache.outputs.cache-matched-key == ''
         id: mkey
-        run: echo "k=aitm-models-v1-$(cd ~/.cache/aitm 2>/dev/null && find . -type f -size +1k | sort | sha1sum | cut -c1-12)" >> $GITHUB_OUTPUT
+        run: echo "k=aitm-models-v2-$(cd ~/.cache/aitm 2>/dev/null && find . -type f -size +1k | sort | sha1sum | cut -c1-12)" >> $GITHUB_OUTPUT
       - name: 儲存 AI 模型快取（有新模型時）
         if: always() && steps.mkey.outputs.k != '' && steps.mkey.outputs.k != steps.mcache.outputs.cache-matched-key
         uses: actions/cache/save@v4
@@ -117,8 +117,8 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ~/.cache/aitm
-          key: aitm-models-v1-none
-          restore-keys: aitm-models-v1-
+          key: aitm-models-v2-none
+          restore-keys: aitm-models-v2-
       - name: 轉文字（第 ${{ matrix.k }} 份）
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -157,8 +157,8 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ~/.cache/aitm
-          key: aitm-models-v1-none
-          restore-keys: aitm-models-v1-
+          key: aitm-models-v2-none
+          restore-keys: aitm-models-v2-
       - name: AI 整理（第 ${{ matrix.k }} 份）
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -193,8 +193,8 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ~/.cache/aitm
-          key: aitm-models-v1-none
-          restore-keys: aitm-models-v1-
+          key: aitm-models-v2-none
+          restore-keys: aitm-models-v2-
       - name: 合併結果
         env:
           GITHUB_TOKEN: ${{ github.token }}

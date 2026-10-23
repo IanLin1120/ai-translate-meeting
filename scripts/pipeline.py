@@ -73,6 +73,11 @@ def clean_work(keep_result=True):
             pass
 
 
+def fetch_fr2():
+    """FireRedASR2（2026 年 2 月版，比第一版準確而且快約 2 倍）"""
+    return T.fetch_model("firered2", "asr-models/sherpa-onnx-fire-red-asr2-zh_en-int8-2026-02-26.tar.bz2", ["encoder.int8.onnx", "decoder.int8.onnx", "tokens.txt"])
+
+
 def span(plan, phase):
     """整體進度：每個階段佔的百分比範圍"""
     a, l = bool(plan.get("asr")), bool(plan.get("llm"))
@@ -185,7 +190,7 @@ def prep():
     # 確認模型都在快取裡（已經有快取就跳過）
     if asr_sh and not os.environ.get("HAVE_CACHE"):
         if model == "firered":
-            T.fetch_model("firered", "asr-models/sherpa-onnx-fire-red-asr-large-zh_en-2025-02-16.tar.bz2", ["encoder.int8.onnx", "decoder.int8.onnx", "tokens.txt"])
+            fetch_fr2()
             T.fetch_model("punct", "punctuation-models/sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12.tar.bz2", ["model.onnx"])
     if m and not os.environ.get("HAVE_CACHE"):
         import llm as L
@@ -268,7 +273,7 @@ def asr_shard(k):
     prog = lambda i: say(25 + 75 * (i + 1) / max(1, len(units)))
     if model == "firered":
         import sherpa_onnx
-        d = f"{MODELS}/firered"
+        d = fetch_fr2()
         pd = f"{MODELS}/punct"
         rec = sherpa_onnx.OfflineRecognizer.from_fire_red_asr(encoder=f"{d}/encoder.int8.onnx", decoder=f"{d}/decoder.int8.onnx",
                                                               tokens=f"{d}/tokens.txt", num_threads=os.cpu_count() or 4)
@@ -427,13 +432,13 @@ def llm_shard(k):
             ai = L.LLM("local", T.status if rep else None)
             si = 0
             if job.get("fix"):
-                fx = L.correct(ai, part, spk_namer(plan), lambda p: prog(si, p), chunk_chars=1800)
+                fx = L.correct(ai, part, spk_namer(plan), lambda p: prog(si, p), chunk_chars=1800, hints=L.hints(job))
                 outp["fixed"] = {str(i0 + i): v for i, v in fx.items()}
                 si += 1
             if job.get("summ"):
                 # 用修正後的文字做重點整理
                 fixed_part = [dict(u, text=outp["fixed"].get(str(i0 + i), u["text"])) for i, u in enumerate(part)]
-                outp["partial"] = L.summarize_parts(ai, fixed_part, spk_namer(plan), lambda p: prog(si, p))
+                outp["partial"] = L.summarize_parts(ai, fixed_part, spk_namer(plan), lambda p: prog(si, p), hints=L.hints(job))
             outp["model"] = ai.model
             outp["calls"] = ai.calls
         except Exception as e:

@@ -1,3 +1,4 @@
 android/assets/
 android/build/
 *.jks
+__pycache__/
