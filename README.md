@@ -78,3 +78,14 @@ App 需要一組 **Fine-grained 權杖**：Repository access 只選本儲存庫�
 | 繁簡轉換 | OpenCC（opencc-js） | Apache 2.0 / MIT |
 
 模型檔案是從 Hugging Face 原樣鏡像過來的，版權屬於各自的作者，使用時請遵守原授權。
+
+## 🎓 訓練我的語音模型
+
+用你校對過的會議錄音，微調一個更懂你們口音、人名與專有名詞的語音辨識模型（以 OpenAI Whisper large-v3-turbo 為基礎，LoRA 微調）：
+
+1. App 打開校對好的會議 → ⋯ →「🎓 加入訓練資料」
+2. 「設定 → 🎓 訓練我的語音模型 → ⬆ 上傳訓練資料」：錄音與逐字稿上傳到本儲存庫的草稿 Release `train-data`（只有擁有者看得到）
+3. 按「🚀 開啟 Google Colab」執行 [`training/finetune_whisper.ipynb`](training/finetune_whisper.ipynb)（免費 T4 GPU）：會先考一次原本的字錯率，訓練後再考一次，**有進步才上傳**成草稿 Release `custom-model-日期`
+4. 「設定 → ☁️ GitHub 雲端轉文字」選「🎓 我的模型」，雲端轉文字就會使用（[`pipeline.py`](scripts/pipeline.py) 的 `fetch_custom`）
+
+[`train-test.yml`](.github/workflows/train-test.yml) 會在 CPU 上用小資料跑一次完整流程，確認程式正常。

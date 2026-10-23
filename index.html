@@ -601,7 +601,7 @@ let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.17.0';
+const APP_VER='1.18.0';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -977,7 +977,7 @@ const R={on:0,paused:0,m:null,cap:null,mr:null,mrN:0,mrT0:0,mrChunks:[],timer:0,
 let MQ=[],mBusy=0;  /* 待處理語音片段的 key */
 const MS={}; /* 載入中的會議 */
 async function getM(id){if(MS[id])return MS[id];const m=await iget('m',id);if(m)MS[id]=m;return m}
-let msT={};function saveM(m,keepUp){if(!keepUp&&m.st!='rec'){m.up=Date.now();if(S.set.sync&&m.st=='done')syncSoon()}clearTimeout(msT[m.id]);msT[m.id]=setTimeout(()=>iput('m',m.id,m),400);const i=S.meets.findIndex(x=>x.id==m.id),ix={id:m.id,title:m.title,client:m.client||'',room:m.room||'',ts:m.ts,dur:m.dur,n:m.u.length,st:m.st,cs:m.cs||'',up:m.up||m.ts,sum:m.sum?1:0,ra:m.aud&&m.aud.length?1:0,spk:m.spk.length,pv:m.u.slice(0,3).map(u=>u.text).join(' ').slice(0,120)};i<0?S.meets.unshift(ix):S.meets[i]=ix;save()}
+let msT={};function saveM(m,keepUp){if(!keepUp&&m.st!='rec'){m.up=Date.now();if(S.set.sync&&m.st=='done')syncSoon()}clearTimeout(msT[m.id]);msT[m.id]=setTimeout(()=>iput('m',m.id,m),400);const i=S.meets.findIndex(x=>x.id==m.id),ix={id:m.id,train:m.train?1:0,title:m.title,client:m.client||'',room:m.room||'',ts:m.ts,dur:m.dur,n:m.u.length,st:m.st,cs:m.cs||'',up:m.up||m.ts,sum:m.sum?1:0,ra:m.aud&&m.aud.length?1:0,spk:m.spk.length,pv:m.u.slice(0,3).map(u=>u.text).join(' ').slice(0,120)};i<0?S.meets.unshift(ix):S.meets[i]=ix;save()}
 const mTitle=m=>m.title||'會議 '+fmtD(m.ts);
 function spkOf(m,id){return m.spk.find(s=>s.id==id)||{id,name:'講者 ?',c:'#888'}}
 /* ================= 會議資訊：標題、客戶名稱、會議室 ================= */
@@ -1243,6 +1243,24 @@ function cloudApply(m,r){m.spk=[];const map={};
 /* ================= AI 修正錯字＋重點整理(既有會議:只送逐字稿文字) ================= */
 const AIJ={};
 const AREL={};
+/* ===== 🎓 訓練我的語音模型：上傳校對過的錄音＋逐字稿 → Colab 微調 → 雲端用「我的模型」 ===== */
+const COLAB=`https://colab.research.google.com/github/${GH.user}/${GH.repo}/blob/main/training/finetune_whisper.ipynb`;
+let TRM=null;
+async function trRel(create){const rs=await ghApi('GET','/releases?per_page=100');let r=rs.find(x=>x.tag_name=='train-data');if(!r&&create)r=await ghApi('POST','/releases',{tag_name:'train-data',name:'train-data',draft:true,body:'App 上傳的訓練資料（只有你看得到）'});return r}
+async function trModels(){try{const rs=await ghApi('GET','/releases?per_page=100');TRM=rs.filter(r=>/^custom-model-/.test(r.tag_name)).map(r=>{let x={};try{x=JSON.parse(r.body||'{}')}catch(e){}return{...x,tag:r.tag_name,id:r.id}}).filter(x=>!x.test).sort((a,b)=>a.tag<b.tag?1:-1);S.set.cmOK=TRM.length?1:0;save()}catch(e){TRM=TRM||[]}return TRM}
+async function trUpload(){if(!S.set.ghTok)return toast('請先設定 GitHub 權杖',3000);const L=S.meets.filter(x=>x.train);if(!L.length)return toast('還沒有會議加入訓練資料：打開會議 → 右上角 ⋯ →「🎓 加入訓練資料」',4500);
+ const el=$('#trst'),say=x=>{el&&(el.textContent=x)};try{say('準備上傳…');const rel=await trRel(1);const have={};(rel.assets||[]).forEach(a=>have[a.name]=a);let n=0,sk=0;
+  for(const x of L){const m=await getM(x.id);if(!m||!m.aud.length)continue;
+   for(const a of m.aud){const b=await iget('a',m.id+':'+a.n);if(!b)continue;const t1=(m.aud.find(z=>z.n>a.n)||{}).t0??1e9;
+    const segs=m.u.filter(u=>u.t0>=a.t0-0.5&&u.t0<t1).map(u=>({s:+(u.t0-a.t0).toFixed(2),e:+((u.t1||u.t0+2)-a.t0).toFixed(2),text:u.text}));if(!segs.length)continue;
+    const ext=/mp4|m4a|aac/.test(b.type)?'m4a':/ogg/.test(b.type)?'ogg':/wav/.test(b.type)?'wav':/mpeg|mp3/.test(b.type)?'mp3':'webm',base=`ds-${m.id}-${a.n}`;
+    const js=JSON.stringify({id:m.id,audio:base+'.'+ext,up:m.up,segs});const jn=base+'.json';
+    if(have[jn]&&have[jn].size==new Blob([js]).size&&have[base+'.'+ext]){sk++;continue}
+    for(const nm of [jn,base+'.'+ext])if(have[nm])try{await ghApi('DELETE','/releases/assets/'+have[nm].id)}catch(e){}
+    say(`上傳中：${mTitle(m)}`);await ghUpload(rel.id,base+'.'+ext,b,(s,tt)=>say(`上傳中：${mTitle(m)}　${Math.round(s/tt*100)}%`));await ghUpload(rel.id,jn,new Blob([js],{type:'application/json'}));n++}}
+  say(`✅ 已上傳 ${n} 份${sk?`（${sk} 份沒有變動）`:''}`);toast('✅ 訓練資料已上傳，接著按「🚀 開啟 Google Colab 開始訓練」',4000)}
+ catch(e){say('❌ '+e.message);toast('❌ 上傳失敗：'+e.message,4000)}}
+async function trClear(){if(!confirm('刪除 GitHub 上所有訓練資料？（手機裡的會議不受影響）'))return;try{const r=await trRel(0);if(r)await ghApi('DELETE','/releases/'+r.id);toast('已刪除',2000)}catch(e){toast('❌ '+e.message,3000)}renderSet()}
 /* ===== 詞庫：專有名詞＋從你的修改學到的常見辨識錯誤（給 AI 修正與重點整理參考，越用越準） ===== */
 function vocab(){const F=(S.set.fixes||[]).slice().sort((a,b)=>(b[2]||1)-(a[2]||1)).slice(0,150).map(x=>[x[0],x[1]]);return{terms:(S.set.terms||[]).slice(0,150),fixes:F}}
 function learnFix(a,b){if(S.set.vlearn===0||!a||!b||a===b||a.length>400||b.length>400)return 0;
@@ -1483,7 +1501,7 @@ function sumText(m){const s=sumNamed(m);if(!s)return'';const L=x=>Array.isArray(
 function renderMD(){const m=MD.m;if(!m)return;$('#mdt').textContent=mTitle(m)+' ✏️';const q=MD.q.toLowerCase();
  const L=m.u.map((u,i)=>[u,i]).filter(([u])=>!q||(u.text+' '+(u.tr||'')+' '+spkOf(m,u.s).name).toLowerCase().includes(q));
  const pend=MQ.filter(k=>k.startsWith(m.id)).length+(mBusy&&m.st=='proc'?1:0);
- $('#mdb').innerHTML=`<div class="mdh">${infoOn().cli||infoOn().room||m.client||m.room?`<div class="mi-row" data-a="info">${infoChips(m)}</div>`:''}<small>📅 ${fmtD(m.ts)}・⏱ ${fmtT(m.dur)}・${m.u.length} 句${pend?`・<b style="color:var(--ac)">辨識中 ${pend} 段</b>`:''}</small></div>
+ $('#mdb').innerHTML=`<div class="mdh">${infoOn().cli||infoOn().room||m.client||m.room?`<div class="mi-row" data-a="info">${infoChips(m)}</div>`:''}<small>${m.train?'<b style="color:var(--ac)">🎓 訓練資料</b>・':''}📅 ${fmtD(m.ts)}・⏱ ${fmtT(m.dur)}・${m.u.length} 句${pend?`・<b style="color:var(--ac)">辨識中 ${pend} 段</b>`:''}</small></div>
  ${m.cloud&&m.st!='done'?`<div class="prog glass"><b>☁️ GitHub 雲端轉文字</b><div>${esc(m.cs||'')}</div><div class="pr" style="margin-top:8px;justify-content:flex-start">${m.st=='cloudfail'||m.st=='cloudwait'?'<button class="btn sm on" data-a="cretry">↻ 重試</button>':''}<button class="btn sm" data-a="clocal">📱 改用手機辨識</button><button class="btn sm dng" data-a="ccancel">✕ 取消雲端工作</button></div></div>`:''}
  <div class="mdtab glass"><b data-tab="s" class="${MD.tab=='s'?'on':''}">✨ 重點整理</b><b data-tab="t" class="${MD.tab=='t'?'on':''}">📝 逐字稿</b></div>
  ${MD.tab=='s'?sumHTML(m):`<div class="mtb">${m.aud.length?'<button class="btn sm on" data-a="play">🎧 播放錄音</button>':''}<button class="btn sm" data-a="aifix">✨ AI 修正錯字</button>${m.u.some(u=>u.raw)?`<button class="btn sm${MD.raw?' on':''}" data-a="raw">${MD.raw?'顯示修正後':'對照原始辨識'}</button>`:''}${m.aud.length&&(m.st=='done'||!m.cloud)?'<button class="btn sm" data-a="cre">☁️ GitHub 重新轉文字</button>':''}<button class="btn sm" data-a="exp">⬇ 匯出</button><button class="btn sm" data-a="cp">⧉ 複製全文</button><button class="btn sm" data-a="tr">🌐 翻譯全文</button><button class="btn sm" data-a="rc">👥 重新分辨講者</button><button class="btn sm" data-a="ren">✏️ 標題・客戶・會議室</button></div>${m.as&&AIJ[m.id]?`<div class="prog glass">✨ ${esc(m.as)}</div>`:''}
@@ -1521,7 +1539,8 @@ $('#mdb').addEventListener('click',async e=>{const m=MD.m;if(!m)return;
   if(k=='tr'){const tl=m.tr||(isZh(S.set.tgt)?'en':S.set.tgt);try{u.tr=(await translate(u.text,'auto',tl)).t;saveM(m);renderMD()}catch(err){toast(err.message)}}
   if(k=='cp')copy(u.text);if(k=='del'&&confirm('刪除這句？')){m.u.splice(i,1);saveM(m);renderMD()}}});
 $('#mdt').onclick=async()=>{const m=MD.m;if(m&&await infoEdit(m))renderMD()};
-$('#mdm').onclick=async()=>{const m=MD.m;if(!m)return;const k=await menu(mTitle(m),[['info','✏️ 編輯標題・客戶・會議室'],['exp','⬇ 匯出逐字稿'],['aud','🎵 匯出錄音檔'],['sh','↗ 分享文字'],['del','🗑 刪除這場會議']]);
+$('#mdm').onclick=async()=>{const m=MD.m;if(!m)return;const k=await menu(mTitle(m),[['info','✏️ 編輯標題・客戶・會議室'],...(m.aud.length?[['train',m.train?'🎓 從訓練資料移除':'🎓 加入訓練資料（逐字稿已校對）']]:[]),['exp','⬇ 匯出逐字稿'],['aud','🎵 匯出錄音檔'],['sh','↗ 分享文字'],['del','🗑 刪除這場會議']]);
+ if(k=='train'){m.train=m.train?0:1;saveM(m);renderMD();toast(m.train?'🎓 已加入訓練資料：到「設定 → 🎓 訓練我的語音模型」上傳':'已從訓練資料移除',3000)}
  if(k=='exp')mExport(m);if(k=='sh')share(mText(m),mTitle(m));if(k=='aud')mAudExp(m);if(k=='del'&&confirm('刪除「'+mTitle(m)+'」？錄音與逐字稿都會刪除')){await mDel(m.id);closeMD()}};
 async function mDel(id,fromSync){if(!fromSync&&S.set.sync){(S.set.tomb=S.set.tomb||{})[id]=Date.now();syncSoon()}const m=await getM(id);if(m)for(const a of m.aud)await idel('a',id+':'+a.n);(await ikeys('q')||[]).filter(k=>String(k).startsWith(id)).forEach(k=>idel('q',k));MQ=MQ.filter(k=>!k.startsWith(id));await idel('m',id);delete MS[id];S.meets=S.meets.filter(x=>x.id!=id);if(R.m&&R.m.id==id&&!R.on)R.m=null;save()}
 function mText(m,fmt){const sp=u=>spkOf(m,u.s).name,L=[];
@@ -1616,7 +1635,7 @@ $('#rlist').onclick=async e=>{if(e.target.id=='hclr'){if(confirm('清除所有�
 function setMthr(on){S.set.mthr=on?1:0;save();toast(on?'已開啟多執行緒加速，重新載入中…':'已關閉多執行緒加速，重新載入中…',2000);
  if(IS_APP&&NB.setIso)NB.setIso(!!on);else if('serviceWorker' in navigator){try{sessionStorage.removeItem('coi')}catch(e){}if(!on)navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister()))}
  setTimeout(()=>location.reload(),900)}
-function renderSet(){const s=S.set,sg=(id,a,v)=>`<div class="seg glass" id="${id}">${a.map(([k,n])=>`<b data-k="${k}" class="${v==k?'on':''}">${n}</b>`).join('')}</div>`,sec=(t,b)=>`<div class="ss"><div class="sh3">${t}</div>${b}</div>`,tg=(k,n,d)=>`<div class="row" data-tg="${k}"><b>${n}${d?`<small>${d}</small>`:''}</b><span class="tgl${s[k]?' on':''}"></span></div>`;
+function renderSet(){if(TRM===null&&S.set.ghTok){TRM=undefined;trModels().then(()=>{if(cur=='set')renderSet()})}const s=S.set,sg=(id,a,v)=>`<div class="seg glass" id="${id}">${a.map(([k,n])=>`<b data-k="${k}" class="${v==k?'on':''}">${n}</b>`).join('')}</div>`,sec=(t,b)=>`<div class="ss"><div class="sh3">${t}</div>${b}</div>`,tg=(k,n,d)=>`<div class="row" data-tg="${k}"><b>${n}${d?`<small>${d}</small>`:''}</b><span class="tgl${s[k]?' on':''}"></span></div>`;
  const P=perm();let I=null;if(IS_APP){try{I=JSON.parse(NB.info())}catch(e){}}
  const pst=v=>v=='yes'?'<span class="pst ok">已允許</span>':'<span class="pst no">未允許 ›</span>';
  let h=sec('🎙 語音辨識（OpenAI Whisper）',`<div class="grp glass">${Object.entries(ASRM).map(([k,a])=>`<div class="row${s.asr==k&&!s.asrc?' on':''}" data-asr="${k}"><b>${a.n}<small>${a.s}</small></b><span class="ck">✔</span></div>`).join('')}<div class="sl"><label>自訂 Whisper 模型（ONNX 格式，進階）</label><input class="ti" id="asrc" value="${esc(s.asrc)}" placeholder="例如 onnx-community/whisper-small" autocomplete="off" autocapitalize="off" spellcheck="false"><small>留白就用上面選的模型。可填 Hugging Face 上任何 Transformers.js 相容的 Whisper 模型。</small></div></div>`);
@@ -1625,12 +1644,17 @@ function renderSet(){const s=S.set,sg=(id,a,v)=>`<div class="seg glass" id="${id
   ${tg('fine','精細切換講者','同一段話裡換人講話也能切開（多用一點運算）')}</div>`);
  const mgr=k=>{const L=infoList(k),[ic,n]=INFO_N[k];return `<div class="sl"><label>${ic} 常用${n}<span>${L.length} 個</span></label><div class="ie-chips">${L.map((x,i)=>`<span class="ie-x" data-ix="${k}:${i}">${esc(x)} ✕</span>`).join('')}<span data-iadd="${k}">＋ 新增</span></div></div>`};
  h+=sec('🏷 會議資訊欄位',`<div class="grp glass">${tg('fcli','客戶名稱','錄音前或之後可以選擇／輸入客戶，會顯示在紀錄、Word 匯出')}${s.fcli?mgr('cli'):''}${tg('froom','會議室','可以選擇在哪間會議室開會')}${s.froom?mgr('room'):''}<div class="sl"><small>常用清單會依使用順序自動排列；點 ✕ 刪除</small></div></div>`);
+ {const TL=S.meets.filter(x=>x.train),mins=Math.round(TL.reduce((a,x)=>a+(x.dur||0),0)/60);
+  h+=sec('🎓 訓練我的語音模型',`<div class="grp glass"><div class="sl"><small>用你<b>校對過</b>的會議錄音，訓練一個更懂你們口音、人名和專有名詞的語音辨識模型（以 OpenAI Whisper 為基礎微調）。<br>① 打開校對好的會議 → 右上角 ⋯ →「🎓 加入訓練資料」<br>② 按下面「上傳訓練資料」<br>③ 按「開啟 Google Colab」，用 Google 免費的 GPU 訓練（約 15～30 分鐘／每小時資料）<br>④ 訓練完有進步，下面「雲端轉文字」就可以選「🎓 我的模型」</small></div>
+  <div class="row"><b>已加入的訓練資料<small>${TL.length} 場會議・約 ${mins} 分鐘${mins<60?'（建議至少 1 小時，越多越準）':''}</small></b></div>
+  <div class="pr" style="margin:4px 0 8px;flex-wrap:wrap"><button class="btn sm on" data-a="trup">⬆ 上傳訓練資料</button><button class="btn sm" data-a="trcolab">🚀 開啟 Google Colab 開始訓練</button><button class="btn sm dng" data-a="trclr">🗑 刪除雲端訓練資料</button></div><div class="sl"><small id="trst"></small></div>
+  <div class="sl"><label>我的模型</label><small id="trm">${TRM?(TRM.length?TRM.slice(0,3).map(x=>`${esc(x.date||x.tag)}・${esc(String(x.base||'').split('/').pop())}・字錯率 ${(x.base_cer*100).toFixed(1)}% → <b>${(x.new_cer*100).toFixed(1)}%</b>（${x.minutes} 分鐘資料）`).join('<br>'):'還沒有訓練好的模型'):'讀取中…'}</small></div></div>`)}
  const FX=(S.set.fixes||[]);h+=sec('📚 詞庫（讓 AI 越用越準）',`<div class="grp glass"><div class="sl"><label>專有名詞<span>${(S.set.terms||[]).length} 個</span></label><textarea class="ti" id="vterms" rows="3" placeholder="人名、地名、公司、產品、術語…（一行一個，或用、分隔）&#10;例如：林慧因、彰化和美、聯合大學、Vantive、PMPMMONE0000002">${esc((S.set.terms||[]).join('\n'))}</textarea><small>AI 修正錯字和整理重點時，會優先使用這些正確寫法</small></div>
   ${tg('vlearn','從我的修改自動學習','你在逐字稿改過的字會被記下來（例如「昆明 → 和美」），之後 AI 修正會參考')}
   ${FX.length?`<div class="sl"><label>已學到的正確寫法<span>${FX.length} 個</span></label><div class="ie-chips">${FX.slice(0,60).map((f,i)=>`<span class="ie-x" data-fx="${i}">${esc(f[0])} → <b>${esc(f[1])}</b>${f[2]>1?' ×'+f[2]:''} ✕</span>`).join('')}</div><small>點一下刪除學錯的</small></div>`:''}</div>`);
  h+=sec('📝 逐字稿',`<div class="grp glass">${tg('tw','中文輸出為繁體（台灣用語）','Whisper 預設常輸出簡體，自動用 OpenCC 轉成繁體')}${tg('hall','過濾「幻聽」字幕','移除「請訂閱」「字幕由…提供」這類模型亂補的句子')}${tg('keepAud','保存錄音檔','可以從逐字稿任一句直接播放原音（約 15 MB／小時）')}</div>`);
  h+=sec('🌐 翻譯引擎',`<div class="grp glass">${Object.entries(MTE).map(([k,e])=>`<div class="row${s.eng==k?' on':''}" data-eng="${k}"><b>${e.n}<small>${e.s}</small></b><span class="ck">✔</span></div>`).join('')}</div>`);
- let G=sec('☁️ GitHub 雲端轉文字',`<div class="grp glass"><div class="sl"><label>會議錄音・音檔轉文字在哪裡運算</label>${sg('smcloud',[['gh','GitHub 雲端'],['local','這支手機']],s.mcloud)}<small>${s.mcloud=='gh'?'錄音上傳到你 GitHub 的草稿 Release（只有你看得到）→ GitHub 伺服器辨識 → 錄音立刻從 GitHub 刪除 → 結果傳回手機。手機不用下載語音模型。':'在手機上辨識，不需要網路，但要下載模型、比較耗電。'}</small></div>${s.mcloud=='gh'?`<div class="sl"><label>GitHub 權杖<span id="tokst">${s.ghTok?'已設定':'未設定'}</span></label><input class="ti" id="ghtok" type="password" value="${esc(s.ghTok)}" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false"><small>建立方式：GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token → Repository access 只選 <b>${GH.repo}</b> → Permissions 把 <b>Contents</b> 和 <b>Actions</b> 設成 Read and write。權杖只存在這支手機裡。</small><div class="pr" style="margin-top:8px"><button class="btn sm" data-a="tokmk">🔑 到 GitHub 建立權杖</button><button class="btn sm on" data-a="toktest">測試連線</button></div></div><div class="sl"><label>雲端語音模型</label>${sg('scm',[['firered','FireRed 最準'],['sensevoice','SenseVoice 最快'],['large-v3-turbo','Whisper 多語']],s.cmodel)}<small>${s.cmodel=='firered'?'小紅書 FireRedASR：中文、中英夾雜辨識最準（AISHELL-1 錯誤率約 0.6%），比較慢，1 小時會議約 1～1.5 小時':s.cmodel=='sensevoice'?'阿里巴巴 SenseVoice：中英日韓粵語，速度最快（1 小時會議約 5～10 分鐘），準確度略低於 FireRedASR':'OpenAI Whisper：支援約 100 種語言，但中文準確度較低、速度較慢'}</small></div>`:''}</div>`);
+ let G=sec('☁️ GitHub 雲端轉文字',`<div class="grp glass"><div class="sl"><label>會議錄音・音檔轉文字在哪裡運算</label>${sg('smcloud',[['gh','GitHub 雲端'],['local','這支手機']],s.mcloud)}<small>${s.mcloud=='gh'?'錄音上傳到你 GitHub 的草稿 Release（只有你看得到）→ GitHub 伺服器辨識 → 錄音立刻從 GitHub 刪除 → 結果傳回手機。手機不用下載語音模型。':'在手機上辨識，不需要網路，但要下載模型、比較耗電。'}</small></div>${s.mcloud=='gh'?`<div class="sl"><label>GitHub 權杖<span id="tokst">${s.ghTok?'已設定':'未設定'}</span></label><input class="ti" id="ghtok" type="password" value="${esc(s.ghTok)}" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false"><small>建立方式：GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token → Repository access 只選 <b>${GH.repo}</b> → Permissions 把 <b>Contents</b> 和 <b>Actions</b> 設成 Read and write。權杖只存在這支手機裡。</small><div class="pr" style="margin-top:8px"><button class="btn sm" data-a="tokmk">🔑 到 GitHub 建立權杖</button><button class="btn sm on" data-a="toktest">測試連線</button></div></div><div class="sl"><label>雲端語音模型</label>${sg('scm',[['firered','FireRed 最準'],['sensevoice','SenseVoice 最快'],['large-v3-turbo','Whisper 多語'],...(S.set.cmOK||s.cmodel=='custom'?[['custom','🎓 我的模型']]:[])],s.cmodel)}<small>${s.cmodel=='firered'?'小紅書 FireRedASR：中文、中英夾雜辨識最準（AISHELL-1 錯誤率約 0.6%），比較慢，1 小時會議約 1～1.5 小時':s.cmodel=='sensevoice'?'阿里巴巴 SenseVoice：中英日韓粵語，速度最快（1 小時會議約 5～10 分鐘），準確度略低於 FireRedASR':'OpenAI Whisper：支援約 100 種語言，但中文準確度較低、速度較慢'}</small></div>`:''}</div>`);
  G+=sec('✨ AI 修正錯字・重點整理',`<div class="grp glass"><div class="sl"><label>AI 整理引擎</label>${sg('sllm',[['local','開源 Qwen3'],['off','關閉']],s.llm=='off'?'off':'local')}<small>${s.llm=='off'?'不做 AI 修正與重點整理':'在你的 GitHub 伺服器上跑阿里巴巴開源的 Qwen3 4B 語言模型，逐字稿不會送到其他服務。1 小時的會議大約多花 30～60 分鐘'}</small></div>
   ${s.llm!='off'?tg('aifix','自動修正錯字','依上下文修正同音字、專有名詞、英文拼寫，保留原始辨識可對照')+tg('aisum','自動產生重點整理','分章節列出重點、決議事項、待辦事項'):''}</div>`);
  if(IS_APP){const P=perm()||{},ok=!!NB.cloudWatch;G+=sec('🔔 雲端處理通知',`<div class="grp glass"><div class="sl"><small>${ok?'✅ 這個 App 版本支援通知欄進度與完成通知':'⚠️ 目前安裝的 App 版本太舊，沒有通知功能：請到「檢查更新」下載新版 APK 安裝'}</small></div>
@@ -1670,6 +1694,7 @@ $('#se').onclick=async e=>{const _fx=e.target.closest('[data-fx]');if(_fx){S.set
   if(k=='toktest'){const v=$('#ghtok').value.trim();S.set.ghTok=v;save();if(!v)return toast('請先貼上權杖');toast('測試中…',8000);
    try{const r=await ghApi('GET','');if(!r.permissions||!r.permissions.push)throw new Error('權杖沒有寫入權限');await ghApi('GET','/actions/workflows/transcribe.yml');await ghApi('GET','/releases?per_page=1');$('#tokst').textContent='✅ 連線成功';toast('✅ 連線成功，可以使用 GitHub 雲端轉文字',3000);
     for(const x of S.meets)if(x.st=='cloudwait'){const m=await getM(x.id);if(m)cloudRun(m)}}catch(e){$('#tokst').textContent='❌ 失敗';toast('❌ '+e.message,5000)}}
+  if(k=='trup'){await trUpload();return}if(k=='trclr'){await trClear();return}if(k=='trcolab'){IS_APP&&NB.openUrl?NB.openUrl(COLAB):window.open(COLAB,'_blank');return}
   if(k=='ntest'){try{NB.notifyTest()}catch(e){}toast('已送出測試通知，請看通知欄',2500);return}
   if(k=='sytok'){const pw=$('#sypw');if(pw){S.set.syncPw=pw.value;SY.key=null;save()}await syTokFetch(1);return}
   if(k=='synow'){const pw=$('#sypw');if(pw){S.set.syncPw=pw.value;SY.key=null;save()}if(!S.set.syncPw)return toast('請先設定同步密碼',3000);syncNow(1)}
