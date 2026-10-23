@@ -9,7 +9,7 @@
 中間檔（w-*）都放在同一個「草稿 Release」（只有儲存庫擁有者看得到），處理完或失敗時一律刪除。
 隱私：這個儲存庫是公開的，Actions 紀錄任何人都看得到，所以這裡「絕不」印出逐字稿內容。
 """
-import json, math, os, re, subprocess, sys, tempfile, time, traceback
+import json, math, os, re, shutil, subprocess, sys, tempfile, time, traceback
 
 import numpy as np
 
@@ -76,6 +76,42 @@ def clean_work(keep_result=True):
 def fetch_fr2():
     """FireRedASR2（2026 年 2 月版，比第一版準確而且快約 2 倍）"""
     return T.fetch_model("firered2", "asr-models/sherpa-onnx-fire-red-asr2-zh_en-int8-2026-02-26.tar.bz2", ["encoder.int8.onnx", "decoder.int8.onnx", "tokens.txt"])
+
+
+def fetch_custom():
+    """你訓練的模型（training/finetune.py 上傳到草稿 Release「custom-model-…」）：用最新的一個"""
+    rels = [r for r in T.gh("GET", "/releases?per_page=100") if str(r.get("tag_name", "")).startswith("custom-model-")]
+    ok = []
+    for r in rels:
+        try:
+            m = json.loads(r.get("body") or "{}")
+        except Exception:
+            m = {}
+        if m.get("test") and not os.environ.get("CUSTOM_ALLOW_TEST"):
+            continue
+        ok.append(r)
+    if not ok:
+        raise RuntimeError("還沒有訓練好的專屬模型：請先到 App「設定 → 🎓 訓練我的語音模型」")
+    r = max(ok, key=lambda x: x.get("created_at", ""))
+    d = f"{MODELS}/custom/{r['tag_name']}"
+    if os.path.exists(f"{d}/model/model.bin"):
+        return f"{d}/model"
+    os.makedirs(d, exist_ok=True)
+    parts = sorted([a for a in r["assets"] if a["name"].startswith("model.tar.part")], key=lambda a: a["name"])
+    tar = f"{d}/model.tar"
+    with open(tar, "wb") as o:
+        for a in parts:
+            p = f"{d}/{a['name']}"
+            T.download_asset(a, p)
+            with open(p, "rb") as f:
+                shutil.copyfileobj(f, o, 1 << 20)
+            os.remove(p)
+    import tarfile
+    with tarfile.open(tar) as tf:
+        tf.extractall(d)
+    os.remove(tar)
+    print(f"::notice title=我的模型::{r['tag_name']}", flush=True)
+    return f"{d}/model"
 
 
 def span(plan, phase):
@@ -309,9 +345,14 @@ def asr_shard(k):
             prog(i)
     else:
         from faster_whisper import WhisperModel
-        wm = WhisperModel(model, device="cpu", compute_type="int8", cpu_threads=os.cpu_count() or 4, download_root=f"{MODELS}/whisper")
+        src = fetch_custom() if model == "custom" else model
+        wm = WhisperModel(src, device="cpu", compute_type="int8", cpu_threads=os.cpu_count() or 4, download_root=f"{MODELS}/whisper")
         wl = None if lang in ("auto", "") else lang
-        prompt = "以下是會議錄音，內容是繁體中文和 English 夾雜。" if wl in (None, "zh") else None
+        if model == "custom" and wl is None:
+            wl = "zh"
+        # 詞庫的專有名詞放進提示，Whisper 會比較容易寫對
+        terms = "、".join(((plan["job"].get("vocab") or {}).get("terms") or [])[:40])
+        prompt = ("以下是會議錄音，內容是繁體中文和 English 夾雜。" + (f"可能出現：{terms}。" if terms else "")) if wl in (None, "zh") else None
         for i, u in enumerate(units):
             a = clip(u)
             if a is not None:

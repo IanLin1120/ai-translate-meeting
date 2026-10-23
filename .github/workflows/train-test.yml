@@ -1,0 +1,44 @@
+name: 測試：訓練我的語音模型
+
+# 用 tests/ 裡的小資料在 CPU 上跑一次完整流程（訓練幾步 → 轉檔 → 上傳 → 雲端轉文字使用 → 刪除），只用來確認程式正常
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 安裝套件
+        run: |
+          pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -q transformers==4.48.3 peft==0.14.0 accelerate jiwer ctranslate2==4.5.0 imageio-ffmpeg
+      - name: 訓練（whisper-tiny，4 步）並上傳
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 training/finetune.py --base openai/whisper-tiny --local tests/train-sample --max_steps 4 --bs 4 --force
+      - name: 雲端轉文字用「我的模型」
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TEST_FILE: tests/four-speakers-zh.wav
+          TEST_MODEL: custom
+          HAVE_CACHE: '1'
+        run: |
+          pip install -q -r scripts/requirements-transcribe.txt
+          M=~/.cache/aitm; mkdir -p $M/seg
+          curl -sSL https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2 | tar xj -C /tmp && cp /tmp/sherpa-onnx-pyannote-segmentation-3-0/model.onnx $M/seg/
+          curl -sSL -o $M/emb.onnx https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx
+          python3 scripts/pipeline_local_test.py
+      - name: 刪除測試模型
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for id in $(gh api repos/${{ github.repository }}/releases --jq '.[]|select(.tag_name|startswith("custom-model-"))|select(.body|test("whisper-tiny"))|.id'); do gh api -X DELETE repos/${{ github.repository }}/releases/$id; done
