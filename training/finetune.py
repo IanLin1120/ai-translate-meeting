@@ -271,4 +271,15 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        tb = traceback.format_exc().strip().splitlines()
+        if os.environ.get("GITHUB_ACTIONS"):
+            print(f"::error title=訓練失敗::{type(e).__name__}: {str(e)[:300]} @ {' | '.join(l.strip() for l in tb[-5:-1])[:600]}")
+        print(f"\n❌ 訓練失敗：{type(e).__name__}: {e}")
+        sys.exit(1)
