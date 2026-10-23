@@ -166,9 +166,17 @@ def hints(job):
     if info:
         L.append("會議資訊：" + info)
     names = [n for n in (job.get("names") or {}).values() if n and not re.match(r"^講者\s?\d+$", n)]
-    terms = list(dict.fromkeys([*(v.get("terms") or []), *names]))[:150]
-    if terms:
-        L.append("專有名詞（正確寫法）：" + "、".join(terms))
+    groups = [g for g in (v.get("groups") or []) if g.get("items")]
+    if groups:  # 分類詞庫：人名、地名、化學、品保…
+        L.append("專有名詞（正確寫法，依類別）：")
+        for g in groups[:20]:
+            L.append(f"- {g.get('name', '')}：" + "、".join(str(x) for x in g["items"][:80]))
+        if names:
+            L.append("- 與會者：" + "、".join(names))
+    else:
+        terms = list(dict.fromkeys([*(v.get("terms") or []), *names]))[:150]
+        if terms:
+            L.append("專有名詞（正確寫法）：" + "、".join(terms))
     fx = [f"{a}→{b}" for a, b in (v.get("fixes") or [])[:150] if a and b]
     if fx:
         L.append("常見辨識錯誤（左邊是聽錯的，右邊是正確的）：" + "；".join(fx))

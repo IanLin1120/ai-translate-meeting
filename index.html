@@ -131,7 +131,13 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 .mhead{display:flex;align-items:center;gap:8px}
 .mi-row{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}.mi-c{font-size:.82em;padding:5px 11px;border-radius:999px;border:1px dashed var(--edge);color:var(--sub);cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mi-c.on{border-style:solid;color:var(--tx,inherit);background:var(--glass);font-weight:600}
 .mc{position:relative}.mc-ed{position:absolute;right:8px;top:8px;opacity:.75}.mc>b{padding-right:34px}.mc-i{display:block;color:var(--ac);margin-top:2px}
-.ie-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.ie-chips span b{margin-left:6px;font-weight:700;color:var(--ac)}.ie-chips span.on{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 12%,transparent)}
+.ie-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.vc-r .vc-ic{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:var(--glass);border:1px solid var(--edge);flex:none}.vc-r small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vc-r b{min-width:0}.vc-n{min-width:26px;text-align:center;font-weight:700;color:var(--ac);font-size:.9em}
+.vf{padding:16px 16px 10px}.vf-h{display:flex;gap:8px;margin-bottom:10px}.vf-h .ti{margin:0}.vf-ic{width:56px!important;flex:none;text-align:center;font-size:1.2em}
+.vf-l{max-height:52vh;overflow:auto;display:flex;flex-direction:column;gap:6px;padding:2px}.vf-r{display:flex;align-items:center;gap:8px}.vf-r .ti{margin:0;flex:1}.vf-no{width:24px;text-align:right;color:var(--sub);font-size:.8em;flex:none;font-variant-numeric:tabular-nums}
+.vf-tip{display:block;color:var(--sub);font-size:.78em;margin:2px 2px 10px}.vf-b{flex-wrap:wrap}.vf-b .btn{flex:1;min-width:30%}
+.tr-steps{margin:8px 0 2px;padding-left:20px;color:var(--sub);font-size:.85em;line-height:1.7}
+.tr-stat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:6px 14px 10px}.tr-stat div{background:var(--glass);border:1px solid var(--edge);border-radius:16px;padding:10px 6px;text-align:center}.tr-stat b{display:block;font-size:1.25em;color:var(--ac)}.tr-stat small{color:var(--sub);font-size:.75em}
+.ie-chips span b{margin-left:6px;font-weight:700;color:var(--ac)}.ie-chips span.on{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 12%,transparent)}
 .ie-chips span{font-size:.8em;padding:4px 10px;border-radius:999px;background:var(--glass);border:1px solid var(--edge);cursor:pointer}
 #mdt{cursor:pointer}.mdh{flex-wrap:wrap}.mdh .mi-row{flex-basis:100%;width:100%;margin:0 0 4px}
 .mhead .mtt{flex:1;min-width:0}
@@ -601,7 +607,7 @@ let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.18.0';
+const APP_VER='1.19.0';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -1262,7 +1268,28 @@ async function trUpload(){if(!S.set.ghTok)return toast('請先設定 GitHub 權�
  catch(e){say('❌ '+e.message);toast('❌ 上傳失敗：'+e.message,4000)}}
 async function trClear(){if(!confirm('刪除 GitHub 上所有訓練資料？（手機裡的會議不受影響）'))return;try{const r=await trRel(0);if(r)await ghApi('DELETE','/releases/'+r.id);toast('已刪除',2000)}catch(e){toast('❌ '+e.message,3000)}renderSet()}
 /* ===== 詞庫：專有名詞＋從你的修改學到的常見辨識錯誤（給 AI 修正與重點整理參考，越用越準） ===== */
-function vocab(){const F=(S.set.fixes||[]).slice().sort((a,b)=>(b[2]||1)-(a[2]||1)).slice(0,150).map(x=>[x[0],x[1]]);return{terms:(S.set.terms||[]).slice(0,150),fixes:F}}
+const VCAT0=[['name','👤','人名'],['place','📍','地名'],['org','🏢','公司・客戶・單位'],['chem','🧪','化學專有名詞'],['phys','⚛️','物理專有名詞'],['qa','✅','品保專有名詞'],['prod','📦','產品・料號・文件編號'],['other','📝','其他']];
+function vcats(){if(!Array.isArray(S.set.vcat)){S.set.vcat=VCAT0.map(([id,ic,n])=>({id,ic,n,items:id=='other'?(S.set.terms||[]).slice():[]}));save()}return S.set.vcat}
+function vcatSync(){S.set.terms=[...new Set(vcats().flatMap(c=>c.items))];S.set.vocT=Date.now();save()}
+/* 分類表單：一格一格往下填 */
+function vcatEdit(id){const L=vcats();let c=L.find(x=>x.id==id);const isNew=!c;if(isNew)c={id:'c'+Date.now().toString(36),ic:'🏷',n:'',items:[]};
+ return new Promise(done=>{const s=$('#act');let rows=c.items.length?c.items.slice():[''];
+  const draw=()=>{$('#actb').innerHTML=`<div class="vf"><div class="vf-h"><input class="ti vf-ic" id="vf-ic" value="${esc(c.ic)}" maxlength="4" aria-label="圖示"><input class="ti" id="vf-n" value="${esc(c.n)}" placeholder="分類名稱（例如：醫療專有名詞）"></div>
+   <div class="vf-l" id="vf-l">${rows.map((v,i)=>`<div class="vf-r"><span class="vf-no">${i+1}</span><input class="ti" data-vi="${i}" value="${esc(v)}" placeholder="${i==rows.length-1?'輸入一個詞，按 Enter 換下一格':''}" enterkeyhint="next" autocomplete="off"><button class="ib" data-vd="${i}" aria-label="刪除">✕</button></div>`).join('')}</div>
+   <button class="btn sm" data-vadd="1" style="margin:6px 0 2px">＋ 新增一格</button><small class="vf-tip">一格放一個詞（人名、地名、術語…），AI 修正錯字和整理重點時會優先用這些正確寫法</small>
+   <div class="pr vf-b">${isNew?'':'<button class="btn dng" data-vdel="1">🗑 刪除分類</button>'}<button class="btn" data-vx="1">取消</button><button class="btn on" data-vok="1">💾 儲存</button></div></div>`};
+  const read=()=>{rows=[...$$('#vf-l [data-vi]')].map(x=>x.value);c.ic=$('#vf-ic').value.trim()||'🏷';c.n=$('#vf-n').value.trim()};
+  draw();s.classList.add('on','ue-on');setTimeout(()=>{const f=isNew?$('#vf-n'):$$('#vf-l [data-vi]').at(-1);f&&f.focus()},120);
+  const close=v=>{s.classList.remove('on','ue-on');s.onclick=null;s.onkeydown=null;s.oninput=null;done(v)};
+  const focusRow=i=>setTimeout(()=>{const x=$(`#vf-l [data-vi="${i}"]`);x&&(x.focus(),x.scrollIntoView({block:'nearest'}))},30);
+  s.oninput=e=>{const x=e.target.closest('[data-vi]');if(x&&+x.dataset.vi==rows.length-1&&x.value.trim()){read();rows.push('');const k=+x.dataset.vi,pos=x.selectionStart;draw();const y=$(`#vf-l [data-vi="${k}"]`);y.focus();y.setSelectionRange(pos,pos)}};
+  s.onkeydown=e=>{const x=e.target.closest('[data-vi]');if(x&&e.key=='Enter'){e.preventDefault();read();const k=+x.dataset.vi;if(k==rows.length-1)rows.push('');draw();focusRow(k+1)}};
+  s.onclick=e=>{const d=e.target.closest('[data-vd]');if(d){read();rows.splice(+d.dataset.vd,1);if(!rows.length)rows=[''];draw();return}
+   if(e.target.closest('[data-vadd]')){read();rows.push('');draw();focusRow(rows.length-1);return}
+   if(e.target.closest('[data-vx]')||e.target==s)return close(0);
+   if(e.target.closest('[data-vdel]')){if(!confirm(`刪除「${c.n}」分類和裡面 ${c.items.length} 個詞？`))return;S.set.vcat=L.filter(x=>x.id!=c.id);vcatSync();toast('已刪除分類',1500);return close(1)}
+   if(e.target.closest('[data-vok]')){read();if(!c.n)return toast('請輸入分類名稱',2000);c.items=[...new Set(rows.map(x=>x.trim()).filter(Boolean))];if(isNew)L.push(c);vcatSync();toast(`✅ 已儲存「${c.n}」・${c.items.length} 個詞`,1800);close(1)}}})}
+function vocab(){const F=(S.set.fixes||[]).slice().sort((a,b)=>(b[2]||1)-(a[2]||1)).slice(0,150).map(x=>[x[0],x[1]]);vcats();return{terms:(S.set.terms||[]).slice(0,200),groups:vcats().filter(c=>c.items.length).map(c=>({name:c.n,items:c.items.slice(0,80)})),fixes:F}}
 function learnFix(a,b){if(S.set.vlearn===0||!a||!b||a===b||a.length>400||b.length>400)return 0;
  /* 逐字比對，找出被你改掉的詞 */
  const n=a.length,m=b.length,D=Array.from({length:n+1},()=>new Uint16Array(m+1));for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)D[i][j]=a[i]===b[j]?D[i+1][j+1]+1:Math.max(D[i+1][j],D[i][j+1]);
@@ -1320,7 +1347,7 @@ async function syTokFetch(manual){if(!S.set.syncPw){if(manual)toast('請先輸�
  const raw=n=>fetch(`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/notes/${n}?t=${Date.now()}`,{cache:'no-store'}).then(r=>r.ok?r.text():null).catch(()=>null);
  try{const kt=await raw('key.json'),ct=await raw('cfg.enc');if(!kt||!ct){if(manual)toast('還沒有裝置上傳過權杖：請先在已設定權杖的手機上按一次「立即同步」',5000);return false}
   const kj=JSON.parse(kt);SY.key=null;const key=await syKey(kj.salt,kj.iter);try{await syDec(key,kj.check)}catch(e){if(manual)toast('❌ 同步密碼錯誤',3000);return false}
-  const c=await syDec(key,ct);if(!c.ghTok)return false;S.set.ghTok=c.ghTok;if(c.terms)S.set.terms=[...new Set([...(S.set.terms||[]),...c.terms])];if(c.fixes)S.set.fixes=c.fixes;S.set.cfgH='';save();if(manual)toast('✅ 已取得 GitHub 權杖，雲端功能可以使用了',3000);if(cur=='set')renderSet();return true}
+  const c=await syDec(key,ct);if(!c.ghTok)return false;S.set.ghTok=c.ghTok;if(c.vcat){S.set.vcat=c.vcat;vcatSync()}else if(c.terms){const o=vcats().find(z=>z.id=='other');c.terms.forEach(x=>{if(o&&!o.items.includes(x))o.items.push(x)});vcatSync()}if(c.fixes)S.set.fixes=c.fixes;S.set.cfgH='';save();if(manual)toast('✅ 已取得 GitHub 權杖，雲端功能可以使用了',3000);if(cur=='set')renderSet();return true}
  catch(e){if(manual)toast('❌ 無法取得：'+e.message,4000);return false}}
 async function syncNow(manual){if(S.set.sync&&S.set.syncPw&&!S.set.ghTok)await syTokFetch(0);
  if(!S.set.sync||!S.set.ghTok||!S.set.syncPw){if(manual)toast(!S.set.ghTok?'請先設定 GitHub 權杖':'請先設定同步密碼',3000);return}
@@ -1334,10 +1361,11 @@ async function syncNow(manual){if(S.set.sync&&S.set.syncPw&&!S.set.ghTok)await s
   /* 權杖也加密同步：其他裝置（例如網頁版）只要輸入同步密碼就能使用雲端功能 */
   try{const cf=await syGet('cfg.enc');let rc={};if(cf){try{rc=await syDec(key,cf.txt)}catch(e){}}
    /* 合併其他裝置的詞庫 */
-   let chg=0;if(rc.terms){const T0=new Set(S.set.terms||[]);rc.terms.forEach(x=>{if(!T0.has(x)){T0.add(x);chg=1}});S.set.terms=[...T0]}
+   let chg=0;if(rc.vcat){const L=vcats();rc.vcat.forEach(rcz=>{let c=L.find(x=>x.n==rcz.n);if(!c){L.push(rcz);chg=1}else rcz.items.forEach(w=>{if(!c.items.includes(w)){c.items.push(w);chg=1}})});vcatSync()}
+   else if(rc.terms){const o=vcats().find(c=>c.id=='other');rc.terms.forEach(x=>{if(!S.set.terms.includes(x)&&o){o.items.push(x);chg=1}});vcatSync()}
    if(rc.fixes){S.set.fixes=S.set.fixes||[];rc.fixes.forEach(f=>{const o=S.set.fixes.find(z=>z[0]==f[0]&&z[1]==f[1]);if(!o){S.set.fixes.push(f);chg=1}else if((f[2]||1)>(o[2]||1))o[2]=f[2]})}
    if(rc.del)S.set.fixes=S.set.fixes.filter(f=>!(rc.del||[]).includes(f[0]+'→'+f[1]));
-   const h=await sha1s(S.set.ghTok+JSON.stringify(S.set.terms)+JSON.stringify(S.set.fixes));if(S.set.cfgH!==h||!cf){await syPut('cfg.enc',await syEnc(key,{ghTok:S.set.ghTok,terms:S.set.terms||[],fixes:S.set.fixes||[],t:Date.now()}),cf&&cf.sha,'更新設定');S.set.cfgH=h}save()}catch(e){}
+   const h=await sha1s(S.set.ghTok+JSON.stringify(S.set.vcat)+JSON.stringify(S.set.fixes));if(S.set.cfgH!==h||!cf){await syPut('cfg.enc',await syEnc(key,{ghTok:S.set.ghTok,vcat:vcats(),terms:S.set.terms||[],fixes:S.set.fixes||[],t:Date.now()}),cf&&cf.sha,'更新設定');S.set.cfgH=h}save()}catch(e){}
   /* 2. 目錄 */
   const xf=await syGet('index.enc');let idx=xf?await syDec(key,xf.txt):{items:{}};const sha={};let changed=0;
   const local={};S.meets.forEach(x=>local[x.id]=x);
@@ -1645,11 +1673,17 @@ function renderSet(){if(TRM===null&&S.set.ghTok){TRM=undefined;trModels().then((
  const mgr=k=>{const L=infoList(k),[ic,n]=INFO_N[k];return `<div class="sl"><label>${ic} 常用${n}<span>${L.length} 個</span></label><div class="ie-chips">${L.map((x,i)=>`<span class="ie-x" data-ix="${k}:${i}">${esc(x)} ✕</span>`).join('')}<span data-iadd="${k}">＋ 新增</span></div></div>`};
  h+=sec('🏷 會議資訊欄位',`<div class="grp glass">${tg('fcli','客戶名稱','錄音前或之後可以選擇／輸入客戶，會顯示在紀錄、Word 匯出')}${s.fcli?mgr('cli'):''}${tg('froom','會議室','可以選擇在哪間會議室開會')}${s.froom?mgr('room'):''}<div class="sl"><small>常用清單會依使用順序自動排列；點 ✕ 刪除</small></div></div>`);
  {const TL=S.meets.filter(x=>x.train),mins=Math.round(TL.reduce((a,x)=>a+(x.dur||0),0)/60);
-  h+=sec('🎓 訓練我的語音模型',`<div class="grp glass"><div class="sl"><small>用你<b>校對過</b>的會議錄音，訓練一個更懂你們口音、人名和專有名詞的語音辨識模型（以 OpenAI Whisper 為基礎微調）。<br>① 打開校對好的會議 → 右上角 ⋯ →「🎓 加入訓練資料」<br>② 按下面「上傳訓練資料」<br>③ 按「開啟 Google Colab」，用 Google 免費的 GPU 訓練（約 15～30 分鐘／每小時資料）<br>④ 訓練完有進步，下面「雲端轉文字」就可以選「🎓 我的模型」</small></div>
-  <div class="row"><b>已加入的訓練資料<small>${TL.length} 場會議・約 ${mins} 分鐘${mins<60?'（建議至少 1 小時，越多越準）':''}</small></b></div>
-  <div class="pr" style="margin:4px 0 8px;flex-wrap:wrap"><button class="btn sm on" data-a="trup">⬆ 上傳訓練資料</button><button class="btn sm" data-a="trcolab">🚀 開啟 Google Colab 開始訓練</button><button class="btn sm dng" data-a="trclr">🗑 刪除雲端訓練資料</button></div><div class="sl"><small id="trst"></small></div>
-  <div class="sl"><label>我的模型</label><small id="trm">${TRM?(TRM.length?TRM.slice(0,3).map(x=>`${esc(x.date||x.tag)}・${esc(String(x.base||'').split('/').pop())}・字錯率 ${(x.base_cer*100).toFixed(1)}% → <b>${(x.new_cer*100).toFixed(1)}%</b>（${x.minutes} 分鐘資料）`).join('<br>'):'還沒有訓練好的模型'):'讀取中…'}</small></div></div>`)}
- const FX=(S.set.fixes||[]);h+=sec('📚 詞庫（讓 AI 越用越準）',`<div class="grp glass"><div class="sl"><label>專有名詞<span>${(S.set.terms||[]).length} 個</span></label><textarea class="ti" id="vterms" rows="3" placeholder="人名、地名、公司、產品、術語…（一行一個，或用、分隔）&#10;例如：林慧因、彰化和美、聯合大學、Vantive、PMPMMONE0000002">${esc((S.set.terms||[]).join('\n'))}</textarea><small>AI 修正錯字和整理重點時，會優先使用這些正確寫法</small></div>
+  const last=TRM&&TRM[0];
+  h+=sec('🎓 訓練我的語音模型',`<div class="grp glass"><div class="sl"><small>用你<b>校對過</b>的會議錄音，訓練一個更懂你們口音、人名與專有名詞的語音辨識模型（以 OpenAI Whisper 微調）。</small><ol class="tr-steps"><li>打開校對好的會議 → 右上角 ⋯ →「🎓 加入訓練資料」</li><li>上傳訓練資料</li><li>到 Google Colab 用免費 GPU 訓練</li><li>有進步就在「雲端轉文字」選「🎓 我的模型」</li></ol></div>
+  <div class="tr-stat"><div><b>${TL.length}</b><small>場會議</small></div><div><b>${mins}</b><small>分鐘語音</small></div><div><b>${last?(last.new_cer*100).toFixed(1)+'%':'—'}</b><small>我的模型字錯率</small></div></div>
+  ${mins<60?`<div class="sl"><small style="color:var(--ac)">💡 建議累積 1 小時以上的訓練資料，越多越準</small></div>`:''}
+  <div class="row" data-a="trup"><span>⬆️</span><b>上傳訓練資料<small id="trst">${TL.length?`把 ${TL.length} 場會議的錄音與逐字稿傳到你的 GitHub（只有你看得到）`:'先到會議 ⋯ 選「加入訓練資料」'}</small></b>›</div>
+  <div class="row" data-a="trcolab"><span>🚀</span><b>開啟 Google Colab 開始訓練<small>免費 T4 GPU・每小時資料約 15～30 分鐘</small></b>›</div>
+  <div class="row"><span>🎓</span><b>我的模型<small id="trm">${TRM?(TRM.length?TRM.slice(0,3).map(x=>`${esc(x.date||x.tag)}・字錯率 ${(x.base_cer*100).toFixed(1)}% → <b>${(x.new_cer*100).toFixed(1)}%</b>・${x.minutes} 分鐘資料`).join('<br>'):'還沒有訓練好的模型'):'讀取中…'}</small></b></div>
+  <div class="row" data-a="trclr"><span>🗑</span><b style="color:#c0392b">刪除雲端訓練資料<small>只刪 GitHub 上的訓練資料，手機裡的會議不受影響</small></b>›</div></div>`)}
+ const FX=(S.set.fixes||[]);h+=sec('📚 詞庫（讓 AI 越用越準）',`<div class="grp glass"><div class="sl"><small>依類別整理正確寫法，AI 修正錯字和整理重點時會優先使用。點分類打開表單，一格一格填寫。</small></div>
+  ${vcats().map(c=>`<div class="row vc-r" data-vc="${esc(c.id)}"><span class="vc-ic">${esc(c.ic)}</span><b>${esc(c.n)}<small>${c.items.length?esc(c.items.slice(0,4).join('、'))+(c.items.length>4?'…':''):'尚未填寫'}</small></b><span class="vc-n">${c.items.length}</span>›</div>`).join('')}
+  <div class="row vc-r" data-vc="+"><span class="vc-ic">＋</span><b>新增分類<small>自訂分類名稱，例如「醫療」「機台設備」</small></b>›</div>
   ${tg('vlearn','從我的修改自動學習','你在逐字稿改過的字會被記下來（例如「昆明 → 和美」），之後 AI 修正會參考')}
   ${FX.length?`<div class="sl"><label>已學到的正確寫法<span>${FX.length} 個</span></label><div class="ie-chips">${FX.slice(0,60).map((f,i)=>`<span class="ie-x" data-fx="${i}">${esc(f[0])} → <b>${esc(f[1])}</b>${f[2]>1?' ×'+f[2]:''} ✕</span>`).join('')}</div><small>點一下刪除學錯的</small></div>`:''}</div>`);
  h+=sec('📝 逐字稿',`<div class="grp glass">${tg('tw','中文輸出為繁體（台灣用語）','Whisper 預設常輸出簡體，自動用 OpenCC 轉成繁體')}${tg('hall','過濾「幻聽」字幕','移除「請訂閱」「字幕由…提供」這類模型亂補的句子')}${tg('keepAud','保存錄音檔','可以從逐字稿任一句直接播放原音（約 15 MB／小時）')}</div>`);
@@ -1679,8 +1713,8 @@ function renderSet(){if(TRM===null&&S.set.ghTok){TRM=undefined;trModels().then((
  ghInfo();
  $('#se').innerHTML=G+h+`<p style="grid-column:1/-1;text-align:center;color:var(--sub);font-size:.8em;margin-top:20px">AI 翻譯會議 v${APP_VER}${I?'（APK '+I.ver+'）':''} · 所有 AI 都在這台裝置上運算</p>`;
  AI.call('info',{}).then(r=>{const g=$('#gpuinfo');g&&(g.textContent=(r.gpu?'✅ 這台裝置支援 WebGPU（GPU 加速）':'⚠️ 這台裝置不支援 WebGPU，會用 CPU 運算（較慢，建議用 Base 以下的語音模型）')+'・Transformers.js '+r.ver+'（'+(r.lib=='jsdelivr'?'jsDelivr':IS_APP?'App 內建':'GitHub')+'）'+(r.thr>1?'・多執行緒 '+r.thr:''))}).catch(e=>{const g=$('#gpuinfo');g&&(g.textContent='⚠️ AI 模組無法載入：'+e.message+'（請確認網路）')})}
-$('#se').addEventListener('change',e=>{if(e.target.id=='vterms'){S.set.terms=[...new Set(e.target.value.split(/[\n、,，;；]/).map(x=>x.trim()).filter(Boolean))];S.set.vocT=Date.now();save();toast('📚 已儲存詞庫',1500)}});
-$('#se').onclick=async e=>{const _fx=e.target.closest('[data-fx]');if(_fx){S.set.fixes.splice(+_fx.dataset.fx,1);S.set.vocT=Date.now();save();renderSet();return}
+$('#se').onclick=async e=>{const _vc=e.target.closest('[data-vc]');if(_vc){if(await vcatEdit(_vc.dataset.vc=='+'?null:_vc.dataset.vc))renderSet();return}
+ const _fx=e.target.closest('[data-fx]');if(_fx){S.set.fixes.splice(+_fx.dataset.fx,1);S.set.vocT=Date.now();save();renderSet();return}
  const _ix=e.target.closest('[data-ix]'),_ia=e.target.closest('[data-iadd]');if(_ix||_ia){if(_ix){const [k,i]=_ix.dataset.ix.split(':');const key=k=='cli'?'clients':'rooms';S.set[key].splice(+i,1)}else{const k=_ia.dataset.iadd,v=prompt('新增'+INFO_N[k][1]+'名稱');if(v&&v.trim()){const key=k=='cli'?'clients':'rooms';S.set[key]=[...infoList(k).filter(x=>x!==v.trim()),v.trim()]}}save();renderSet();return}
  const s=S.set,b=e.target.closest('b[data-k]'),r=e.target.closest('[data-th]'),a=e.target.closest('[data-a]'),_m=a&&a.dataset.a=='mthr'&&(setMthr(!MTHR()),1),pr=e.target.closest('[data-p]'),t=e.target.closest('[data-tg]'),as=e.target.closest('[data-asr]'),en=e.target.closest('[data-eng]');
  if(b){const p=b.parentNode.id;const key={sm:'mode',su:'ui',sf:'surf',sdev:'dev',shf:'hf',smsrc:'msrc',smcloud:'mcloud',scm:'cmodel',sllm:'llm'}[p];if(!key)return;s[key]=b.dataset.k;if(key=='dev'||key=='hf'||key=='msrc'){if(AI.w){AI.w.terminate();AI.w=null}}lastW=0;layout();apply();save();renderSet()}
