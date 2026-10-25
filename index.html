@@ -131,7 +131,10 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 .mhead{display:flex;align-items:center;gap:8px}
 .mi-row{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}.mi-c{font-size:.82em;padding:5px 11px;border-radius:999px;border:1px dashed var(--edge);color:var(--sub);cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mi-c.on{border-style:solid;color:var(--tx,inherit);background:var(--glass);font-weight:600}
 .mc{position:relative}.mc-ed{position:absolute;right:8px;top:8px;opacity:.75}.mc>b{padding-right:34px}.mc-i{display:block;color:var(--ac);margin-top:2px}
-.ie-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.updp{position:fixed;left:50%;top:calc(var(--sat) + 70px);transform:translate(-50%,-20px);opacity:0;pointer-events:none;z-index:160;width:min(420px,calc(100% - 32px));border-radius:18px;padding:10px 14px;transition:.3s}.updp.on{opacity:1;transform:translate(-50%,0)}.updp span{display:block;font-size:.88em;font-weight:600;margin-bottom:6px}.updp div{height:6px;border-radius:6px;background:var(--edge);overflow:hidden}.updp i{display:block;height:100%;width:0;background:var(--ac);transition:width .3s}
+.ie-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.tw{padding:16px 16px 10px}.tw h3{margin:0 0 6px;font-size:1.05em}.tw h3 small{display:block;color:var(--sub);font-weight:400;font-size:.78em;margin-top:2px}.tw-why{font-size:.85em;color:var(--sub);line-height:1.6;margin:4px 0 10px}
+.tw-s{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--edge)}.tw-s>b{width:26px;height:26px;border-radius:50%;background:var(--ac);color:#fff;display:grid;place-items:center;flex:none;font-size:.85em}.tw-s>div{flex:1;min-width:0}.tw-s span{display:block;font-weight:700;font-size:.92em}.tw-s small{display:block;color:var(--sub);font-size:.78em;line-height:1.5;margin-top:2px}.tw-s .btn{flex:none}
+.tw-st{display:block;margin-top:8px;font-size:.82em;color:var(--ac)}.tw-cta b{color:var(--ac)}
+.updp{position:fixed;left:50%;top:calc(var(--sat) + 70px);transform:translate(-50%,-20px);opacity:0;pointer-events:none;z-index:160;width:min(420px,calc(100% - 32px));border-radius:18px;padding:10px 14px;transition:.3s}.updp.on{opacity:1;transform:translate(-50%,0)}.updp span{display:block;font-size:.88em;font-weight:600;margin-bottom:6px}.updp div{height:6px;border-radius:6px;background:var(--edge);overflow:hidden}.updp i{display:block;height:100%;width:0;background:var(--ac);transition:width .3s}
 .upd-big b{color:var(--ac)}.vl{max-height:55vh;overflow:auto}
 .vc-r .vc-ic{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:var(--glass);border:1px solid var(--edge);flex:none}.vc-r small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vc-r b{min-width:0}.vc-n{min-width:26px;text-align:center;font-weight:700;color:var(--ac);font-size:.9em}
 .vf{padding:16px 16px 10px}.vf-h{display:flex;gap:8px;margin-bottom:10px}.vf-h .ti{margin:0}.vf-ic{width:56px!important;flex:none;text-align:center;font-size:1.2em}
@@ -610,7 +613,7 @@ let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.20.0';
+const APP_VER='1.21.0';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -620,7 +623,7 @@ const CDN={occ:[LIBB+'opencc-full.js','https://cdn.jsdelivr.net/npm/opencc-js@1.
 let TESS_GH=1;const TOPT=()=>TESS_GH?{workerPath:LIBB+'tesseract/worker.min.js',corePath:LIBB+'tesseract/core',workerBlobURL:!IS_APP&&!ON_PAGES}:{};
 window.__ins=(t,r,b,l)=>{const st=document.documentElement.style;st.setProperty('--sat',t+'px');st.setProperty('--sar',r+'px');st.setProperty('--sab',b+'px');st.setProperty('--sal',l+'px')};
 window.__night=()=>apply();
-window.__resume=()=>{if(cur=='set')renderSet()};
+window.__resume=()=>{twResume();if(cur=='set'&&!TKW.wait)renderSet()};
 let permWait=null;
 window.__perm=(p,g)=>{if(permWait){const f=permWait;permWait=null;f(p)}if(cur=='set')renderSet()};
 const sysDark=()=>IS_APP&&NB.night?NB.night():matchMedia('(prefers-color-scheme:dark)').matches;
@@ -1041,7 +1044,7 @@ $('#mmode').onclick=()=>{if(R.on)return toast('錄音中無法切換');show('set
 $('#mlang').onchange=e=>{S.set.mlang=e.target.value;save()};$('#mtrl').onchange=e=>{S.set.mtr=e.target.value;save();if(R.m){R.m.tr=S.set.mtr;saveM(R.m)}};
 $('#mtitle').onchange=e=>{if(R.m){R.m.title=e.target.value.trim();saveM(R.m)}};
 $('#minfo').onclick=async e=>{const c=e.target.closest('[data-pick]');if(!c)return;const k=c.dataset.pick,v=await infoPick(k,MI[k]);if(v==null)return;MI[k]=v;if(R.m){R.m[k=='cli'?'client':'room']=v;saveM(R.m)}renderMeet()};
-$('#mbtn').onclick=e=>{const b=e.target.closest('button');if(!b)return;({mstart:mStart,mstop:mStop,mpause:mPause,mopen:()=>R.m&&openMD(R.m.id),mresume:()=>{mPump();renderMeet()},mretry:()=>{if(!S.set.ghTok)return toast('請先到「設定 → ☁️ GitHub 雲端轉文字」填入 GitHub 權杖',3500);R.m.st='cloud';cloudRun(R.m);renderMeet()}})[b.id]?.()};
+$('#mbtn').onclick=e=>{const b=e.target.closest('button');if(!b)return;({mstart:mStart,mstop:mStop,mpause:mPause,mopen:()=>R.m&&openMD(R.m.id),mresume:()=>{mPump();renderMeet()},mretry:()=>{if(!needTok('雲端轉文字'))return;R.m.st='cloud';cloudRun(R.m);renderMeet()}})[b.id]?.()};
 function mStatus(){const n=MQ.length+(mBusy?1:0);$('#mst').classList.toggle('err',!!(R.m&&R.m.st=='cloudfail'));if(R.m&&R.m.cloud&&(R.on||R.m.st=='cloud'||R.m.st=='cloudwait'||R.m.st=='cloudfail')){$('#mst').textContent=R.on?(R.paused?'⏸ 已暫停':'● 錄音中')+'・結束後上傳到 GitHub 轉文字':(R.m.st=='cloudfail'?'':'☁️ ')+(R.m.cs||'GitHub 處理中');$('#mclock').textContent=fmtT(R.on&&R.cap?R.m.off+R.cap.time:R.m.dur);return}
  $('#mst').textContent=R.on?(R.paused?'⏸ 已暫停':'● 錄音中')+(n?`・待辨識 ${n} 段`:'・即時辨識中'):n?`辨識剩下的 ${n} 段語音…`:R.m?`已完成・${R.m.u.length} 句・${R.m.spk.length} 位講者`:'準備就緒・可以錄很久，不限時間';
  const t=R.on&&R.cap?R.m.off+R.cap.time:R.m?R.m.dur:0;$('#mclock').textContent=fmtT(t)}
@@ -1180,8 +1183,10 @@ $('#mfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f
 /* ================= GitHub 雲端轉文字 =================
    上傳錄音到你的 GitHub 儲存庫「草稿 Release」(只有你看得到) → 觸發 GitHub Actions 辨識
    → 伺服器下載後立刻刪除錄音 → 取回結果 → 刪除整個草稿 */
-const cloudOn=()=>S.set.mcloud=='gh';
-const GHA={api:`https://api.github.com/repos/${GH.user}/${GH.repo}`};
+const cloudOn=()=>S.set.mcloud=='gh'&&!!S.set.ghTok;
+/* 雲端功能用哪個儲存庫：每個人用自己 Fork 的（各自的權杖、伺服器、資料完全分開）；App、模型、更新仍從原作者的公開儲存庫下載 */
+const CR=()=>S.set.cRepo||(GH.user+'/'+GH.repo);
+const GHA={get api(){return 'https://api.github.com/repos/'+CR()}};
 function mediaDur(f){return new Promise(ok=>{const a=document.createElement('audio'),u=URL.createObjectURL(f);a.preload='metadata';a.onloadedmetadata=()=>{const d=a.duration;URL.revokeObjectURL(u);ok(isFinite(d)?d:0)};a.onerror=()=>ok(0);a.src=u;setTimeout(()=>ok(0),5000)})}
 const HTTPCB={};let httpN=0;
 window.__http=(id,code,body)=>{const c=HTTPCB[id];if(c){delete HTTPCB[id];c(code,body)}};
@@ -1196,7 +1201,7 @@ async function ghApi(method,path,body,hx){const url=path.startsWith('http')?path
  let j=null;try{j=txt?JSON.parse(txt):null}catch(e){}
  if(code>=400){const msg=j&&j.message||txt.slice(0,120);throw Object.assign(new Error(code==401?'GitHub 權杖無效或已過期':code==403||code==404?'GitHub 權杖沒有這個儲存庫的權限（需要 Contents 與 Actions 讀寫）':'GitHub 錯誤 '+code+'：'+msg),{code})}
  return j??txt}
-async function ghUpload(rel,name,blob,onp){const url=`https://uploads.github.com/repos/${GH.user}/${GH.repo}/releases/${rel}/assets?name=${encodeURIComponent(name)}`,h=ghHeaders({'Content-Type':blob.type||'application/octet-stream'});
+async function ghUpload(rel,name,blob,onp){const url=`https://uploads.github.com/repos/${CR()}/releases/${rel}/assets?name=${encodeURIComponent(name)}`,h=ghHeaders({'Content-Type':blob.type||'application/octet-stream'});
  if(IS_APP&&NB.upBegin){const id=NB.upBegin();if(!id)throw new Error('手機無法準備上傳檔案（請更新到最新版 APK）');const bin=new Uint8Array(await blob.arrayBuffer()),C=196608;
   for(let i=0;i<bin.length;i+=C){const s=bin.subarray(i,i+C);let b='';for(let j=0;j<s.length;j+=8192)b+=String.fromCharCode.apply(null,s.subarray(j,j+8192));NB.upB64(id,btoa(b));if(i%(C*20)==0)await sleep(0)}
   const [code,txt]=await new Promise(ok=>{const cb='u'+(++httpN);HTTPCB[cb]=(c,b)=>{delete HTTPCB[cb+':p'];ok([c,b])};HTTPCB[cb+':p']=onp||(()=>{});NB.upSend(id,cb,'POST',url,JSON.stringify(h))});
@@ -1209,14 +1214,16 @@ const CLOUD={};
 /* 通知欄:雲端轉文字進度(App 在背景時由原生服務繼續查詢 GitHub) */
 const CNT={};
 function cloudNote(m,t,p){if(!IS_APP||!NB.cloudWatch)return;const now=Date.now();if(CNT[m.id]&&now-CNT[m.id]<2000&&p!=null&&p<100)return;CNT[m.id]=now;
- const j=m.cj||AREL[m.id]||{};try{NB.cloudWatch(m.id,mTitle(m),GH.user+'/'+GH.repo,S.set.ghTok||'',+j.rel||0,t,p==null?-1:Math.round(p),!!j.disp)}catch(e){}}
+ const j=m.cj||AREL[m.id]||{};try{NB.cloudWatch(m.id,mTitle(m),CR(),S.set.ghTok||'',+j.rel||0,t,p==null?-1:Math.round(p),!!j.disp)}catch(e){}}
 function notifAsk(){if(!IS_APP)return;const P=perm();if(P&&P.notif&&P.notif!='yes'&&NB.requestPerms)NB.requestPerms('notif')}
 function cloudFin(m,ok,msg){delete CNT[m.id];if(IS_APP&&NB.cloudDone){try{NB.cloudDone(m.id,ok,msg||'')}catch(e){}}}
 window.__openM=id=>{if(id&&MS[id]||S.meets.some(x=>x.id==id))openMD(id)};
 const etaS=s=>s>=3600?`${Math.floor(s/3600)} 小時 ${Math.round(s%3600/60)} 分`:s>=90?`${Math.round(s/60)} 分鐘`:'1 分鐘內';
 const stTxt=b=>'GitHub '+(b.stage||'處理中'),etaT=e=>e>0?`・剩約 ${etaS(e)}`:'';
 function cloudSt(m,t,p,eta){m.cs=t+(p!=null?` ${Math.round(p)}%`:'')+etaT(eta);saveM(m);cloudNote(m,t+etaT(eta),p);if(R.m==m&&cur=='meet'){mStatus();if(!m.u.length&&!R.on)mList(m)}if(MD.id==m.id)renderMD();if(cur=='rec')renderRec()}
-async function cloudRun(m){if(CLOUD[m.id])return;CLOUD[m.id]=1;
+/* 啟動雲端工作；Fork 第一次使用時 GitHub 可能還沒開啟 Actions → 給清楚的提示 */
+async function ghDispatch(body){try{return await ghApi('POST','/actions/workflows/transcribe.yml/dispatches',body)}catch(e){if(S.set.cRepo&&(e.code==404||e.code==403||e.code==422)){openURL(`https://github.com/${CR()}/actions`);throw new Error('你的儲存庫還沒開啟 GitHub Actions：已幫你打開 Actions 頁面，請按綠色按鈕「I understand my workflows, go ahead and enable them」，再回來按重試')}throw e}}
+async function cloudRun(m){if(CLOUD[m.id])return;CLOUD[m.id]=1;forkSync(0);
  try{if(!S.set.ghTok){m.st='cloudwait';cloudSt(m,'等待設定 GitHub 權杖（設定 → ☁️ GitHub 雲端）');return}
   m.st='cloud';m.cj=m.cj||{up:{}};
   notifAsk();if(!m.cj.rel){cloudSt(m,'建立 GitHub 工作');const r=await ghApi('POST','/releases',{tag_name:'job-'+m.id,name:'job-'+m.id,draft:true,body:JSON.stringify({state:'uploading'})});m.cj.rel=r.id;saveM(m)}
@@ -1229,7 +1236,7 @@ async function cloudRun(m){if(CLOUD[m.id])return;CLOUD[m.id]=1;
   if(!m.cj.job){const spk=+S.set.maxSpk||0,sens=Math.max(.45,Math.min(.85,1.45-(+S.set.thr||.8)));
    const job=new Blob([JSON.stringify({parts,vocab:vocab(),title:m.title||'',client:m.client||'',room:m.room||'',lang:m.lang=='auto'?'auto':m.lang,model:S.set.cmodel||'firered',speakers:spk,sens,tw:S.set.tw?1:0,...aiOpts()})],{type:'application/json'});
    await ghUpload(rel,'job.json',job);m.cj.job=1;saveM(m)}
-  if(!m.cj.disp){cloudSt(m,'啟動 GitHub 轉文字');await ghApi('POST','/actions/workflows/transcribe.yml/dispatches',{ref:'main',inputs:{release:String(rel)}});m.cj.disp=Date.now();saveM(m)}
+  if(!m.cj.disp){cloudSt(m,'啟動 GitHub 轉文字');await ghDispatch({ref:'main',inputs:{release:String(rel)}});m.cj.disp=Date.now();saveM(m)}
   /* 等結果:讀草稿 Release 的說明欄進度 */
   let lastT=Date.now();
   for(;;){await sleep(8000);let r;try{r=await ghApi('GET','/releases/'+rel)}catch(e){if(e.code==404)throw new Error('GitHub 上的工作已被刪除，請重新上傳');cloudSt(m,'連線中斷，重試中…');continue}
@@ -1255,11 +1262,11 @@ function cloudApply(m,r){m.spk=[];const map={};
 const AIJ={};
 const AREL={};
 /* ===== 🎓 訓練我的語音模型：上傳校對過的錄音＋逐字稿 → Colab 微調 → 雲端用「我的模型」 ===== */
-const COLAB=`https://colab.research.google.com/github/${GH.user}/${GH.repo}/blob/main/training/finetune_whisper.ipynb`;
+const COLABU=()=>`https://colab.research.google.com/github/${CR()}/blob/main/training/finetune_whisper.ipynb`;
 let TRM=null;
 async function trRel(create){const rs=await ghApi('GET','/releases?per_page=100');let r=rs.find(x=>x.tag_name=='train-data');if(!r&&create)r=await ghApi('POST','/releases',{tag_name:'train-data',name:'train-data',draft:true,body:'App 上傳的訓練資料（只有你看得到）'});return r}
 async function trModels(){try{const rs=await ghApi('GET','/releases?per_page=100');TRM=rs.filter(r=>/^custom-model-/.test(r.tag_name)).map(r=>{let x={};try{x=JSON.parse(r.body||'{}')}catch(e){}return{...x,tag:r.tag_name,id:r.id}}).filter(x=>!x.test).sort((a,b)=>a.tag<b.tag?1:-1);S.set.cmOK=TRM.length?1:0;save()}catch(e){TRM=TRM||[]}return TRM}
-async function trUpload(){if(!S.set.ghTok)return toast('請先設定 GitHub 權杖',3000);const L=S.meets.filter(x=>x.train);if(!L.length)return toast('還沒有會議加入訓練資料：打開會議 → 右上角 ⋯ →「🎓 加入訓練資料」',4500);
+async function trUpload(){if(!needTok('訓練我的語音模型'))return;const L=S.meets.filter(x=>x.train);if(!L.length)return toast('還沒有會議加入訓練資料：打開會議 → 右上角 ⋯ →「🎓 加入訓練資料」',4500);
  const el=$('#trst'),say=x=>{el&&(el.textContent=x)};try{say('準備上傳…');const rel=await trRel(1);const have={};(rel.assets||[]).forEach(a=>have[a.name]=a);let n=0,sk=0;
   for(const x of L){const m=await getM(x.id);if(!m||!m.aud.length)continue;
    for(const a of m.aud){const b=await iget('a',m.id+':'+a.n);if(!b)continue;const t1=(m.aud.find(z=>z.n>a.n)||{}).t0??1e9;
@@ -1310,14 +1317,14 @@ function learnFix(a,b){if(S.set.vlearn===0||!a||!b||a===b||a.length>400||b.lengt
   const f=S.set.fixes.find(z=>z[0]===w&&z[1]===r);if(f)f[2]=(f[2]||1)+1;else S.set.fixes.unshift([w,r,1]);k++}
  if(k){S.set.fixes=S.set.fixes.slice(0,300);S.set.vocT=Date.now();save()}return k}
 function aiSt(m,t,p,eta){m.as=t+(p!=null?` ${Math.round(p)}%`:'')+etaT(eta);saveM(m,1);cloudNote(m,(x=>/^AI/.test(x)?x:'AI '+x)(t.replace(/^GitHub /,''))+etaT(eta),p);if(MD.id==m.id)renderMD()}
-async function aiRun(m,what){if(AIJ[m.id])return;if(!S.set.ghTok&&S.set.sync)await syTokFetch(0);if(!S.set.ghTok)return toast('請先到「設定 → ☁️ GitHub 雲端轉文字」填入 GitHub 權杖',3500);
+async function aiRun(m,what){if(AIJ[m.id])return;if(!S.set.ghTok&&S.set.sync)await syTokFetch(0);if(!needTok('AI 修正錯字・重點整理'))return;
  if(!m.u.length)return toast('這場會議還沒有逐字稿');const o=aiOpts();if(!o.llm)return toast('AI 整理已關閉，請到「設定 → ✨ AI 修正錯字・重點整理」開啟',3500);
- AIJ[m.id]=1;let rel=null;
+ AIJ[m.id]=1;let rel=null;forkSync(0);
  try{aiSt(m,'建立 GitHub 工作');const r0=await ghApi('POST','/releases',{tag_name:'job-ai-'+m.id+'-'+Date.now().toString(36),name:'job-ai-'+m.id,draft:true,body:JSON.stringify({state:'uploading'})});rel=r0.id;AREL[m.id]={rel,disp:0};notifAsk();
   const names={};m.spk.forEach(s=>names[s.id]=s.name);
   const job={mode:'text',vocab:vocab(),title:m.title||'',client:m.client||'',room:m.room||'',dur:m.dur,lang:m.lang,tw:S.set.tw?1:0,llm:o.llm,fix:what!='sum'?1:0,summ:what!='fix'?1:0,names,segs:m.u.map(u=>({s:u.t0,e:u.t1,spk:u.s,text:u.text}))};
   await ghUpload(rel,'job.json',new Blob([JSON.stringify(job)],{type:'application/json'}));
-  aiSt(m,'啟動 GitHub AI 整理');await ghApi('POST','/actions/workflows/transcribe.yml/dispatches',{ref:'main',inputs:{release:String(rel)}});AREL[m.id].disp=1;const t0=Date.now();
+  aiSt(m,'啟動 GitHub AI 整理');await ghDispatch({ref:'main',inputs:{release:String(rel)}});AREL[m.id].disp=1;const t0=Date.now();
   for(;;){await sleep(8000);let r;try{r=await ghApi('GET','/releases/'+rel)}catch(e){if(e.code==404)throw new Error('GitHub 上的工作已被刪除');continue}
    let b={};try{b=JSON.parse(r.body||'{}')}catch(e){}
    const res=(r.assets||[]).find(a=>a.name=='result.json');
@@ -1349,13 +1356,13 @@ function syPack(m){return{id:m.id,title:m.title,client:m.client||'',room:m.room|
 async function sha1s(s){return b64e(new Uint8Array(await crypto.subtle.digest('SHA-1',new TextEncoder().encode(s||''))))}
 /* 沒有權杖的裝置:用同步密碼從公開儲存庫讀回加密的權杖 */
 async function syTokFetch(manual){if(!S.set.syncPw){if(manual)toast('請先輸入同步密碼',3000);return false}
- const raw=n=>fetch(`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/notes/${n}?t=${Date.now()}`,{cache:'no-store'}).then(r=>r.ok?r.text():null).catch(()=>null);
+ const raw=n=>fetch(`https://raw.githubusercontent.com/${CR()}/notes/${n}?t=${Date.now()}`,{cache:'no-store'}).then(r=>r.ok?r.text():null).catch(()=>null);
  try{const kt=await raw('key.json'),ct=await raw('cfg.enc');if(!kt||!ct){if(manual)toast('還沒有裝置上傳過權杖：請先在已設定權杖的手機上按一次「立即同步」',5000);return false}
   const kj=JSON.parse(kt);SY.key=null;const key=await syKey(kj.salt,kj.iter);try{await syDec(key,kj.check)}catch(e){if(manual)toast('❌ 同步密碼錯誤',3000);return false}
   const c=await syDec(key,ct);if(!c.ghTok)return false;S.set.ghTok=c.ghTok;if(c.vcat){S.set.vcat=c.vcat;vcatSync()}else if(c.terms){const o=vcats().find(z=>z.id=='other');c.terms.forEach(x=>{if(o&&!o.items.includes(x))o.items.push(x)});vcatSync()}if(c.fixes)S.set.fixes=c.fixes;S.set.cfgH='';save();if(manual)toast('✅ 已取得 GitHub 權杖，雲端功能可以使用了',3000);if(cur=='set')renderSet();return true}
  catch(e){if(manual)toast('❌ 無法取得：'+e.message,4000);return false}}
 async function syncNow(manual){if(S.set.sync&&S.set.syncPw&&!S.set.ghTok)await syTokFetch(0);
- if(!S.set.sync||!S.set.ghTok||!S.set.syncPw){if(manual)toast(!S.set.ghTok?'請先設定 GitHub 權杖':'請先設定同步密碼',3000);return}
+ if(!S.set.sync||!S.set.ghTok||!S.set.syncPw){if(manual){if(!S.set.ghTok)return needTok('會議記錄同步');toast('請先設定同步密碼',3000)};return}
  if(SY.busy)return;SY.busy=1;let up=0,down=0,del=0;const say=t=>{SY.msg=t;const el=$('#syst');el&&(el.textContent=t)};
  try{say('同步中…');
   /* 1. 金鑰檔:第一次建立;之後用來檢查密碼 */
@@ -1549,8 +1556,8 @@ $('#mdb').addEventListener('click',async e=>{const m=MD.m;if(!m)return;
  if(a){const k=a.dataset.a;if(seAct(m,k,+a.dataset.i))return;
   if(k=='docx'){if(SE.on)return;mDocx(m,{tr:0});return}
   if(k=='play'){if(AUD.m&&AUD.m.id==m.id&&AUD.url){apShow(1);apUpd();if($('#aud').paused)$('#aud').play().catch(()=>{})}else audPlay(m,-1)}
-  if(k=='cretry'){if(!S.set.ghTok)return toast('請先到「設定 → ☁️ GitHub 雲端」填入 GitHub 權杖',3500);m.cloud=1;m.st='cloud';cloudRun(m);renderMD()}
-  if(k=='cre'){if(!S.set.ghTok)return toast('請先到「設定 → ☁️ GitHub 雲端」填入 GitHub 權杖',3500);if(m.u.length&&!confirm('用 GitHub 重新轉文字？目前的逐字稿會被取代'))return;m.cloud=1;m.st='cloud';m.cj=null;cloudRun(m);renderMD()}
+  if(k=='cretry'){if(!needTok('雲端轉文字'))return;m.cloud=1;m.st='cloud';cloudRun(m);renderMD()}
+  if(k=='cre'){if(!needTok('雲端轉文字'))return;if(m.u.length&&!confirm('用 GitHub 重新轉文字？目前的逐字稿會被取代'))return;m.cloud=1;m.st='cloud';m.cj=null;cloudRun(m);renderMD()}
   if(k=='ccancel'){if(!confirm('取消 GitHub 工作？（GitHub 上的錄音會一併刪除）'))return;await cloudCancel(m);renderMD()}
   if(k=='clocal'){if(m.cj)await cloudCancel(m);m.cloud=0;await mLocal(m);renderMD()}
   if(k=='aisum'&&m.sum&&m.sum.edited&&!confirm('重新用 AI 整理會取代你手動編輯的重點，確定嗎？'))return;
@@ -1664,6 +1671,49 @@ $('#rlist').onclick=async e=>{if(e.target.id=='hclr'){if(confirm('清除所有�
 </script>
 
 <script>
+/* ================= ☁️ 雲端功能設定精靈：Fork → 建立權杖（已填好權限）→ 回到 App 自動帶入 ================= */
+const PATU=()=>'https://github.com/settings/personal-access-tokens/new?'+new URLSearchParams({name:'AI翻譯會議',description:'AI翻譯會議 App 的雲端轉文字、AI 整理、同步、訓練（只選 ai-translate-meeting 儲存庫）',expires_in:'366',contents:'write',actions:'write'}).toString();
+const TKW={wait:0,why:''};
+const TOKRE=/(github_pat_[A-Za-z0-9_]{40,}|gh[pousr]_[A-Za-z0-9]{30,})/;
+function needTok(why){if(S.set.ghTok)return true;tokWizard(why);return false}
+async function tokSetup(tok){tok=String(tok||'').trim();const m=tok.match(TOKRE);if(!m)throw new Error('這不是 GitHub 權杖（應該是 github_pat_ 開頭）');tok=m[1];
+ const old=S.set.ghTok;S.set.ghTok=tok;
+ try{const u=await ghApi('GET','https://api.github.com/user');const login=u.login;let repo=null;
+  try{const r=await ghApi('GET',`https://api.github.com/repos/${login}/${GH.repo}`);if(r&&r.full_name)repo=r.full_name}catch(e){}
+  if(!repo&&login.toLowerCase()==GH.user.toLowerCase())repo=GH.user+'/'+GH.repo;
+  if(!repo)throw new Error(`找不到 ${login}/${GH.repo}：請先完成步驟 ②（Fork 儲存庫），建立權杖時「Repository access」要選這個儲存庫`);
+  S.set.cRepo=repo==GH.user+'/'+GH.repo?'':repo;S.set.cUser=login;
+  const info=await ghApi('GET','');if(info.permissions&&!info.permissions.push)throw new Error('權杖沒有寫入權限：建立權杖時 Contents 和 Actions 要選 Read and write');
+  /* Fork 的 Actions 預設是關的 → 打開；並同步原作者的最新程式 */
+  if(S.set.cRepo){try{const w=await ghApi('GET','/actions/workflows');for(const x of (w.workflows||[]))if(x.state!='active')try{await ghApi('PUT','/actions/workflows/'+x.id+'/enable')}catch(e){}}catch(e){}forkSync(1)}
+  await ghApi('GET','/actions/workflows/transcribe.yml');
+  S.set.mcloud='gh';S.set.cfgH='';save();return{login,repo}}
+ catch(e){S.set.ghTok=old;save();throw e}}
+async function forkSync(force){if(!S.set.cRepo||!S.set.ghTok)return;if(!force&&Date.now()-(S.set.fsync||0)<6*3600e3)return;S.set.fsync=Date.now();save();try{await ghApi('POST','/merge-upstream',{branch:'main'})}catch(e){}}
+function tokWizard(why){const sh=$('#act');TKW.wait=0;TKW.why=why||'';const own=GH.user;
+ $('#actb').innerHTML=`<div class="tw"><h3>☁️ 設定雲端功能<small>約 3 分鐘・只要做一次</small></h3>
+  ${why?`<p class="tw-why">「${esc(why)}」需要連接你的 GitHub（免費）：錄音會在 GitHub 的伺服器上轉文字、AI 整理，資料放在<b>你自己的</b>儲存庫，別人看不到。</p>`:'<p class="tw-why">雲端轉文字、AI 修正與重點整理、會議記錄同步、訓練語音模型，都會使用你自己的 GitHub（免費）。翻譯、學習、手機上轉文字不需要設定。</p>'}
+  <div class="tw-s"><b>1</b><div><span>登入 GitHub</span><small>還沒有帳號就先免費註冊</small></div><button class="btn sm" data-tw="login">開啟</button></div>
+  <div class="tw-s"><b>2</b><div><span>複製（Fork）儲存庫到你的帳號</span><small>按綠色的「Create fork」就好（帳號是 ${esc(own)} 本人不用這步）</small></div><button class="btn sm" data-tw="fork">Fork</button></div>
+  <div class="tw-s"><b>3</b><div><span>建立權杖（權限已幫你填好）</span><small>「Repository access」選 <b>Only select repositories</b> → 選 <b>${esc(GH.repo)}</b> → 拉到最下面按「Generate token」→ 按複製 📋</small></div><button class="btn sm" data-tw="pat">建立</button></div>
+  <div class="tw-s"><b>4</b><div><span>回到這裡</span><small>${IS_APP?'App 會自動讀取剛剛複製的權杖；':''}也可以貼在下面</small></div></div>
+  <input class="ti" id="tw-tok" type="password" placeholder="github_pat_…（貼上權杖）" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <div class="pr" style="margin-top:10px"><button class="btn" data-tw="x" style="flex:1">稍後</button><button class="btn on" data-tw="ok" style="flex:2">✅ 完成設定</button></div><small class="tw-st" id="tw-st"></small></div>`;
+ sh.classList.add('on','ue-on');
+ const st=x=>{const e=$('#tw-st');e&&(e.textContent=x)};
+ const go=async tok=>{st('連線中…');try{const r=await tokSetup(tok);sh.classList.remove('on','ue-on');sh.onclick=null;TKW.wait=0;
+   toast(`✅ 已連接 ${r.repo}，雲端功能可以使用了`,4000);if(cur=='set')renderSet();for(const x of S.meets)if(x.st=='cloudwait'){const m=await getM(x.id);if(m)cloudRun(m)}if(S.set.sync)syncNow(0)}catch(e){st('❌ '+e.message)}};
+ TKW.go=go;
+ sh.onclick=e=>{const b=e.target.closest('[data-tw]');if(!b){if(e.target==sh){sh.classList.remove('on','ue-on');sh.onclick=null;TKW.wait=0}return}const k=b.dataset.tw;
+  if(k=='login')openURL('https://github.com/login');
+  if(k=='fork')openURL(`https://github.com/${GH.user}/${GH.repo}/fork`);
+  if(k=='pat'){TKW.wait=1;openURL(PATU())}
+  if(k=='x'){sh.classList.remove('on','ue-on');sh.onclick=null;TKW.wait=0}
+  if(k=='ok'){const v=$('#tw-tok').value;if(!v.trim())return st('請先貼上權杖（或按步驟 3 建立）');go(v)}}}
+/* 從 GitHub 回到 App：自動讀取剪貼簿裡的權杖 */
+async function twResume(){if(!TKW.wait||!$('#act').classList.contains('on'))return;let c='';try{c=IS_APP&&NB.paste?NB.paste():await navigator.clipboard.readText()}catch(e){}
+ const m=String(c||'').match(TOKRE);if(m){const i=$('#tw-tok');if(i)i.value=m[1];TKW.wait=0;TKW.go&&TKW.go(m[1])}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(twResume,400)});
 /* ================= 設定 ================= */
 function setMthr(on){S.set.mthr=on?1:0;save();toast(on?'已開啟多執行緒加速，重新載入中…':'已關閉多執行緒加速，重新載入中…',2000);
  if(IS_APP&&NB.setIso)NB.setIso(!!on);else if('serviceWorker' in navigator){try{sessionStorage.removeItem('coi')}catch(e){}if(!on)navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister()))}
@@ -1693,7 +1743,7 @@ function renderSet(){if(TRM===null&&S.set.ghTok){TRM=undefined;trModels().then((
   ${FX.length?`<div class="sl"><label>已學到的正確寫法<span>${FX.length} 個</span></label><div class="ie-chips">${FX.slice(0,60).map((f,i)=>`<span class="ie-x" data-fx="${i}">${esc(f[0])} → <b>${esc(f[1])}</b>${f[2]>1?' ×'+f[2]:''} ✕</span>`).join('')}</div><small>點一下刪除學錯的</small></div>`:''}</div>`);
  h+=sec('📝 逐字稿',`<div class="grp glass">${tg('tw','中文輸出為繁體（台灣用語）','Whisper 預設常輸出簡體，自動用 OpenCC 轉成繁體')}${tg('hall','過濾「幻聽」字幕','移除「請訂閱」「字幕由…提供」這類模型亂補的句子')}${tg('keepAud','保存錄音檔','可以從逐字稿任一句直接播放原音（約 15 MB／小時）')}</div>`);
  h+=sec('🌐 翻譯引擎',`<div class="grp glass">${Object.entries(MTE).map(([k,e])=>`<div class="row${s.eng==k?' on':''}" data-eng="${k}"><b>${e.n}<small>${e.s}</small></b><span class="ck">✔</span></div>`).join('')}</div>`);
- let G=sec('☁️ GitHub 雲端轉文字',`<div class="grp glass"><div class="sl"><label>會議錄音・音檔轉文字在哪裡運算</label>${sg('smcloud',[['gh','GitHub 雲端'],['local','這支手機']],s.mcloud)}<small>${s.mcloud=='gh'?'錄音上傳到你 GitHub 的草稿 Release（只有你看得到）→ GitHub 伺服器辨識 → 錄音立刻從 GitHub 刪除 → 結果傳回手機。手機不用下載語音模型。':'在手機上辨識，不需要網路，但要下載模型、比較耗電。'}</small></div>${s.mcloud=='gh'?`<div class="sl"><label>GitHub 權杖<span id="tokst">${s.ghTok?'已設定':'未設定'}</span></label><input class="ti" id="ghtok" type="password" value="${esc(s.ghTok)}" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false"><small>建立方式：GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token → Repository access 只選 <b>${GH.repo}</b> → Permissions 把 <b>Contents</b> 和 <b>Actions</b> 設成 Read and write。權杖只存在這支手機裡。</small><div class="pr" style="margin-top:8px"><button class="btn sm" data-a="tokmk">🔑 到 GitHub 建立權杖</button><button class="btn sm on" data-a="toktest">測試連線</button></div></div><div class="sl"><label>雲端語音模型</label>${sg('scm',[['firered','FireRed 最準'],['sensevoice','SenseVoice 最快'],['large-v3-turbo','Whisper 多語'],...(S.set.cmOK||s.cmodel=='custom'?[['custom','🎓 我的模型']]:[])],s.cmodel)}<small>${s.cmodel=='firered'?'小紅書 FireRedASR：中文、中英夾雜辨識最準（AISHELL-1 錯誤率約 0.6%），比較慢，1 小時會議約 1～1.5 小時':s.cmodel=='sensevoice'?'阿里巴巴 SenseVoice：中英日韓粵語，速度最快（1 小時會議約 5～10 分鐘），準確度略低於 FireRedASR':'OpenAI Whisper：支援約 100 種語言，但中文準確度較低、速度較慢'}</small></div>`:''}</div>`);
+ let G=sec('☁️ GitHub 雲端轉文字',`<div class="grp glass"><div class="sl"><label>會議錄音・音檔轉文字在哪裡運算</label>${sg('smcloud',[['gh','GitHub 雲端'],['local','這支手機']],s.mcloud)}<small>${s.mcloud=='gh'?'錄音上傳到你 GitHub 的草稿 Release（只有你看得到）→ GitHub 伺服器辨識 → 錄音立刻從 GitHub 刪除 → 結果傳回手機。手機不用下載語音模型。':'在手機上辨識，不需要網路，但要下載模型、比較耗電。'}</small></div>${s.mcloud=='gh'?`${s.ghTok?`<div class="row"><span>✅</span><b>已連接 ${esc(CR())}<small>${S.set.cRepo?'你自己的儲存庫（Fork）':'原始儲存庫'}・權杖只存在這台裝置</small></b></div><div class="pr" style="margin:4px 0 8px"><button class="btn sm on" data-a="toktest">測試連線</button><button class="btn sm" data-a="tokwiz">重新設定</button><button class="btn sm dng" data-a="tokoff">中斷連線</button></div>`:`<div class="row tw-cta" data-a="tokwiz"><span>☁️</span><b>設定雲端功能（約 3 分鐘）<small>連接你自己的 GitHub（免費）；沒設定前，會議會自動改在這支手機上轉文字</small></b>›</div>`}<div class="sl"><label>雲端語音模型</label>${sg('scm',[['firered','FireRed 最準'],['sensevoice','SenseVoice 最快'],['large-v3-turbo','Whisper 多語'],...(S.set.cmOK||s.cmodel=='custom'?[['custom','🎓 我的模型']]:[])],s.cmodel)}<small>${s.cmodel=='firered'?'小紅書 FireRedASR：中文、中英夾雜辨識最準（AISHELL-1 錯誤率約 0.6%），比較慢，1 小時會議約 1～1.5 小時':s.cmodel=='sensevoice'?'阿里巴巴 SenseVoice：中英日韓粵語，速度最快（1 小時會議約 5～10 分鐘），準確度略低於 FireRedASR':'OpenAI Whisper：支援約 100 種語言，但中文準確度較低、速度較慢'}</small></div>`:''}</div>`);
  G+=sec('✨ AI 修正錯字・重點整理',`<div class="grp glass"><div class="sl"><label>AI 整理引擎</label>${sg('sllm',[['local','開源 Qwen3'],['off','關閉']],s.llm=='off'?'off':'local')}<small>${s.llm=='off'?'不做 AI 修正與重點整理':'在你的 GitHub 伺服器上跑阿里巴巴開源的 Qwen3 4B 語言模型，逐字稿不會送到其他服務。1 小時的會議大約多花 30～60 分鐘'}</small></div>
   ${s.llm!='off'?tg('aifix','自動修正錯字','依上下文修正同音字、專有名詞、英文拼寫，保留原始辨識可對照')+tg('aisum','自動產生重點整理','分章節列出重點、決議事項、待辦事項'):''}</div>`);
  if(IS_APP){const P=perm()||{},ok=!!NB.cloudWatch;G+=sec('🔔 雲端處理通知',`<div class="grp glass"><div class="sl"><small>${ok?'✅ 這個 App 版本支援通知欄進度與完成通知':'⚠️ 目前安裝的 App 版本太舊，沒有通知功能：請到「檢查更新」下載新版 APK 安裝'}</small></div>
@@ -1731,11 +1781,11 @@ $('#se').onclick=async e=>{const _vc=e.target.closest('[data-vc]');if(_vc){if(aw
  else if(en){s.eng=en.dataset.eng;save();renderSet();if(/^q/.test(s.eng))toast('LLM 翻譯建議在支援 WebGPU 的裝置使用',3000)}
  else if(pr){const k=pr.dataset.p;if(k=='app')NB.openAppSettings();else NB.requestPerms(k)}
  else if(a){const k=a.dataset.a;if(k=='mm')openMM();
-  if(k=='tokmk')openURL('https://github.com/settings/personal-access-tokens/new');
-  if(k=='toktest'){const v=$('#ghtok').value.trim();S.set.ghTok=v;save();if(!v)return toast('請先貼上權杖');toast('測試中…',8000);
-   try{const r=await ghApi('GET','');if(!r.permissions||!r.permissions.push)throw new Error('權杖沒有寫入權限');await ghApi('GET','/actions/workflows/transcribe.yml');await ghApi('GET','/releases?per_page=1');$('#tokst').textContent='✅ 連線成功';toast('✅ 連線成功，可以使用 GitHub 雲端轉文字',3000);
-    for(const x of S.meets)if(x.st=='cloudwait'){const m=await getM(x.id);if(m)cloudRun(m)}}catch(e){$('#tokst').textContent='❌ 失敗';toast('❌ '+e.message,5000)}}
-  if(k=='trup'){await trUpload();return}if(k=='trclr'){await trClear();return}if(k=='trcolab'){IS_APP&&NB.openUrl?NB.openUrl(COLAB):window.open(COLAB,'_blank');return}
+  if(k=='tokmk'||k=='tokwiz')tokWizard();if(k=='tokoff'&&confirm('中斷 GitHub 連線？（雲端功能會停用，會議改在手機上轉文字）')){S.set.ghTok='';S.set.cRepo='';save();renderSet()}
+  if(k=='toktest'){if(!S.set.ghTok)return tokWizard();toast('測試中…',8000);
+   try{const r=await ghApi('GET','');if(!r.permissions||!r.permissions.push)throw new Error('權杖沒有寫入權限');await ghApi('GET','/actions/workflows/transcribe.yml');await ghApi('GET','/releases?per_page=1');toast('✅ 連線成功，可以使用 GitHub 雲端轉文字',3000);
+    for(const x of S.meets)if(x.st=='cloudwait'){const m=await getM(x.id);if(m)cloudRun(m)}}catch(e){toast('❌ '+e.message,5000)}}
+  if(k=='trup'){await trUpload();return}if(k=='trclr'){await trClear();return}if(k=='trcolab'){openURL(COLABU());return}
   if(k=='ntest'){try{NB.notifyTest()}catch(e){}toast('已送出測試通知，請看通知欄',2500);return}
   if(k=='sytok'){const pw=$('#sypw');if(pw){S.set.syncPw=pw.value;SY.key=null;save()}await syTokFetch(1);return}
   if(k=='synow'){const pw=$('#sypw');if(pw){S.set.syncPw=pw.value;SY.key=null;save()}if(!S.set.syncPw)return toast('請先設定同步密碼',3000);syncNow(1)}

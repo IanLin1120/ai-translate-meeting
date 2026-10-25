@@ -51,6 +51,8 @@ App 下方的「學習」分頁：
 
 逐字稿與重點整理以 **AES-256-GCM** 加密（金鑰由你的同步密碼經 PBKDF2-SHA256 310,000 次推導）後存到本儲存庫的 `notes` 分支；GitHub 上只看得到亂碼，錄音檔不會同步。每台裝置在「設定 → 🔄 會議記錄同步」輸入相同密碼即可同步。
 
+**其他人使用**：在 App「設定 → ☁️ 設定雲端功能」照 3 個步驟做：Fork 本儲存庫（只複製 main）→ 開啟已填好權限的權杖建立頁面 → 複製權杖回到 App 自動帶入。雲端工作會跑在各自 Fork 的儲存庫，資料互不相通；App 會自動開啟 Fork 的 Actions，並在使用雲端功能前同步原作者的最新程式。翻譯、學習、手機上轉文字不需要權杖。
+
 App 需要一組 **Fine-grained 權杖**：Repository access 只選本儲存庫，Permissions 把 **Contents** 和 **Actions** 設成 Read and write，填到 App「設定 → ☁️ GitHub 雲端轉文字」。
 
 ## 模型同步

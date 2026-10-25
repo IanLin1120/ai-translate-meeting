@@ -129,7 +129,7 @@ def evaluate(model, proc, items, device, bs=8, lang="zh"):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY", "IanLin1120/ai-translate-meeting"))
+    ap.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY", ""), help="雲端儲存庫（留白：自動用權杖擁有者的 ai-translate-meeting，沒有 Fork 就用原作者的）")
     ap.add_argument("--token", default=os.environ.get("GITHUB_TOKEN", ""))
     ap.add_argument("--base", default="openai/whisper-large-v3-turbo", help="基礎模型（Hugging Face 名稱）")
     ap.add_argument("--epochs", type=float, default=3)
@@ -149,6 +149,15 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = torch.float16 if device == "cuda" else torch.float32
     print(f"🖥  運算裝置：{device}" + ("（沒有 GPU，只適合測試，正式訓練請用 Colab 的 GPU）" if device == "cpu" else f"（{torch.cuda.get_device_name(0)}）"), flush=True)
+    if not a.repo and a.token:  # 自動判斷：用自己 Fork 的儲存庫
+        try:
+            me = GH("x/y", a.token).req("GET", "https://api.github.com/user")["login"]
+            GH(f"{me}/ai-translate-meeting", a.token).req("GET", "")
+            a.repo = f"{me}/ai-translate-meeting"
+        except Exception:
+            a.repo = "IanLin1120/ai-translate-meeting"
+        print(f"📦 儲存庫：{a.repo}", flush=True)
+    a.repo = a.repo or "IanLin1120/ai-translate-meeting"
     gh = GH(a.repo, a.token) if a.token else None
     if not a.local and not gh:
         sys.exit("❌ 請提供 GitHub 權杖（--token）")
