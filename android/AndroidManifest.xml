@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="tw.ian.aitm"
-    android:versionCode="9"
-    android:versionName="1.16.0">
+    android:versionCode="10"
+    android:versionName="1.20.0">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
 
@@ -15,6 +15,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
@@ -50,6 +51,7 @@
             android:name=".RecService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+        <receiver android:name=".ApkInstaller$Receiver" android:exported="false" />
         <service
             android:name=".CloudService"
             android:exported="false"

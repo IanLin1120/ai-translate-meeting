@@ -131,7 +131,9 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 .mhead{display:flex;align-items:center;gap:8px}
 .mi-row{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}.mi-c{font-size:.82em;padding:5px 11px;border-radius:999px;border:1px dashed var(--edge);color:var(--sub);cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mi-c.on{border-style:solid;color:var(--tx,inherit);background:var(--glass);font-weight:600}
 .mc{position:relative}.mc-ed{position:absolute;right:8px;top:8px;opacity:.75}.mc>b{padding-right:34px}.mc-i{display:block;color:var(--ac);margin-top:2px}
-.ie-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.vc-r .vc-ic{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:var(--glass);border:1px solid var(--edge);flex:none}.vc-r small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vc-r b{min-width:0}.vc-n{min-width:26px;text-align:center;font-weight:700;color:var(--ac);font-size:.9em}
+.ie-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.updp{position:fixed;left:50%;top:calc(var(--sat) + 70px);transform:translate(-50%,-20px);opacity:0;pointer-events:none;z-index:160;width:min(420px,calc(100% - 32px));border-radius:18px;padding:10px 14px;transition:.3s}.updp.on{opacity:1;transform:translate(-50%,0)}.updp span{display:block;font-size:.88em;font-weight:600;margin-bottom:6px}.updp div{height:6px;border-radius:6px;background:var(--edge);overflow:hidden}.updp i{display:block;height:100%;width:0;background:var(--ac);transition:width .3s}
+.upd-big b{color:var(--ac)}.vl{max-height:55vh;overflow:auto}
+.vc-r .vc-ic{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:var(--glass);border:1px solid var(--edge);flex:none}.vc-r small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vc-r b{min-width:0}.vc-n{min-width:26px;text-align:center;font-weight:700;color:var(--ac);font-size:.9em}
 .vf{padding:16px 16px 10px}.vf-h{display:flex;gap:8px;margin-bottom:10px}.vf-h .ti{margin:0}.vf-ic{width:56px!important;flex:none;text-align:center;font-size:1.2em}
 .vf-l{max-height:52vh;overflow:auto;display:flex;flex-direction:column;gap:6px;padding:2px}.vf-r{display:flex;align-items:center;gap:8px}.vf-r .ti{margin:0;flex:1}.vf-no{width:24px;text-align:right;color:var(--sub);font-size:.8em;flex:none;font-variant-numeric:tabular-nums}
 .vf-tip{display:block;color:var(--sub);font-size:.78em;margin:2px 2px 10px}.vf-b{flex-wrap:wrap}.vf-b .btn{flex:1;min-width:30%}
@@ -407,6 +409,7 @@ html[data-surf="paper"] .seg.glass,html[data-surf="paper"] .lbar.glass{backgroun
 <!-- 學習卡片 -->
 <div class="sheet" id="lc"><div class="pn"><div class="eh"><button class="ib" id="lcx">✕</button><b id="lct"></b><button class="ib" id="lcb" title="上一張">↩</button></div><div class="eb" id="lcb2"></div></div></div>
 <!-- 動作選單 -->
+<div class="updp glass" id="updp"><span></span><div><i></i></div></div>
 <div class="sheet" id="act" style="z-index:140"><div class="dpn"><div id="actb"></div></div></div>
 <!-- AI 模型面板 -->
 <div class="sheet" id="mm"><div class="pn"><div class="eh"><span style="width:40px"></span><b>AI 模型</b><button class="btn on" id="mmx">完成</button></div><div class="eb" id="mmb"></div></div></div>
@@ -448,7 +451,7 @@ async function get(key,id,make){USE.set(key,Date.now());if(M.has(key))return M.g
    if(BADF.test(msg)&&!purged){purged=1;const n=await purgeRepo(repoOf(key));if(n){post({warn:'模型檔案損壞，正在重新下載…'});const x=new Error(msg);x.badf=1;throw x}}
    throw e}finally{if(CUR&&CUR.key==key)CUR=null}}}
 /* 閒置 4 分鐘的模型自動從記憶體移除(降低耗電、發燙;檔案仍保存在手機裡) */
-setInterval(()=>{const now=Date.now();for(const [k,v] of [...M]){if(now-(USE.get(k)||0)>240000){M.delete(k);USE.delete(k);Promise.resolve(v).then(dispose,()=>{});post({idle:k})}}},60000);
+setInterval(()=>{const now=Date.now();for(const [k,v] of [...M]){if(now-(USE.get(k)||0)>(k.startsWith('mt:')?1200000:240000)){/* 翻譯模型小、常用：閒置 20 分鐘才釋放；其他 4 分鐘 */M.delete(k);USE.delete(k);Promise.resolve(v).then(dispose,()=>{});post({idle:k})}}},60000);
 function dispose(o){try{if(!o)return;if(o.dispose)o.dispose();else if(o.model&&o.model.dispose)o.model.dispose()}catch(e){}}
 function drop(prefix,keep){for(const [k,v] of [...M]){if(k.startsWith(prefix)&&k!==keep){M.delete(k);Promise.resolve(v).then(dispose,()=>{})}}}
 async function tryAll(list){let err;for(const f of list){try{return await f()}catch(e){err=e;const m=String(e&&e.message||e);if(OOM.test(m)||BADF.test(m)||/下載|網路|Failed to fetch|NetworkError|空間不足/.test(m))throw e}}throw err}
@@ -607,7 +610,7 @@ let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.19.0';
+const APP_VER='1.20.0';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -671,7 +674,7 @@ const HR={tr:['🕘','翻譯紀錄'],learn:['⭐','我的收藏'],meet:['📂','
 function show(v){if(cur=='tr'&&v!='tr'){camStop();if(LV.on)lvStop()}cur=v;document.documentElement.dataset.v=v;
  $$('.view').forEach(x=>x.classList.toggle('on',x.id=='v-'+v));$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v==v));
  $('#ttl').textContent=NAV.find(n=>n[0]==v)[2];const h=HR[v];$('#hr').textContent=h[0];$('#hr').title=h[1];$('#hr').style.visibility=h[0]?'visible':'hidden';
- ({tr:()=>tsub(S.set.tsub,1),learn:()=>lsub(LS.sub),meet:renderMeet,rec:renderRec,set:renderSet})[v]();document.getElementById('v-'+v).scrollTop=0}
+ ({tr:()=>{tsub(S.set.tsub,1);mtWarm()},learn:()=>lsub(LS.sub),meet:renderMeet,rec:renderRec,set:renderSet})[v]();document.getElementById('v-'+v).scrollTop=0}
 $('#hr').onclick=()=>{if(cur=='tr'){show('rec');rsub('t')}else if(cur=='meet')$('#mfile').click();else if(cur=='learn')lsub('fav')};
 
 /* ================= AI 運算管理(Web Worker) ================= */
@@ -709,7 +712,7 @@ function loadUI(p){if(p.key){if(p.ready)delete LOADS[p.key];else if(p.t){const o
  if(!L.length){lpT=setTimeout(()=>$('#mpill').classList.remove('on'),400);return}
  let l=0,t=0;L.forEach(x=>{l+=x.l;t+=x.t});
  /* 下載完、正在載入記憶體時,顯示「準備中」而不是卡在 100% */
- const dl=L.some(x=>x.dl);$('#mpt').textContent=l>=t&&t>0?`⚙️ 準備 ${L.map(x=>MNAME(x.key)).join('、')} 中…（第一次比較久）`:dl?`⬇ 下載 ${L.map(x=>MNAME(x.key)).join('、')}　${fmtMB(l)} / ${fmtMB(t)}`:`⚙️ 載入 ${L.map(x=>MNAME(x.key)).join('、')}　${Math.round(l/t*100)}%`;$('#mpb').style.width=(t?l/t*100:0)+'%';$('#mpill').classList.add('on')}
+ const dl=L.some(x=>x.dl);$('#mpt').textContent=l>=t&&t>0?(dl?`⚙️ 下載完成，啟動 ${L.map(x=>MNAME(x.key)).join('、')} 中…`:`⚙️ 從手機啟動 ${L.map(x=>MNAME(x.key)).join('、')}（已下載，不用網路）`):dl?`⬇ 第一次下載 ${L.map(x=>MNAME(x.key)).join('、')}　${fmtMB(l)} / ${fmtMB(t)}（之後不用再下載）`:`⚙️ 從手機載入 ${L.map(x=>MNAME(x.key)).join('、')}　${Math.round(l/t*100)}%`;$('#mpb').style.width=(t?l/t*100:0)+'%';$('#mpill').classList.add('on')}
 $('#mpill').onclick=()=>openMM();
 const asrRepo=()=>S.set.asrc.trim()||(ASRM[S.set.asr]||ASRM.base).r;
 
@@ -837,7 +840,7 @@ async function doTr(){const t=$('#tin').value.trim();if(!t)return;if(tBusy){tSto
  try{const r=(await dictTr(t))||await translate(t,S.set.src,S.set.tgt,{onProg:prog,stop:()=>tStop});TOUT=r.t;LAST_SRC=r.src;o.classList.remove('ph');o.textContent=r.t||'（沒有結果）';
   $('#teng').textContent=(S.set.src=='auto'&&r.src?'偵測：'+LANG[r.src].n.split(' ')[0]+'・':'')+r.eng+'・'+((performance.now()-t0)/1000).toFixed(1)+' 秒';
   /* 太長的內容只在紀錄裡存前 3000 字,避免手機空間被塞滿 */
-  addHist({a:t.slice(0,3000),b:r.t.slice(0,3000),s:r.src||S.set.src,g:S.set.tgt,k:'text'});if(isZh(S.set.tgt)&&t.length<60)trDict(t,r.src)}
+  if(!S.set.mtWarm){S.set.mtWarm=1;save()}addHist({a:t.slice(0,3000),b:r.t.slice(0,3000),s:r.src||S.set.src,g:S.set.tgt,k:'text'});if(isZh(S.set.tgt)&&t.length<60)trDict(t,r.src)}
  catch(e){if(e.stopped){TOUT=e.partial||'';o.classList.remove('ph');o.textContent=(e.partial||'')+'\n\n⏹ 已停止翻譯';$('#teng').textContent='已停止'}else o.textContent='❌ 翻譯失敗：'+e.message+'\n請確認網路（第一次需下載模型），或到「設定」換翻譯引擎。'}
  finally{tBusy=0;tStop=0;b.disabled=false;b.textContent='🌐 翻譯'}}
 /* 匯入文字檔:txt / md / srt / csv / html / docx(Word) */
@@ -1064,6 +1067,8 @@ async function mStart(){if(R.on)return;if(!await needPerm('mic'))return;if(IS_AP
  if(!m.cloud)mPreload()}
 function mPreload(){const fine=S.set.fine;(async()=>{try{await AI.call('asr',{repo:asrRepo(),load:1});await AI.call('emb',{load:1});if(fine)await AI.call('seg',{load:1});if(S.set.mtr)await mtLoad(S.set.mtr)}catch(e){toast('AI 模型載入失敗：'+e.message+'（錄音照常進行，連上網路後會繼續辨識）',5000)}})()}
 async function mtLoad(tl){try{await translate('hello',tl=='en'?'zh-TW':'en',tl)}catch(e){}}
+/* 開啟翻譯頁時，在背景先把上次用過的翻譯模型從手機載入記憶體，按翻譯時就不用等 */
+let mtWarmed=0;function mtWarm(){if(mtWarmed||!S.set.mtWarm)return;mtWarmed=1;setTimeout(()=>{const s=S.set.src=='auto'?(isZh(S.set.tgt)?'en':'zh-TW'):S.set.src;if(s==S.set.tgt)return;translate('Hello.',s,S.set.tgt).catch(()=>{mtWarmed=0})},1500)}
 function mPause(){if(!R.on)return;R.paused=!R.paused;R.cap.paused=R.paused;try{R.mr&&(R.paused?R.mr.pause():R.mr.resume())}catch(e){}renderMeet()}
 async function mStop(){if(!R.on)return;const m=R.m;R.on=0;clearInterval(R.timer);R.cap.stop();m.dur=m.off+R.cap.time;R.cap=null;await mrStop();
  if(IS_APP&&NB.keepRec)NB.keepRec(false,'');try{R.lock&&R.lock.release()}catch(e){}R.lock=null;
@@ -1698,7 +1703,9 @@ function renderSet(){if(TRM===null&&S.set.ghTok){TRM=undefined;trModels().then((
   ${s.sync?`<div class="sl"><label>同步密碼<span id="syst">${esc(SY.msg||(s.lastSync?'上次同步 '+fmtD(s.lastSync):'尚未同步'))}</span></label><input class="ti" id="sypw" type="password" value="${esc(s.syncPw)}" placeholder="每台裝置都要輸入一樣的密碼" autocomplete="new-password"><small>用 AES-256-GCM 加密，GitHub 上只看得到亂碼。<b>忘記密碼就無法還原</b>，請記好。密碼只存在這台裝置。</small><div class="pr" style="margin-top:8px"><button class="btn sm on" data-a="synow">🔄 立即同步</button>${!s.ghTok?'<button class="btn sm" data-a="sytok">🔑 從其他裝置取得 GitHub 權杖</button>':''}</div><small>GitHub 權杖也會用同步密碼加密後同步，在網頁版或其他裝置只要輸入同一組同步密碼就能用雲端轉文字和 AI 整理（請使用夠長、不好猜的密碼）。</small></div>`:''}</div>`);
  G+=sec('☁️ GitHub 雲端（功能與模型）',`<div class="grp glass"><div class="sl"><label>AI 模型下載來源</label>${sg('smsrc',[['gh','GitHub 優先'],['hf','Hugging Face']],s.msrc)}<small id="ghinfo">GitHub 鏡像：讀取中…</small></div>
   ${IS_APP?tg('autoUpd','自動更新功能','開啟 App 時從 GitHub 下載最新版介面與功能（不用重新安裝 APK）'):''}
-  <div class="row" data-a="upd"><span>🔄</span><b>檢查更新<small>目前版本 v${APP_VER}${IS_APP&&I?'・APK v'+I.ver:''}</small></b>›</div>
+  ${IS_APP&&I&&S.set.latest&&S.set.latest.apk>(I.code||0)?`<div class="row upd-big" data-a="apkup"><span>🆕</span><b>有大改版：APK v${esc(S.set.latest.apkName)}<small>點這裡直接下載並安裝（覆蓋舊版，資料保留）</small></b>›</div>`:''}
+  <div class="row" data-a="upd"><span>🔄</span><b>檢查更新<small>目前版本 v${APP_VER}${IS_APP&&I?'・APK v'+I.ver:''}${S.set.pinVer?'・已固定 '+esc(S.set.pinVer)+' 介面':''}</small></b>›</div>
+  <div class="row" data-a="vers"><span>🕘</span><b>歷史版本<small>下載或安裝以前的版本、只換介面版本</small></b>›</div>
   ${IS_APP?'<div class="row" data-a="rst"><span>↩️</span><b>還原為 APK 內建版本<small>更新後有問題時使用</small></b>›</div>':''}
   <div class="row" data-a="ghweb"><span>🌐</span><b>網頁版<small>${GH.pages.replace('https://','')}</small></b>›</div>
   <div class="row" data-a="ghrepo"><span>📦</span><b>GitHub 儲存庫<small>下載最新 APK、查看模型</small></b>›</div></div>`);
@@ -1732,7 +1739,7 @@ $('#se').onclick=async e=>{const _vc=e.target.closest('[data-vc]');if(_vc){if(aw
   if(k=='ntest'){try{NB.notifyTest()}catch(e){}toast('已送出測試通知，請看通知欄',2500);return}
   if(k=='sytok'){const pw=$('#sypw');if(pw){S.set.syncPw=pw.value;SY.key=null;save()}await syTokFetch(1);return}
   if(k=='synow'){const pw=$('#sypw');if(pw){S.set.syncPw=pw.value;SY.key=null;save()}if(!S.set.syncPw)return toast('請先設定同步密碼',3000);syncNow(1)}
-  if(k=='upd')checkUpd(1);if(k=='rst'&&confirm('還原為 APK 內建版本？')){NB.resetApp();location.reload()}if(k=='ghweb')openURL(GH.pages);if(k=='ghrepo')openURL(GH.web+'/releases');
+  if(k=='upd')checkUpd(1);if(k=='vers')verList();if(k=='apkup')apkInstall(relApk('v'+S.set.latest.apkName),'v'+S.set.latest.apkName);if(k=='rst'&&confirm('還原為 APK 內建版本？')){NB.resetApp();location.reload()}if(k=='ghweb')openURL(GH.pages);if(k=='ghrepo')openURL(GH.web+'/releases');
   if(k=='ej'){toast('打包中…');const out=[];for(const x of S.meets){const m=await getM(x.id);if(m)out.push({...m,spk:m.spk.map(({v,...q})=>q),u:m.u.map(({e,...u})=>u)})}dl('AI翻譯會議-備份.json',JSON.stringify({meets:out,hist:S.hist},null,1),'application/json')}
   if(k=='clr'&&confirm('這會刪除全部會議記錄、錄音與翻譯紀錄，確定嗎？')){if(R.on)await mStop();for(const st of ['m','a','q'])await idb(st,'readwrite',x=>x.clear());S.meets=[];S.hist=[];MQ=[];for(const k in MS)delete MS[k];R.m=null;save();renderSet();toast('已清除')}}};
 $('#se').oninput=e=>{const k=e.target.dataset.r;if(!k)return;const v=+e.target.value;S.set[k]=k=='glass'||k=='thr'?v/100:v;const o=$('#o_'+k);if(o)o.textContent=k=='glass'||k=='thr'?v+'%':v+'px';
@@ -1774,9 +1781,36 @@ let GHM=null;
 async function ghMan(){if(GHM)return GHM;try{const r=await fetch(GH.models+'manifest.json',{cache:'no-cache'});if(!r.ok)throw 0;const j=await r.json();let sz=0;Object.values(j.models||{}).forEach(m=>sz+=m.size||0);GHM={n:Object.keys(j.models||{}).length,sz,up:j.updated,models:j.models||{}}}catch(e){GHM={n:0,sz:0}}return GHM}
 async function ghInfo(){const g=await ghMan(),el=$('#ghinfo');if(!el)return;el.innerHTML=g.n?`GitHub 鏡像：${g.n} 個模型・${fmtMB(g.sz)}・更新於 ${g.up?fmtD(Date.parse(g.up)):'-'}<br>${Object.entries(g.models).map(([k,m])=>esc(k.split('/')[1])).join('、')}`:'GitHub 鏡像尚未就緒（同步中或無法連線），會自動改用 Hugging Face'}
 const verGt=(a,b)=>{a=String(a).split('.').map(Number);b=String(b).split('.').map(Number);for(let i=0;i<3;i++){if((a[i]||0)!=(b[i]||0))return(a[i]||0)>(b[i]||0)}return false};
+const relApk=tag=>`https://github.com/${GH.user}/${GH.repo}/releases/download/${tag}/AI-translate-meeting.apk`;
+/* App 內下載並安裝 APK（覆蓋舊版，資料保留） */
+function apkInstall(url,label){if(!IS_APP)return openURL(url);if(!NB.apkInstall){toast('目前的 App 版本不支援直接安裝，改用瀏覽器下載',3000);return openURL(url)}
+ if(NB.canInstall&&!NB.canInstall()){menu('需要允許「安裝不明應用程式」',[['go','⚙️ 前往設定允許（允許後回來再按一次）'],['no','取消']]).then(k=>{if(k=='go')NB.askInstallPerm()});return}
+ const say=(t,d)=>{const p=$('#updp');if(p){p.classList.add('on');p.querySelector('span').textContent=t;p.querySelector('i').style.width=(d||0)+'%'}};
+ window.__apk=(st,p,msg)=>{if(st=='download')say(`⬇ 下載 ${label||'新版 APK'}　${p}%`,p);else if(st=='install')say('📲 準備安裝…',100);else if(st=='confirm'){say('📲 請在跳出的視窗按「更新」／「安裝」',100);setTimeout(()=>$('#updp').classList.remove('on'),8000)}
+  else if(st=='done'){say('✅ 安裝完成',100)}else if(st=='error'){$('#updp').classList.remove('on');toast('❌ '+msg,5000)}};
+ say('⬇ 開始下載…',0);NB.apkInstall(url)}
+async function verList(){const sh=$('#act');$('#actb').innerHTML='<div class="pmb"><h3 style="font-size:1em">🕘 歷史版本</h3><p class="emp">讀取中…</p></div>';sh.classList.add('on');
+ let rs=[];try{const r=await fetch(`https://api.github.com/repos/${GH.user}/${GH.repo}/releases?per_page=40`,{cache:'no-store'});rs=await r.json();if(!Array.isArray(rs))throw new Error(rs.message||'讀取失敗')}catch(e){$('#actb').innerHTML=`<div class="pmb"><h3>🕘 歷史版本</h3><p class="emp">❌ ${esc(e.message)}</p></div>`;return}
+ rs=rs.filter(r=>!r.draft&&/^v\d/.test(r.tag_name));let cur='';if(IS_APP){try{cur=JSON.parse(NB.info()).ver||''}catch(e){}}
+ $('#actb').innerHTML=`<div class="pmb" style="padding-bottom:0"><h3 style="font-size:1em">🕘 歷史版本</h3><small style="color:var(--sub)">目前：介面 v${APP_VER}${cur?'・APK v'+esc(cur):''}${S.set.pinVer?`・<b>已固定使用 ${esc(S.set.pinVer)} 介面</b>`:''}</small></div>
+ <div class="grp vl">${rs.map(r=>{const v=r.tag_name.slice(1),old=cur&&verGt(cur,v),now=cur==v;return`<div class="row" data-vr="${esc(r.tag_name)}"><span>${now?'✅':old?'🕘':'🆕'}</span><b>v${esc(v)}${now?'（使用中）':old?'':'（較新）'}<small>${esc((r.published_at||'').slice(0,10))}・${esc(String(r.body||'').split('\n')[0].slice(0,60))}</small></b>›</div>`}).join('')}</div>
+ ${S.set.pinVer?'<div class="pmb" style="padding-top:4px"><button class="btn on" data-vr="unpin" style="width:100%">↩ 恢復自動更新到最新版</button></div>':''}<div class="pmb pr" style="padding-top:4px"><button class="btn" data-vr="" style="flex:1">關閉</button></div>`;
+ sh.onclick=async e=>{const b=e.target.closest('[data-vr]');if(!b){if(e.target==sh){sh.classList.remove('on');sh.onclick=null}return}const tag=b.dataset.vr;sh.classList.remove('on');sh.onclick=null;if(!tag)return;
+  if(tag=='unpin'){S.set.pinVer='';S.set.autoUpd=1;save();if(IS_APP)NB.resetApp();toast('已恢復自動更新，重新開啟中…',2000);return setTimeout(()=>checkUpd(1),800)}
+  const v=tag.slice(1),old=cur&&verGt(cur,v);
+  const k=await menu('v'+v,[...(IS_APP?[['inst',old?'📲 安裝這個 APK（較舊：要先解除安裝目前的 App，資料會清除）':'📲 下載並安裝這個 APK（覆蓋目前版本，資料保留）'],['ui','🖥 只換成這個版本的介面（不用重裝，可隨時恢復）'],['dl','⬇ 下載 APK 檔到手機的「下載」資料夾']]:[['dl','⬇ 下載 APK 檔']])]);
+  if(k=='inst')apkInstall(relApk(tag),'v'+v);
+  if(k=='dl'){if(IS_APP&&NB.downloadFile){NB.downloadFile(relApk(tag),`AI翻譯會議-${tag}.apk`);toast('已開始下載，完成後會出現在通知欄與「下載」資料夾',3500)}else openURL(relApk(tag))}
+  if(k=='ui'){try{toast('下載 v'+v+' 介面…',3000);const h=await (await fetch(`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/${tag}/index.html?t=${Date.now()}`,{cache:'no-store'})).text();if(h.length<50000||!/const APP_VER='/.test(h))throw new Error('下載不完整');
+   if(!NB.writeApp('index.html',h))throw new Error('無法寫入');S.set.pinVer=tag;S.set.autoUpd=0;save();toast('✅ 已換成 v'+v+' 的介面，重新開啟中…（到「歷史版本」可恢復最新版）',3000);setTimeout(()=>location.reload(),1500)}catch(x){toast('❌ '+x.message,4000)}}}}
 async function checkUpd(manual){try{const r=await fetch(GH.pages+'version.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const v=await r.json();
   let apk=0;if(IS_APP){try{apk=JSON.parse(NB.info()).code||0}catch(e){}}
-  if(IS_APP&&v.minApk&&apk<v.minApk){const k=await menu(`有新版 APK v${v.apkName||v.app}`,[['dl','⬇ 到 GitHub 下載新版 APK'],['no','稍後']]);if(k=='dl')openURL(GH.web+'/releases/latest');return}
+  S.set.latest={app:v.app,apk:v.apk,apkName:v.apkName,notes:v.notes};save();
+  /* 大改版：要安裝新版 APK（可以直接在 App 裡安裝，覆蓋舊版，資料保留） */
+  if(IS_APP&&v.apk&&apk&&v.apk>apk&&(manual||S.set.apkAsk!==v.apk||(v.minApk&&apk<v.minApk))){S.set.apkAsk=v.apk;save();
+   const k=await menu(`🆕 有大改版：APK v${v.apkName}`+(v.notes?'\n'+v.notes:''),[['inst','📲 下載並安裝（覆蓋舊版，資料保留）'],['no','稍後']]);if(k=='inst'){apkInstall(relApk('v'+v.apkName),'v'+v.apkName);return}
+   if(v.minApk&&apk<v.minApk)return}
+  if(S.set.pinVer&&!manual)return;
   if(!verGt(v.app,APP_VER)){if(manual)toast('已經是最新版本 v'+APP_VER);return}
   if(!IS_APP){if(ON_PAGES){toast('有新版本 v'+v.app+'，重新整理頁面即可使用',4000)}else{const k=await menu('有新版本 v'+v.app,[['go','🌐 開啟網頁版（最新）'],['no','稍後']]);if(k=='go')openURL(GH.pages)}return}
   const h=await (await fetch(GH.pages+'index.html?t='+Date.now(),{cache:'no-store'})).text();

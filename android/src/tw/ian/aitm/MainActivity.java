@@ -428,6 +428,10 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void setIso(boolean on) { getSharedPreferences("p", 0).edit().putBoolean("iso", on).apply(); }
         @JavascriptInterface public void requestPerms(String k) { ui.post(() -> MainActivity.this.requestPerms(k)); }
         @JavascriptInterface public void openAppSettings() { ui.post(MainActivity.this::openAppSettings); }
+        @JavascriptInterface public boolean canInstall() { return ApkInstaller.canInstall(MainActivity.this); }
+        @JavascriptInterface public void askInstallPerm() { ui.post(() -> ApkInstaller.askPermission(MainActivity.this)); }
+        @JavascriptInterface public void apkInstall(String url) { ApkInstaller.install(MainActivity.this, url, (st, p, msg) -> js("window.__apk&&__apk(" + JSONObject.quote(st) + "," + p + "," + JSONObject.quote(msg == null ? "" : msg) + ")")); }
+        @JavascriptInterface public void downloadFile(String url, String name) { try { ApkInstaller.download(MainActivity.this, url, name); } catch (Exception ignored) {} }
         @JavascriptInterface public void openUrl(String u) { ui.post(() -> { try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(u))); } catch (Exception ignored) {} }); }
         @JavascriptInterface public boolean night() { return MainActivity.this.night(); }
         @JavascriptInterface public void ready() { readyOk = true; pushInsets(); }
