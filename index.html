@@ -552,12 +552,12 @@ const H={
    return out}
   const key='mt:'+p.repo;drop('mt:',key);
   const pipe=await get(key,id,cb=>tryAll([()=>T.pipeline('translation',p.repo,{device:'wasm',dtype:'q8',progress_callback:cb}),()=>T.pipeline('translation',p.repo,{device:'wasm',dtype:'fp32',progress_callback:cb})]));
-  if(p.load)return 1;const opt={max_new_tokens:512,no_repeat_ngram_size:3,repetition_penalty:1.1};if(p.sl)opt.src_lang=p.sl;if(p.tl)opt.tgt_lang=p.tl;const out=[];
+  if(p.load)return 1;const opt={max_new_tokens:p.maxTok||400,no_repeat_ngram_size:3,repetition_penalty:1.1,num_beams:p.beams||1,do_sample:false};if(p.sl)opt.src_lang=p.sl;if(p.tl)opt.tgt_lang=p.tl;const out=[];
   /* Opus-MT 英→中要在句首放語言標記 >>cmn_Hans<<。Transformers.js 會把這個標記拆成亂碼(> > cm n _ H ans < <),
      模型就把亂碼一起「翻譯」出來,所以這裡直接把標記的 token ID 接在句子前面再生成 */
   const tok=pipe.tokenizer,tid=p.tag&&tok.convert_tokens_to_ids?tok.convert_tokens_to_ids([p.tag])[0]:null;
   if(tid!=null&&tid!==tok.unk_token_id){for(const t of p.texts){const ids=[tid,...Array.from(tok(t).input_ids.data,Number)],n=ids.length;
-    const o=await pipe.model.generate({input_ids:new T.Tensor('int64',BigInt64Array.from(ids,x=>BigInt(x)),[1,n]),attention_mask:new T.Tensor('int64',new BigInt64Array(n).fill(1n),[1,n]),...opt});
+    const o=await pipe.model.generate({input_ids:new T.Tensor('int64',BigInt64Array.from(ids,x=>BigInt(x)),[1,n]),attention_mask:new T.Tensor('int64',new BigInt64Array(n).fill(1n),[1,n]),...opt,max_new_tokens:Math.min(opt.max_new_tokens,Math.round(n*2.5)+20)});
     out.push(tok.batch_decode(o,{skip_special_tokens:true})[0]||'')}return out}
   for(const t of p.texts){const r=await pipe(t,opt);out.push((Array.isArray(r)?r[0]:r).translation_text||'')}return out},
  /* 通用 LLM 問答(學習頁的 AI 解說) */
@@ -613,7 +613,7 @@ let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.21.0';
+const APP_VER='1.21.1';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -710,7 +710,8 @@ const AI={w:null,n:0,cb:{},single:0,
 const LOADS={};let lpT;
 const MNAME=k=>{if(k.startsWith('pre:'))return k.split('/')[1];if(k.startsWith('asr:'))return'語音辨識 '+k.split(':')[1].split('/')[1];if(k=='sv')return'講者聲紋 WavLM';if(k=='seg')return'講者分段 pyannote';if(k.startsWith('mt:')||k.startsWith('llm:'))return'翻譯 '+k.split(':')[1].split('/')[1];return k};
 const fmtMB=b=>b>1073741824?(b/1073741824).toFixed(2)+' GB':(b/1048576).toFixed(b>104857600?0:1)+' MB';
-function loadUI(p){if(p.key){if(p.ready)delete LOADS[p.key];else if(p.t){const o=LOADS[p.key];if(o&&o.t==p.t&&p.l<o.l)p.l=o.l;LOADS[p.key]=p}}
+let WARM=0;
+function loadUI(p){if(WARM&&p.key&&!p.ready&&!p.dl&&!tBusy){return}if(p.key){if(p.ready)delete LOADS[p.key];else if(p.t){const o=LOADS[p.key];if(o&&o.t==p.t&&p.l<o.l)p.l=o.l;LOADS[p.key]=p}}
  const L=Object.values(LOADS);clearTimeout(lpT);
  if(!L.length){lpT=setTimeout(()=>$('#mpill').classList.remove('on'),400);return}
  let l=0,t=0;L.forEach(x=>{l+=x.l;t+=x.t});
@@ -762,7 +763,7 @@ async function translate(text,src,tgt,o={}){text=String(text||'').trim();if(!tex
  const all=inp.map(s=>s.trim()),idx=[];all.forEach((s,i)=>{if(s)idx.push(i)});const outF=flat.map(()=>'');
  const cjk=isZh(tgt)||tgt=='ja';const join=()=>{let k=0;return paras.map(pp=>pp.map(()=>outF[k++]).filter(x=>x!==undefined).join(cjk?'':' ').replace(/[ \t]+/g,' ').trim()).join('\n')};
  /* 長文分批翻譯(每批幾句):可以邊翻邊顯示、顯示進度、中途停止 */
- const B=p.llm?1:6;for(let i=0;i<idx.length;i+=B){if(o.stop&&o.stop())throw Object.assign(new Error('已停止翻譯'),{stopped:1,partial:await zhFix(join(),tgt,cjk)});
+ const B=p.llm?1:(idx.length>4?3:2);/* 一次 2～3 句，譯好就先顯示 */for(let i=0;i<idx.length;i+=B){if(o.stop&&o.stop())throw Object.assign(new Error('已停止翻譯'),{stopped:1,partial:await zhFix(join(),tgt,cjk)});
   const ids=idx.slice(i,i+B),res=await AI.call('mt',{...p,texts:ids.map(j=>all[j])});res.forEach((r,j)=>outF[ids[j]]=r);
   if(o.onProg)o.onProg(Math.min(i+B,idx.length),idx.length,idx.length>B?await zhFix(join(),tgt,cjk):'')}
  let out=join();if(isZh(tgt))out=await zhOut(out,tgt);out=out.replace(/>>\w+<<\s*/g,'');
@@ -838,7 +839,7 @@ async function dictTr(t){if(!isZh(S.set.tgt)||(S.set.src!='auto'&&S.set.src!='en
  let out='';if(i!=null&&!t.includes(' ')){out=senses(WD[i][2]).filter(s=>s.p).map(s=>s.p+'. '+s.m.slice(0,6).join('、')).join('\n')}else if(PI.has(q))out=PD[PI.get(q)][1];
  if(!out)return null;return{t:S.set.tgt=='zh-CN'?await toCN(out):out,eng:'📖 字典',src:'en'}}
 let tStop=0;
-async function doTr(){const t=$('#tin').value.trim();if(!t)return;if(tBusy){tStop=1;return}tBusy=1;tStop=0;const b=$('#tgo'),o=$('#tout');b.textContent='⏹ 停止翻譯';o.classList.add('ph');o.classList.toggle('long',t.length>1500);o.textContent='AI 翻譯中…（第一次使用會先下載模型）';const t0=performance.now();
+async function doTr(){const t=$('#tin').value.trim();if(!t)return;if(tBusy){tStop=1;return}tBusy=1;tStop=0;const b=$('#tgo'),o=$('#tout');b.textContent='⏹ 停止翻譯';o.classList.add('ph');o.classList.toggle('long',t.length>1500);o.textContent='AI 翻譯中…';const t0=performance.now();
  const prog=(d,n,part)=>{if(n<2)return;b.textContent=`⏹ 停止（${d}/${n} 句）`;$('#teng').textContent=`翻譯中 ${Math.round(d/n*100)}%・${((performance.now()-t0)/1000).toFixed(0)} 秒`;if(part){o.classList.remove('ph');o.textContent=part}};
  try{const r=(await dictTr(t))||await translate(t,S.set.src,S.set.tgt,{onProg:prog,stop:()=>tStop});TOUT=r.t;LAST_SRC=r.src;o.classList.remove('ph');o.textContent=r.t||'（沒有結果）';
   $('#teng').textContent=(S.set.src=='auto'&&r.src?'偵測：'+LANG[r.src].n.split(' ')[0]+'・':'')+r.eng+'・'+((performance.now()-t0)/1000).toFixed(1)+' 秒';
@@ -1071,7 +1072,7 @@ async function mStart(){if(R.on)return;if(!await needPerm('mic'))return;if(IS_AP
 function mPreload(){const fine=S.set.fine;(async()=>{try{await AI.call('asr',{repo:asrRepo(),load:1});await AI.call('emb',{load:1});if(fine)await AI.call('seg',{load:1});if(S.set.mtr)await mtLoad(S.set.mtr)}catch(e){toast('AI 模型載入失敗：'+e.message+'（錄音照常進行，連上網路後會繼續辨識）',5000)}})()}
 async function mtLoad(tl){try{await translate('hello',tl=='en'?'zh-TW':'en',tl)}catch(e){}}
 /* 開啟翻譯頁時，在背景先把上次用過的翻譯模型從手機載入記憶體，按翻譯時就不用等 */
-let mtWarmed=0;function mtWarm(){if(mtWarmed||!S.set.mtWarm)return;mtWarmed=1;setTimeout(()=>{const s=S.set.src=='auto'?(isZh(S.set.tgt)?'en':'zh-TW'):S.set.src;if(s==S.set.tgt)return;translate('Hello.',s,S.set.tgt).catch(()=>{mtWarmed=0})},1500)}
+let mtWarmed=0;function mtWarm(){if(mtWarmed||!S.set.mtWarm)return;mtWarmed=1;setTimeout(()=>{const s=S.set.src=='auto'?(isZh(S.set.tgt)?'en':'zh-TW'):S.set.src;if(s==S.set.tgt)return;WARM=1;translate('Hello.',s,S.set.tgt).catch(()=>{mtWarmed=0}).finally(()=>{WARM=0;loadUI({})})},1500)}
 function mPause(){if(!R.on)return;R.paused=!R.paused;R.cap.paused=R.paused;try{R.mr&&(R.paused?R.mr.pause():R.mr.resume())}catch(e){}renderMeet()}
 async function mStop(){if(!R.on)return;const m=R.m;R.on=0;clearInterval(R.timer);R.cap.stop();m.dur=m.off+R.cap.time;R.cap=null;await mrStop();
  if(IS_APP&&NB.keepRec)NB.keepRec(false,'');try{R.lock&&R.lock.release()}catch(e){}R.lock=null;
