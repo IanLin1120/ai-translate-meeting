@@ -206,7 +206,7 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 .sm-k{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}.sm-k span{font-size:.8em;padding:2px 10px;border-radius:99px;border:1px solid var(--edge);background:var(--glass)}
 .aifix{display:inline-block;white-space:nowrap;font-size:.68em;line-height:1.5;color:var(--ac);border:1px solid var(--ac);border-radius:99px;padding:0 6px;margin-left:6px;vertical-align:2px}
 .ut .rw{color:var(--sub);font-size:.85em;margin-top:2px}.ut .rw s{opacity:.85}
-.mtb{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none}.mtb::-webkit-scrollbar{display:none}.mtb .btn{flex:none}
+.mtb{display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 8px}.mtb::-webkit-scrollbar{display:none}.mtb .btn{flex:none}
 #mpill{position:fixed;z-index:60;left:50%;top:calc(max(10px,var(--sat)) + 60px);transform:translate(-50%,-10px);opacity:0;pointer-events:none;transition:.3s;border-radius:99px;padding:6px 14px;font-size:.82em;width:max-content;max-width:calc(100% - 24px);text-align:center}
 #mpill.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
 #mpill .pb{margin-top:4px;height:4px}
@@ -613,7 +613,7 @@ let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.22.1';
+const APP_VER='1.23.0';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -1113,7 +1113,7 @@ async function mSeg(m,s){const k=m.id+':'+String(++m.seq).padStart(6,'0');await 
 async function mPump(){if(mBusy)return;mBusy=1;
  while(MQ.length){const k=MQ.shift();try{const q=await iget('q',k);if(q){const m=await getM(q.mid);if(m)await mProc(m,q)}}catch(e){console.warn(e);if(/fetch|網路|network|Failed/i.test(e.message)){MQ.unshift(k);mBusy=0;mStatus();toast('AI 模型需要網路下載，連上網路後會自動繼續辨識',4000);setTimeout(mPump,15000);return}}
   await idel('q',k);mStatus();if(cur=='meet')mPend()}
- mBusy=0;for(const id in MS){const m=MS[id];if(m.st=='proc'&&!(R.on&&R.m==m)){m.st='done';if(!m.cm&&m.u.some(u=>u.e))recluster(m);saveM(m);if(R.m==m&&cur=='meet')renderMeet();if(MD.id==m.id)renderMD()}}mStatus();if(cur=='meet'&&R.m)mPend()}
+ mBusy=0;for(const id in MS){const m=MS[id];if(m.st=='proc'&&!(R.on&&R.m==m)){m.st='done';if(!m.cm&&m.u.some(u=>u.e))recluster(m,m.nspk||0);saveM(m);if(R.m==m&&cur=='meet')renderMeet();if(MD.id==m.id)renderMD()}}mStatus();if(cur=='meet'&&R.m)mPend()}
 /* 一段語音:Whisper 轉文字 → pyannote 切講者 → WavLM 聲紋比對 → 合併成句子 */
 async function mProc(m,q){const a=i2f(q.pcm),dur=a.length/16000;
  const r=await AI.call('asr',{repo:asrRepo(),lang:m.lang=='auto'?null:m.lang,audio:a.slice(0)});
@@ -1144,7 +1144,7 @@ function cos(a,b){let s=0;for(let i=0;i<a.length;i++)s+=a[i]*b[i];return s}
 function newSpk(m){const id=m.spk.reduce((a,s)=>Math.max(a,s.id),0)+1;const s={id,name:'講者 '+id,c:SPC[(id-1)%SPC.length],n:0,v:null};m.spk.push(s);return s}
 function assign(m,e,len){if(!e){if(!m.spk.length)newSpk(m);return m.spk[0].id}
  const v=nrm(e);let best=null,bs=-2;m.spk.forEach(s=>{if(!s.v)return;const c=cos(v,nrm(s.v));if(c>bs){bs=c;best=s}});
- const max=+S.set.maxSpk||0,thr=+S.set.thr+(len<2?-.04:0);
+ const max=(m.nspk!=null?+m.nspk:+S.set.maxSpk)||0,thr=+S.set.thr+(len<2?-.04:0);
  let s=best;if(!best||(bs<thr&&(!max||m.spk.length<max)))s=newSpk(m);
  const w=Math.min(len||1,6);if(!s.v)s.v=Array.from(v,x=>x*w);else for(let i=0;i<v.length;i++)s.v[i]+=v[i]*w;s.n++;return s.id}
 /* 講者分群(與 GitHub 端 diarize.py 相同):平均連結階層分群 → 零碎小群併入最像的群 → 依群中心修正;
@@ -1256,7 +1256,7 @@ async function cloudRun(m){if(CLOUD[m.id])return;CLOUD[m.id]=1;forkSync(0);
    if(m.cj.up[name])continue;const b=await iget('a',m.id+':'+a.n);if(!b)continue;
    cloudSt(m,`上傳錄音 ${k}/${m.aud.length}`,0);await ghUpload(rel,name,b,(s,t)=>cloudSt(m,`上傳錄音 ${k}/${m.aud.length}（${fmtMB(s)}/${fmtMB(t)}）`,s/t*100));m.cj.up[name]=1;saveM(m)}
   if(!parts.length)throw new Error('沒有錄音檔可以上傳');
-  if(!m.cj.job){const spk=+S.set.maxSpk||0,sens=Math.max(.45,Math.min(.85,1.45-(+S.set.thr||.8)));
+  if(!m.cj.job){const spk=m.nspk!=null?+m.nspk:(+S.set.maxSpk||0),sens=Math.max(.45,Math.min(.85,1.45-(+S.set.thr||.8)));
    const job=new Blob([JSON.stringify({parts,vocab:vocab(),title:m.title||'',client:m.client||'',room:m.room||'',lang:m.lang=='auto'?'auto':m.lang,model:S.set.cmodel||'firered',speakers:spk,sens,tw:S.set.tw?1:0,...aiOpts()})],{type:'application/json'});
    await ghUpload(rel,'job.json',job);m.cj.job=1;saveM(m)}
   if(!m.cj.disp){cloudSt(m,'啟動 GitHub 轉文字');await ghDispatch({ref:'main',inputs:{release:String(rel)}});m.cj.disp=Date.now();saveM(m)}
@@ -1427,7 +1427,7 @@ async function syncNow(manual){if(S.set.sync&&S.set.syncPw&&!S.set.ghTok)await s
  finally{SY.busy=0}}
 
 /* 改用手機辨識:把存好的錄音解碼、切段,放進本機辨識佇列 */
-async function mLocal(m){toast('讀取錄音中…',60000);m.u=[];m.spk=[];m.seq=0;let n=0;
+async function mLocal(m){toast('讀取錄音中…',60000);m.u=[];m.spk=[];m.seq=0;m.cm=null;let n=0;
  for(const a of m.aud){const b=await iget('a',m.id+':'+a.n);if(!b)continue;let buf;
   try{const ac=new (window.AudioContext||window.webkitAudioContext)();const dec=await ac.decodeAudioData(await b.arrayBuffer());ac.close();const len=Math.ceil(dec.duration*16000),oc=new OfflineAudioContext(1,len,16000),src=oc.createBufferSource();src.buffer=dec;src.connect(oc.destination);src.start();buf=(await oc.startRendering()).getChannelData(0)}
   catch(e){toast('無法讀取錄音（格式不支援）',4000);continue}
@@ -1567,7 +1567,7 @@ function renderMD(){const m=MD.m;if(!m)return;$('#mdt').textContent=mTitle(m)+' 
  $('#mdb').innerHTML=`<div class="mdh">${infoOn().cli||infoOn().room||m.client||m.room?`<div class="mi-row" data-a="info">${infoChips(m)}</div>`:''}<small>${m.train?'<b style="color:var(--ac)">🎓 訓練資料</b>・':''}📅 ${fmtD(m.ts)}・⏱ ${fmtT(m.dur)}・${m.u.length} 句${pend?`・<b style="color:var(--ac)">辨識中 ${pend} 段</b>`:''}</small></div>
  ${m.cloud&&m.st!='done'?`<div class="prog glass"><b>☁️ GitHub 雲端轉文字</b><div>${esc(m.cs||'')}</div><div class="pr" style="margin-top:8px;justify-content:flex-start">${m.st=='cloudfail'||m.st=='cloudwait'?'<button class="btn sm on" data-a="cretry">↻ 重試</button>':''}<button class="btn sm" data-a="clocal">📱 改用手機辨識</button><button class="btn sm dng" data-a="ccancel">✕ 取消雲端工作</button></div></div>`:''}
  <div class="mdtab glass"><b data-tab="s" class="${MD.tab=='s'?'on':''}">✨ 重點整理</b><b data-tab="t" class="${MD.tab=='t'?'on':''}">📝 逐字稿</b></div>
- ${MD.tab=='s'?sumHTML(m):`<div class="mtb">${m.aud.length?'<button class="btn sm on" data-a="play">🎧 播放錄音</button>':''}<button class="btn sm" data-a="aifix">✨ AI 修正錯字</button>${m.u.some(u=>u.raw)?`<button class="btn sm${MD.raw?' on':''}" data-a="raw">${MD.raw?'顯示修正後':'對照原始辨識'}</button>`:''}${m.aud.length&&(m.st=='done'||!m.cloud)?'<button class="btn sm" data-a="cre">☁️ GitHub 重新轉文字</button>':''}<button class="btn sm" data-a="exp">⬇ 匯出</button><button class="btn sm" data-a="cp">⧉ 複製全文</button><button class="btn sm" data-a="tr">🌐 翻譯全文</button><button class="btn sm" data-a="rc">👥 重新分辨講者</button><button class="btn sm" data-a="ren">✏️ 標題・客戶・會議室</button></div>${m.as&&AIJ[m.id]?`<div class="prog glass">✨ ${esc(m.as)}</div>`:''}
+ ${MD.tab=='s'?sumHTML(m):`<div class="mtb">${m.aud.length?'<button class="btn sm on" data-a="play">🎧 播放錄音</button>':''}${(m.st=='done'||!m.cloud)&&(m.aud.length||m.u.some(u=>u.e))?'<button class="btn sm" data-a="rean">🔄 重新分析</button>':''}<button class="btn sm" data-a="aifix">✨ AI 修正錯字</button>${m.u.some(u=>u.raw)?`<button class="btn sm${MD.raw?' on':''}" data-a="raw">${MD.raw?'顯示修正後':'對照原始辨識'}</button>`:''}<button class="btn sm" data-a="exp">⬇ 匯出</button><button class="btn sm" data-a="cp">⧉ 複製全文</button><button class="btn sm" data-a="tr">🌐 翻譯全文</button><button class="btn sm" data-a="ren">✏️ 標題・客戶・會議室</button></div>${m.as&&AIJ[m.id]?`<div class="prog glass">✨ ${esc(m.as)}</div>`:''}
  <div class="spks">${m.spk.map(s=>`<span class="spk" data-sid="${s.id}"><i style="background:${s.c}">${esc(s.name.slice(-1))}</i>${esc(s.name)}・${m.u.filter(u=>u.s==s.id).length}</span>`).join('')}</div>
  <input class="sb" id="mdq" placeholder="🔍 搜尋這場會議" value="${esc(MD.q)}">
  <div class="mlw glass" id="mdl">${L.map(([u,i])=>utHTML(m,u,i)).join('')||'<p class="emp">'+(pend?'辨識中…':'沒有內容')+'</p>'}</div>`}`;
@@ -1591,6 +1591,20 @@ $('#mdb').addEventListener('click',async e=>{const m=MD.m;if(!m)return;
   if(k=='exp')mExport(m);
   if(k=='cp')copy(mText(m));
   if(k=='tr'){const tl=await menu('翻譯成哪種語言？',Object.entries(LANG).map(([k,l])=>[k,l.n]));if(!tl)return;m.tr=tl;let i=0;for(const u of m.u){i++;toast(`翻譯中 ${i}/${m.u.length}…`,60000);try{u.tr=(await translate(u.text,'auto',tl)).t}catch(err){toast('翻譯失敗：'+err.message,3000);break}if(i%5==0)renderMD()}saveM(m);renderMD();toast('翻譯完成')}
+  if(k=='rean'){const hasE=m.u.some(u=>u.e&&u.e.length),hasA=m.aud.length>0,O=[];
+   if(hasE)O.push(['spk','👥 只重新分講者（幾秒完成，保留你改過的文字）']);
+   if(hasA)O.push(['all','🔄 整段錄音重新分析（重新辨識文字＋講者'+(cloudOn()?'・GitHub 雲端約 10～20 分鐘）':'・在這支手機上辨識）')]);
+   if(!O.length)return toast('這場會議沒有保存錄音，無法重新分析',3500);
+   const md=await menu('重新分析・目前 '+m.spk.length+' 位講者',O);if(!md)return;
+   const cnt=m.spk.filter(x=>m.u.some(u=>u.s==x.id)).length;
+   const nk=await menu('這場會議有幾個人說話？',[['0','🤖 自動判斷'],...[2,3,4,5,6,7,8,9,10,12,15].map(n=>[String(n),n+' 人'+(n==cnt?'（目前）':'')]),['1','1 人（只有一個人說話）']]);if(nk==null)return;
+   const n=+nk;m.nspk=n;
+   if(md=='spk'){recluster(m,n);saveM(m);renderMD();if(R.m==m)renderMeet();toast('已重新分講者：'+m.spk.length+' 位'+(n&&m.spk.length<n?'（聲音太像的人無法再分開）':''),3500);return}
+   const ed=m.u.some(u=>u.ed)||(m.sum&&m.sum.edited);
+   if(m.u.length&&!confirm('整段重新分析會取代目前的逐字稿'+(ed?'（包含你手動改過的文字和重點整理）':'')+'，確定嗎？'))return;
+   if(cloudOn()){m.cloud=1;m.st='cloud';m.cj=null;cloudRun(m);toast('已送到 GitHub 重新分析（'+(n?n+' 位講者':'自動判斷講者人數')+'），完成會通知你',3500)}
+   else{m.cloud=0;await mLocal(m)}
+   renderMD();return}
   if(k=='rc'){const k2=await menu('重新分辨講者',[['a','依目前靈敏度重新分群（'+Math.round(S.set.thr*100)+'%）'],['n','指定講者人數…']]);if(!k2)return;let old=S.set.maxSpk;if(k2=='n'){const n=parseInt(prompt('這場會議有幾個人說話？','2'));if(!(n>0))return;S.set.maxSpk=n}recluster(m);S.set.maxSpk=old;renderMD();if(R.m==m)renderMeet();toast('已重新分群：'+m.spk.length+' 位講者')}
   if(k=='ren'||k=='info'){if(await infoEdit(m))renderMD()}
   return}
