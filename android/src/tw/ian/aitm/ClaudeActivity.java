@@ -7,6 +7,9 @@ import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Message;
+import android.net.Uri;
+import android.widget.FrameLayout;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -42,6 +45,9 @@ public class ClaudeActivity extends Activity {
     final Handler ui = new Handler(Looper.getMainLooper());
     String inject = "";
     boolean done = false;
+    FrameLayout frame;
+    WebView pop;
+    int homeHops = 0;
 
     int dp(int v) { return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, getResources().getDisplayMetrics())); }
 
@@ -75,30 +81,87 @@ public class ClaudeActivity extends Activity {
         root.addView(top); root.addView(bar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(4)));
 
         web = new WebView(this);
-        WebSettings s = web.getSettings();
-        s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setDatabaseEnabled(true);
-        s.setMediaPlaybackRequiresUserGesture(false); s.setSupportMultipleWindows(false); s.setJavaScriptCanOpenWindowsAutomatically(true);
-        /* 用一般手機瀏覽器的識別（去掉 WebView 標記），登入頁比較不會擋 */
-        s.setUserAgentString(s.getUserAgentString().replace("; wv", "").replaceAll("Version/[0-9.]+ ", ""));
-        CookieManager cm = CookieManager.getInstance(); cm.setAcceptCookie(true); cm.setAcceptThirdPartyCookies(web, true);
+        setup(web);
         web.addJavascriptInterface(new Bridge(), "AITMC");
-        web.setWebChromeClient(new WebChromeClient());
+        web.setWebChromeClient(new Chrome());
         web.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) { return false; }
+            @Override public void onPageStarted(WebView v, String url, android.graphics.Bitmap f) { hint(url); }
             @Override public void onPageFinished(WebView v, String url) {
                 if (inject.length() > 0) v.evaluateJavascript(inject, null);
-                if (url != null && url.contains("/login")) say("請先登入 Claude（第一次需要；之後會記住）。用 Email 登入碼最穩定", -1);
-                /* 登入完成後常會跳到首頁 → 自動回到整理台 */
-                else if (url != null && url.startsWith("https://claude.ai/") && !url.contains("/artifact/") && !url.contains("login") && !url.contains("magic") && !url.contains("oauth") && target.length() > 0)
-                    ui.postDelayed(() -> { if (!done && web != null) web.loadUrl(target); }, 800);
+                hint(url);
+                /* 登入完成後 claude.ai 常停在首頁或對話列表 → 自動回到整理台（登入過程中的網址不碰，避免打斷登入） */
+                Uri u = url == null ? null : Uri.parse(url);
+                String path = u == null || u.getPath() == null ? "" : u.getPath();
+                boolean home = u != null && "claude.ai".equals(u.getHost()) && (path.equals("") || path.equals("/") || path.startsWith("/new") || path.startsWith("/recents") || path.startsWith("/chats") || path.startsWith("/chat/") || path.startsWith("/projects"));
+                if (home && target.length() > 0 && homeHops < 6) {
+                    homeHops++;
+                    ui.postDelayed(() -> { if (!done && web != null) { String c = web.getUrl(); if (c != null && !c.contains("/artifact/") && !c.contains("login")) web.loadUrl(target); } }, 1500);
+                }
                 CookieManager.getInstance().flush();
             }
         });
-        root.addView(web, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+        frame = new FrameLayout(this);
+        frame.addView(web, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        root.addView(frame, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
         setContentView(root);
         root.setOnApplyWindowInsetsListener((v, ins) -> { v.setPadding(0, ins.getSystemWindowInsetTop(), 0, ins.getSystemWindowInsetBottom()); return ins; });
         web.loadUrl(target);
         say("連線到 claude.ai…", -1);
+    }
+
+    void setup(WebView w) {
+        WebSettings s = w.getSettings();
+        s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setDatabaseEnabled(true);
+        s.setMediaPlaybackRequiresUserGesture(false);
+        /* Google 登入是用「彈出視窗」完成的：一定要支援多視窗，登入結果才傳得回 claude.ai */
+        s.setSupportMultipleWindows(true); s.setJavaScriptCanOpenWindowsAutomatically(true);
+        s.setUserAgentString(s.getUserAgentString().replace("; wv", "").replaceAll("Version/[0-9.]+ ", ""));
+        CookieManager cm = CookieManager.getInstance(); cm.setAcceptCookie(true); cm.setAcceptThirdPartyCookies(w, true);
+    }
+
+    void hint(String url) {
+        if (url == null || done) return;
+        if (url.contains("accounts.google.com")) say("Google 登入中…（選帳戶 → 繼續）", -1);
+        else if (url.contains("/login") || url.contains("magic-link")) say("請先登入 Claude（第一次需要；之後會記住）", -1);
+        else if (url.contains("/artifact/")) say("會議整理台開啟中…（第一次會問是否允許使用 Claude，請按允許）", -1);
+        else if (url.contains("claude.ai")) say("登入完成，正在回到會議整理台…", -1);
+    }
+
+    /* 彈出視窗（Google 登入）：疊在主畫面上；登入完成後它會自己關閉 */
+    class Chrome extends WebChromeClient {
+        @Override public boolean onCreateWindow(WebView view, boolean dialog, boolean gesture, Message msg) {
+            closePop();
+            pop = new WebView(ClaudeActivity.this);
+            setup(pop);
+            pop.setWebChromeClient(new WebChromeClient() {
+                @Override public void onCloseWindow(WebView w) { closePop(); }
+            });
+            pop.setWebViewClient(new WebViewClient() {
+                @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) { return false; }
+                @Override public void onPageStarted(WebView v, String url, android.graphics.Bitmap f) { hint(url); }
+                @Override public void onPageFinished(WebView v, String url) {
+                    CookieManager.getInstance().flush();
+                    /* 登入結果頁回到 claude.ai 後若沒有自己關閉 → 幫它關掉，主畫面重新整理 */
+                    if (url != null && url.startsWith("https://claude.ai/")) {
+                        final WebView me = v;
+                        ui.postDelayed(() -> { if (pop == me) { closePop(); if (web != null && !done) web.loadUrl(target); } }, 3000);
+                    }
+                }
+            });
+            frame.addView(pop, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            WebView.WebViewTransport t = (WebView.WebViewTransport) msg.obj;
+            t.setWebView(pop);
+            msg.sendToTarget();
+            return true;
+        }
+        @Override public void onCloseWindow(WebView w) { }
+    }
+
+    void closePop() {
+        if (pop == null) return;
+        WebView p = pop; pop = null;
+        try { frame.removeView(p); p.destroy(); } catch (Exception ignored) {}
     }
 
     void say(String t, int p) {
@@ -126,11 +189,12 @@ public class ClaudeActivity extends Activity {
         }
     }
 
-    @Override public void onBackPressed() { if (web != null && web.canGoBack() && !done) web.goBack(); else super.onBackPressed(); }
+    @Override public void onBackPressed() { if (pop != null) { if (pop.canGoBack()) pop.goBack(); else closePop(); return; } if (web != null && web.canGoBack() && !done) web.goBack(); else super.onBackPressed(); }
 
     @Override protected void onDestroy() {
         running = false;
         if (!done) MainActivity.toApp("window.__claudeErr&&__claudeErr('已關閉 Claude 視窗','closed')");
+        closePop();
         if (web != null) { web.destroy(); web = null; }
         super.onDestroy();
     }
