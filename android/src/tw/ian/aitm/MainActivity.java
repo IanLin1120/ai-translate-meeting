@@ -72,6 +72,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        inst = this;
         try { pendingOpen = getIntent() != null ? getIntent().getStringExtra("openMeeting") : null; } catch (Exception ignored) {}
         Window w = getWindow();
         w.setStatusBarColor(Color.TRANSPARENT);
@@ -124,6 +125,8 @@ public class MainActivity extends Activity {
     void pushInsets() { js("window.__ins&&__ins(" + insT + "," + insR + "," + insB + "," + insL + ")"); }
 
     void js(String code) { ui.post(() -> { if (web != null) web.evaluateJavascript(code, null); }); }
+    static volatile MainActivity inst;
+    static void toApp(String code) { MainActivity m = inst; if (m != null) m.js(code); }
 
     boolean night() { return (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES; }
 
@@ -435,6 +438,13 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void askInstallPerm() { ui.post(() -> ApkInstaller.askPermission(MainActivity.this)); }
         @JavascriptInterface public void apkInstall(String url) { ApkInstaller.install(MainActivity.this, url, (st, p, msg) -> js("window.__apk&&__apk(" + JSONObject.quote(st) + "," + p + "," + JSONObject.quote(msg == null ? "" : msg) + ")")); }
         @JavascriptInterface public void downloadFile(String url, String name) { try { ApkInstaller.download(MainActivity.this, url, name); } catch (Exception ignored) {} }
+        /* 在 App 裡開 Claude 視窗（會議整理台），工作完成後結果自動送回 */
+        @JavascriptInterface public boolean claudeRun(String url, String jobText) {
+            if (url == null || !url.startsWith("https://claude.ai/")) return false;
+            ClaudeActivity.job = jobText == null ? "" : jobText; ClaudeActivity.target = url;
+            ui.post(() -> { try { startActivity(new Intent(MainActivity.this, ClaudeActivity.class)); } catch (Exception ignored) {} });
+            return true;
+        }
         @JavascriptInterface public void openUrl(String u) { ui.post(() -> { try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(u))); } catch (Exception ignored) {} }); }
         @JavascriptInterface public boolean night() { return MainActivity.this.night(); }
         @JavascriptInterface public void ready() { readyOk = true; pushInsets(); }

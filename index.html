@@ -613,7 +613,7 @@ let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.26.0';
+const APP_VER='1.27.0';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -1439,23 +1439,30 @@ Output only the translation — no notes, no quotes, no explanations.`;
 /* ---- 用你的 Claude 方案（claude.ai 上的「會議整理台」頁面）：App 複製內容 → 頁面整理 → 複製結果 → 回 App 自動套用 ---- */
 let CPEND=null;
 async function handOff(job,label){const txt='AITM-JOB:'+JSON.stringify({v:1,...job});CPEND={id:job.id,k:job.k,ts:Date.now()};
+ /* 新版 APK：直接在 App 裡開 Claude 視窗，完成後結果自動送回、自動套用 */
+ if(IS_APP&&NB.claudeRun){let ok=false;try{ok=NB.claudeRun(S.set.cbURL,txt)}catch(e){}if(ok){if(job.k=='meet'){const m=MS[job.id];if(m){AIJ[m.id]=1;aiSt(m,'Claude 整理中（第一次使用要先登入 Claude）',null,null)}}else{$('#tout').classList.add('ph');$('#tout').textContent='✨ Claude 翻譯中…'}return}}
  try{if(IS_APP&&NB.copy)NB.copy(txt);else await navigator.clipboard.writeText(txt)}catch(e){const x=document.createElement('textarea');x.value=txt;document.body.appendChild(x);x.select();document.execCommand('copy');x.remove()}
  toast(`📋 已複製${label}，正在打開「會議整理台」：在框裡長按貼上就會開始；完成後按「複製結果」再回到這裡`,7000);setTimeout(()=>openURL(S.set.cbURL),600);if(job.k=='tr')trPendUI()}
 function claudeHand(m,what){if(!m.u.length)return toast('這場會議還沒有逐字稿');const nm=s=>spkOf(m,s).name;
  handOff({k:'meet',id:m.id,title:[m.title,m.client&&'客戶：'+m.client,m.room&&'地點：'+m.room].filter(Boolean).join('・'),what:what||'both',hint:hintsJS(m),lines:m.u.map((u,i)=>[i,nm(u.s),Math.round(u.t0),u.text])},'逐字稿（'+m.u.length+' 句）')}
 function trHand(t){const src=S.set.src=='auto'?detect(t):S.set.src,tgt=S.set.tgt;const tl=(vocab().groups||[]).flatMap(g=>g.items).slice(0,150).join('、');
- handOff({k:'tr',id:'tr'+Date.now().toString(36),text:t,src,tgt,tname:LNAME(tgt),terms:tl},'要翻譯的文字');$('#tout').classList.add('ph');$('#tout').textContent='✨ 已交給「會議整理台」用 Claude 翻譯…\n完成後在那一頁按「複製結果」，回到這裡就會自動顯示譯文。'}
+ handOff({k:'tr',id:'tr'+Date.now().toString(36),text:t,src,tgt,tname:LNAME(tgt),terms:tl},'要翻譯的文字');if(IS_APP&&NB.claudeRun)return;$('#tout').classList.add('ph');$('#tout').textContent='✨ 已交給「會議整理台」用 Claude 翻譯…\n完成後在那一頁按「複製結果」，回到這裡就會自動顯示譯文。'}
 function trPendUI(){let b=$('#tpend');if(!b){b=document.createElement('div');b.id='tpend';b.className='pr';b.style.cssText='margin-top:8px;justify-content:flex-start';$('#tout').after(b)}b.innerHTML='<button class="btn sm on" data-cpaste="1">📋 貼上 Claude 譯文</button>';b.onclick=()=>claudeCheck(1)}
 /* 讀剪貼簿裡的結果並套用（回到 App 時自動檢查；也可以按「📋 貼上 Claude 結果」） */
-async function claudeCheck(manual){let t='';try{t=IS_APP&&NB.paste?NB.paste():(manual||CPEND)?await navigator.clipboard.readText():''}catch(e){if(manual)toast('無法讀取剪貼簿：請允許讀取，或長按輸入框貼上',3500);return}
+window.__claudeProg=(st,p)=>{if(!CPEND)return;if(CPEND.k=='meet'){const m=MS[CPEND.id];if(m)aiSt(m,'Claude：'+st,p<0?null:p,null)}else{$('#teng').textContent='✨ Claude：'+st}};
+window.__claudeErr=(msg,code)=>{if(!CPEND)return;const c=CPEND;if(c.k=='meet'){const m=MS[c.id];if(m){delete AIJ[m.id];m.as='';saveM(m,1);if(MD.id==m.id)renderMD()}}else if(code=='closed'){$('#tout').classList.remove('ph');$('#tout').textContent='已關閉 Claude 視窗'}if(code=='closed'){CPEND=null;return}toast('❌ Claude：'+msg,5000)};
+window.__claudeRes=t=>claudeApply(String(t||''),0);
+async function claudeCheck(manual){if(IS_APP&&NB.claudeRun&&!manual)return;let t='';try{t=IS_APP&&NB.paste?NB.paste():(manual||CPEND)?await navigator.clipboard.readText():''}catch(e){if(manual)toast('無法讀取剪貼簿：請允許讀取，或長按輸入框貼上',3500);return}
+ return claudeApply(t,1,manual)}
+async function claudeApply(t,ask,manual){
  const i=(t||'').indexOf('AITM-RES:');if(i<0){if(manual)toast('剪貼簿裡沒有 Claude 的結果：請在「會議整理台」按「📋 複製結果」',4000);return}
  let r;try{r=JSON.parse(t.slice(i+9))}catch(e){if(manual)toast('結果不完整，請在「會議整理台」再按一次「複製結果」',4000);return}
  const h=await sha1s(t);if(!manual&&S.set.cbLast==h)return;S.set.cbLast=h;save();
  if(r.k=='tr'){CPEND=null;const b=$('#tpend');if(b)b.remove();let x=String(r.t||'');if(isZh(S.set.tgt))x=await zhOut(x,S.set.tgt);TOUT=x;$('#tout').classList.remove('ph');$('#tout').textContent=x;$('#teng').textContent='✨ Claude（你的方案）';if(cur!='tr')show('tr');toast('✅ 已貼上 Claude 譯文',2500);return}
  const m=await getM(r.id);if(!m)return toast('找不到這份結果對應的會議（可能已刪除）',3500);
- const nf=Object.keys(r.fix||{}).length;const k=await menu(`套用 Claude 的整理結果到「${mTitle(m)}」？`,[['go',`✅ 套用（${r.fix&&nf?'修正 '+nf+' 句':''}${r.sum?(nf?'、':'')+'重點整理':''}）`],['no','不要']]);if(k!='go')return;
+ const nf=Object.keys(r.fix||{}).length;const k=!ask?'go':await menu(`套用 Claude 的整理結果到「${mTitle(m)}」？`,[['go',`✅ 套用（${r.fix&&nf?'修正 '+nf+' 句':''}${r.sum?(nf?'、':'')+'重點整理':''}）`],['no','不要']]);if(k!='go')return;
  let n=0;for(const [ix,v] of Object.entries(r.fix||{})){const u=m.u[+ix];if(!u||u.ed||typeof v!='string'||!v.trim()||v===u.text)continue;u.raw=u.raw||u.text;u.text=v.trim();n++}
- if(r.sum&&(r.sum.chapters||r.sum.overview)){m.sum=r.sum;m.llm='claude.ai'}CPEND=null;saveM(m);if(MD.id!=m.id)openMD(m.id);else renderMD();if(r.sum){MD.tab='s';renderMD()}toast(`✅ 已套用 Claude 整理`+(n?`・修正 ${n} 句`:'')+(r.sum?'・重點已更新':''),3500)}
+ if(r.sum&&(r.sum.chapters||r.sum.overview)){m.sum=r.sum;m.llm='claude.ai'}CPEND=null;delete AIJ[m.id];m.as='';saveM(m);if(MD.id!=m.id)openMD(m.id);else renderMD();if(r.sum){MD.tab='s';renderMD()}toast(`✅ 已套用 Claude 整理`+(n?`・修正 ${n} 句`:'')+(r.sum?'・重點已更新':''),3500)}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&CPEND&&Date.now()-CPEND.ts<3600000)setTimeout(()=>claudeCheck(0),700)});
 /* ---- 會議：AI 修正錯字＋重點整理（用 Claude，取代 GitHub 上的 Qwen） ---- */
 function hintsJS(m){const v=vocab(),L=[],info=[m.title,m.client&&'客戶：'+m.client,m.room&&'地點：'+m.room].filter(Boolean).join('、');if(info)L.push('會議資訊：'+info);

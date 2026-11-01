@@ -1,1 +1,1 @@
-{"app": "1.26.0", "apk": 11, "apkName": "1.25.0", "minApk": 5, "notes": "新增「用你的 Claude 方案」（不另外收費）：會議整理與 ✨ 翻譯交給 claude.ai 上的「會議整理台」，結果回到 App 自動套用；Claude API 額度不足時自動改用 Google 翻譯，不再顯示失敗"}
+{"app": "1.27.0", "apk": 12, "apkName": "1.27.0", "minApk": 5, "notes": "Claude 整理改成在 App 裡直接完成：按「✨ 用 Claude 整理」會在 App 內開 Claude 視窗，完成後自動套用結果並關閉，不用複製貼上、不用切換 App（需要安裝這版 APK）"}

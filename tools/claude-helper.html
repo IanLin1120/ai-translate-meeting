@@ -90,7 +90,8 @@ const ERR={not_granted:'你沒有允許這一頁使用 Claude。重新整理頁�
 const errMsg=e=>ERR[e&&e.code]||('Claude 發生錯誤：'+((e&&e.message)||e));
 function cjson(t){t=String(t||'').replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'').trim();try{return JSON.parse(t)}catch(e){}const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a>=0&&b>a)return JSON.parse(t.slice(a,b+1));throw {code:'invalid_json'}}
 const fmt=s=>{s=Math.max(0,Math.round(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
-function say(stage,p){$('#st').textContent=stage;if(p!=null)$('#pb').style.width=Math.max(2,Math.min(100,p))+'%'}
+let PEER=null;const tell=m=>{try{PEER&&PEER.postMessage({aitm:1,...m},'*')}catch(e){}};
+function say(stage,p){$('#st').textContent=stage;if(p!=null)$('#pb').style.width=Math.max(2,Math.min(100,p))+'%';tell({t:'prog',stage,p})}
 function msg(id,t,cls){const el=$(id);el.hidden=!t;el.textContent=t||'';el.className='msg'+(cls?' '+cls:'')}
 
 /* 1. 讀取 App 複製的工作 */
@@ -124,8 +125,8 @@ async function run(){busy=true;RES='';say('準備中…',2);ctl=new AbortControl
       if(doSum){const txt=L.map(l=>`[${fmt(l[2])}] ${l[1]}：${out.fix[l[0]]||l[3]}`).join('\n').slice(0,300000);say('整理重點（Claude 思考中…）',doFix?58:8);
         const r=await ask(SUM+(JOB.hint?'\n\n'+JOB.hint:'')+'\n\n會議資訊：'+(JOB.title||'')+'\n\n逐字稿：\n'+txt,{onText:({text})=>say('整理重點…已寫 '+text.length+' 字',Math.min(96,(doFix?60:10)+text.length/45))});
         out.sum=cjson(r.text);out.sum.by='claude.ai'}}
-    RES='AITM-RES:'+JSON.stringify({v:1,...out});say('完成',100);show(out);
-  }catch(e){msg('#m1',errMsg(e),e&&e.code=='cancelled'?'':'bad');say('沒有完成',null)}
+    RES='AITM-RES:'+JSON.stringify({v:1,...out});say('完成',100);show(out);tell({t:'res',res:RES});
+  }catch(e){msg('#m1',errMsg(e),e&&e.code=='cancelled'?'':'bad');say('沒有完成',null);tell({t:'err',code:e&&e.code||'',msg:errMsg(e)})}
   finally{busy=false;clearInterval(tick);$('#mt').textContent='花了 '+fmt((Date.now()-t0)/1000);$('#go').disabled=!JOB;$('#stop').hidden=true}}
 
 /* 3. 顯示結果＋複製 */
@@ -136,6 +137,10 @@ function show(o,partial){$('#c3').hidden=false;$('#cp').disabled=!!partial;let h
   $('#view').innerHTML=h;$('#raw').value=partial?'':RES;msg('#m3','')}
 $('#cp').onclick=async()=>{if(!RES)return;try{await navigator.clipboard.writeText(RES);msg('#m3','✅ 已複製，請回到 App','ok')}catch(e){const r=$('#raw');r.closest('details').open=true;r.focus();r.select();let ok=false;try{ok=document.execCommand('copy')}catch(x){}msg('#m3',ok?'✅ 已複製，請回到 App':'請在下方框框長按 → 全選 → 複製',ok?'ok':'')}};
 
-(async()=>{try{sample=window.claude&&window.claude.use?await window.claude.use('sample'):null}catch(e){sample=null}
-  if(!sample)msg('#m1','這一頁要在 claude.ai 登入後開啟，才能使用你的 Claude 方案。','bad');parse()})();
+/* App 內建的 Claude 視窗：App 直接把工作傳進來，完成後自動把結果送回 App（不用複製貼上） */
+const SPR=initS();let LASTJ='';addEventListener('message',e=>{const d=e.data;if(!d||d.aitm!==1||d.t!=='job'||typeof d.job!='string')return;PEER=e.source;tell({t:'ack'});
+ if(busy||d.job===LASTJ)return;const go=()=>{if(!sample){tell({t:'err',code:'no_sample',msg:'這一頁還沒取得 Claude（請確認已登入 claude.ai）'});return}LASTJ=d.job;$('#inp').value=d.job;parse();if(JOB)run()};
+ SPR.then(go)});
+async function initS(){try{sample=window.claude&&window.claude.use?await window.claude.use('sample'):null}catch(e){sample=null}
+  if(!sample)msg('#m1','這一頁要在 claude.ai 登入後開啟，才能使用你的 Claude 方案。','bad');parse()}
 </script>
