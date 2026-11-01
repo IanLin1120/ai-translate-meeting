@@ -608,12 +608,12 @@ const ASRM={tiny:{r:'onnx-community/whisper-tiny',n:'Whisper Tiny',s:'約 40 MB�
 const MTE={auto:{n:'自動（推薦）',s:'有 Claude 金鑰時用 Claude；否則有網路用 Google 線上翻譯；沒網路自動改用手機上的模型'},claude:{n:'Claude（Anthropic）',s:'語意最自然、專有名詞最準・需要 API 金鑰（設定 → 🤖 Claude）・按用量計費'},gg:{n:'Google 線上翻譯',s:'一定用線上翻譯・需要網路・文字會傳到 Google 翻譯'},opus:{n:'Opus-MT（中↔英）',s:'Helsinki-NLP・各約 100 MB・離線最快（只用手機，不連網）'},nllb:{n:'NLLB-200（200 種語言）',s:'Meta・約 900 MB・非商業授權'},m2m:{n:'M2M100（100 種語言）',s:'Meta・約 1 GB・MIT 授權'},q05:{n:'Qwen2.5 0.5B（LLM 翻譯）',s:'阿里巴巴・約 500 MB・語氣較自然，建議 WebGPU',r:'onnx-community/Qwen2.5-0.5B-Instruct'},q15:{n:'Qwen2.5 1.5B（LLM 翻譯）',s:'約 1.2 GB・需要 WebGPU（沒有 GPU 的手機會非常慢）',r:'onnx-community/Qwen2.5-1.5B-Instruct'}};
 const HFS=[['https://huggingface.co/','Hugging Face 官方'],['https://hf-mirror.com/','hf-mirror 鏡像（官方連不上時）']];
 const DEF={theme:'sea',mode:'auto',font:16,blur:18,glass:.4,ui:'auto',surf:'paper',onb:0,src:'auto',tgt:'zh-TW',eng:'auto',asr:'base',asrc:'',dev:'wasm',hf:'https://huggingface.co/',
- mlang:'zh',mtr:'',thr:.8,maxSpk:0,fine:1,hall:1,keepAud:1,tw:1,lvtts:1,lvm:'one',lvA:'zh-TW',lvB:'en',lvSil:.7,tsub:'text',msrc:'gh',autoUpd:1,mcloud:'gh',cmodel:'firered',ghTok:'',thr2:3,v13:0,v15:0,v16:0,llm:'local',aifix:1,aisum:1,sync:0,syncPw:'',tomb:{},lastSync:0,ck:'',ctm:'claude-haiku-5-5',csm:'claude-sonnet-5-5',cTr:1,fcli:1,froom:1,clients:[],rooms:[],terms:[],fixes:[],vlearn:1,vocT:0};
+ mlang:'zh',mtr:'',thr:.8,maxSpk:0,fine:1,hall:1,keepAud:1,tw:1,lvtts:1,lvm:'one',lvA:'zh-TW',lvB:'en',lvSil:.7,tsub:'text',msrc:'gh',autoUpd:1,mcloud:'gh',cmodel:'firered',ghTok:'',thr2:3,v13:0,v15:0,v16:0,llm:'local',aifix:1,aisum:1,sync:0,syncPw:'',tomb:{},lastSync:0,ck:'',cbURL:'https://claude.ai/artifact/5ZS9ovXbfZjngWMwTzRdaX',ctm:'claude-haiku-5-5',csm:'claude-sonnet-5-5',cTr:1,fcli:1,froom:1,clients:[],rooms:[],terms:[],fixes:[],vlearn:1,vocT:0};
 let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.25.0';
+const APP_VER='1.26.0';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -623,7 +623,7 @@ const CDN={occ:[LIBB+'opencc-full.js','https://cdn.jsdelivr.net/npm/opencc-js@1.
 let TESS_GH=1;const TOPT=()=>TESS_GH?{workerPath:LIBB+'tesseract/worker.min.js',corePath:LIBB+'tesseract/core',workerBlobURL:!IS_APP&&!ON_PAGES}:{};
 window.__ins=(t,r,b,l)=>{const st=document.documentElement.style;st.setProperty('--sat',t+'px');st.setProperty('--sar',r+'px');st.setProperty('--sab',b+'px');st.setProperty('--sal',l+'px')};
 window.__night=()=>apply();
-window.__resume=()=>{twResume();if(cur=='set'&&!TKW.wait)renderSet()};
+window.__resume=()=>{twResume();if(typeof CPEND!='undefined'&&CPEND&&Date.now()-CPEND.ts<3600000)setTimeout(()=>claudeCheck(0),700);if(cur=='set'&&!TKW.wait)renderSet()};
 let permWait=null;
 window.__perm=(p,g)=>{if(permWait){const f=permWait;permWait=null;f(p)}if(cur=='set')renderSet()};
 const sysDark=()=>IS_APP&&NB.night?NB.night():matchMedia('(prefers-color-scheme:dark)').matches;
@@ -752,7 +752,7 @@ const TRC=new Map();
 const cjkFix=s=>s.replace(/(\d)[ \t]*\.[ \t]+(\d)/g,'$1.$2').replace(/([㐀-鿿])[ \t]*,[ \t]*/g,'$1，').replace(/([㐀-鿿])[ \t]*\?/g,'$1？').replace(/([㐀-鿿])[ \t]*!/g,'$1！').replace(/([㐀-鿿])[ \t]*;[ \t]*/g,'$1；').replace(/([㐀-鿿])[ \t]*:[ \t]*/g,'$1：').replace(/[ \t]+([，。！？；：、」』）])/g,'$1').replace(/([，。！？；：、「『（])[ \t]+/g,'$1').replace(/([㐀-鿿])[ \t]+(?=[㐀-鿿])/g,'$1，');
 async function zhFix(s,tgt,cjk){if(isZh(tgt))s=await zhOut(s,tgt);s=s.replace(/>>\w+<<\s*/g,'');return cjk?cjkFix(s):s}
 /* 線上翻譯(Google):App 用原生連線,瀏覽器用 fetch;長文依段落切成 ≤1800 字、同時送出 */
-let GGFAIL=0;const onlineTr=()=>(S.set.eng=='auto'||S.set.eng=='gg'||S.set.eng=='claude')&&navigator.onLine!==false&&(S.set.eng=='gg'||Date.now()-GGFAIL>60000);
+let GGFAIL=0;const onlineTr0=()=>(S.set.eng=='auto'||S.set.eng=='gg'||S.set.eng=='claude')&&navigator.onLine!==false&&(S.set.eng=='gg'||Date.now()-GGFAIL>60000),onlineTr=onlineTr0;
 async function httpGet(url,ms){if(IS_APP&&NB.req){try{return await httpNat(url,ms)}catch(e){/* 原生連線失敗就改用 WebView 的 fetch */}}return await httpFetch(url,ms)}
 async function httpNat(url,ms){{return await new Promise((ok,no)=>{const id='r'+(++httpN),tm=setTimeout(()=>{delete HTTPCB[id];no(new Error('連線逾時'))},ms);HTTPCB[id]=(c,b)=>{clearTimeout(tm);c>=200&&c<300?ok(b):no(new Error('HTTP '+c))};NB.req(id,'GET',url,JSON.stringify({'User-Agent':'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36'}),null)})}}
 async function httpFetch(url,ms){const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),ms);try{const r=await fetch(url,{signal:ac.signal});if(!r.ok)throw new Error('HTTP '+r.status);return await r.text()}finally{clearTimeout(tm)}}
@@ -768,7 +768,7 @@ async function translate(text,src,tgt,o={}){text=String(text||'').trim();if(!tex
  if(!o.eng&&!o.off&&claudeTrOn()&&tgt!='auto'){const ck1=['cl',S.set.ctm,src,tgt,text].join('|');if(TRC.has(ck1))return TRC.get(ck1);
   try{const ds=src=='auto'?detect(text):src;if(ds==tgt||(isZh(ds)&&isZh(tgt)))return{t:await zhOut(text,tgt),eng:'OpenCC',src:ds};
    let lp='';const t=await claudeTrans(text,ds,tgt,{stop:o.stop,onPart:o.onPart?x=>{lp=x;o.onPart(x)}:null}).catch(e=>{if(e.stopped)e.partial=lp;throw e});if(t){const r={t,eng:'Claude '+((CLM.find(x=>x[0]==S.set.ctm)||[0,''])[1]),src:ds};TRC.set(ck1,r);return r}}
-  catch(e){if(e.stopped)throw e;if(S.set.eng=='claude')throw new Error(e.message);GGERR='Claude：'+e.message}}
+  catch(e){if(e.stopped)throw e;if(e.fatal){CLFAIL=Date.now();toast('⚠️ '+e.message+'；先改用 Google 翻譯（30 分鐘後再試 Claude）',5000)}GGERR='Claude：'+e.message}}
  if(!o.eng&&!o.off&&onlineTr()&&tgt!='auto'){const ck0=['gg',src,tgt,text].join('|');if(TRC.has(ck0))return TRC.get(ck0);
   try{const g=await stopRace(ggTr(text,src,tgt),o.stop);if(g.t){GGERR='';GGFAIL=0;let t=g.t;if(isZh(tgt))t=await zhOut(t,tgt);const ds=src=='auto'?(LANG[g.src]?g.src:g.src&&g.src.startsWith('zh')?'zh-TW':detect(text)):src;const r={t,eng:'Google 線上',src:ds};TRC.set(ck0,r);return r}}
   catch(e){if(e.stopped)throw e;GGERR=e.message||String(e);GGFAIL=Date.now();if(S.set.eng=='gg')throw new Error('線上翻譯失敗（'+GGERR+'），請確認網路')}}
@@ -888,10 +888,11 @@ $('#tdl').onclick=()=>{if(!TOUT)return toast('還沒有譯文');dl('翻譯_'+new
 /* ✨ 用 LLM（Qwen）重新翻譯：比較像人寫的句子，但比較慢、需要下載較大的模型 */
 let nStop=0;
 $('#tnat').onclick=async()=>{const t=$('#tin').value.trim();if(!t)return;if(tBusy){tStop=1;nStop=1;return}
+ if(!claudeOn()||Date.now()-CLFAIL<1800000||S.set.llm=='cweb'){if(S.set.cbURL)return trHand(t);}
  if(claudeOn()){tBusy=2;nStop=0;const b=$('#tnat'),o=$('#tout'),t0=performance.now(),mdl=S.set.csm||'claude-sonnet-5-5',mn=(CLM.find(x=>x[0]==mdl)||[0,mdl])[1];b.textContent='⏹';o.classList.add('ph');o.textContent='✨ Claude '+mn+' 翻譯中…';
   try{const src=S.set.src=='auto'?detect(t):S.set.src;const r=await claudeTrans(t,src,S.set.tgt,{model:mdl,stop:()=>nStop,onPart:x=>{o.classList.remove('ph');o.textContent=x;$('#teng').textContent='✨ Claude '+mn+'・'+((performance.now()-t0)/1000).toFixed(0)+' 秒'}});
    TOUT=r;o.classList.remove('ph');o.textContent=r;$('#teng').textContent='✨ Claude '+mn+'・'+((performance.now()-t0)/1000).toFixed(1)+' 秒'}
-  catch(x){if(x.stopped){TOUT=o.textContent;$('#teng').textContent='已停止'}else{o.classList.remove('ph');o.textContent='❌ '+x.message}}finally{tBusy=0;nStop=0;b.textContent='✨'}return}
+  catch(x){if(x.stopped){TOUT=o.textContent;$('#teng').textContent='已停止'}else{if(x.fatal)CLFAIL=Date.now();o.classList.remove('ph');o.textContent='❌ '+x.message+(x.fatal&&S.set.cbURL?'\n\n再按一次 ✨ 會改用「會議整理台」（用你的 Claude 方案，不另外收費）':'')}}finally{tBusy=0;nStop=0;b.textContent='✨'}return}
  /* 沒有 GPU(WebGPU)的手機:1.5B 太慢,固定用 0.5B;並先提醒大概要多久 */
  const gpu=S.set.dev!='wasm'&&!!navigator.gpu;let e=String(S.set.eng||'').startsWith('q')?S.set.eng:'q05';if(!gpu)e='q05';const m=MTE[e],n=splitText(t).flat().filter(x=>x.trim()).length;
  if(!gpu&&!S.set.llmCpuOk){const k=await menu(`✨ AI 潤飾翻譯（${m.n.split('（')[0]}）`,[['go',`✅ 繼續（這台手機沒有 GPU 加速，${n} 句大約要 ${Math.max(1,Math.round(n*12/60))}～${Math.max(2,Math.round(n*25/60))} 分鐘，會一句一句顯示）`],['no','取消（一般「🌐 翻譯」已經很準，而且幾秒就好）']]);if(k!='go')return;S.set.llmCpuOk=1;save()}
@@ -1298,7 +1299,7 @@ async function cloudRun(m,force){if(CLOUD[m.id]&&!force)return;const me={b:Date.
    if(res){cloudSt(m,'下載結果',99);const txt=await withTO(ghAssetText(res.id),120000,'下載結果逾時，請按重試');if(!alive())return;cloudApply(m,typeof txt=='string'?JSON.parse(txt):txt);try{await ghApi('DELETE','/releases/'+rel)}catch(e){}
     delete m.cj;m.st='done';m.cp=null;if(S.set.audCloud&&S.set.syncPw){try{await audUp(m,1)}catch(e){}}
     if(!S.set.keepAud&&!m.imp&&(!S.set.audCloud||audAll(m))){for(const a of m.aud)await idel('a',m.id+':'+a.n);m.aud=[]}
-    delete m.cj;m.st='done';m.cs='';saveM(m);cloudFin(m,1,m.u.length+' 句・'+m.spk.length+' 位講者'+(m.sum?'・含重點整理':''));toast('☁️ GitHub 轉文字完成：'+m.u.length+' 句、'+m.spk.length+' 位講者'+(claudeMeetOn()?'，交給 Claude 整理…':''),3500);if(claudeMeetOn()&&(S.set.aifix||S.set.aisum))setTimeout(()=>claudeMeet(m,S.set.aifix&&S.set.aisum?'both':S.set.aifix?'fix':'sum',1),500);break}
+    delete m.cj;m.st='done';m.cs='';saveM(m);cloudFin(m,1,m.u.length+' 句・'+m.spk.length+' 位講者'+(m.sum?'・含重點整理':''));toast('☁️ GitHub 轉文字完成：'+m.u.length+' 句、'+m.spk.length+' 位講者'+(claudeMeetOn()?'，交給 Claude 整理…':S.set.llm=='cweb'?'。按「✨ 用 Claude 整理」產生重點':''),4000);if(claudeMeetOn()&&(S.set.aifix||S.set.aisum))setTimeout(()=>claudeMeet(m,S.set.aifix&&S.set.aisum?'both':S.set.aifix?'fix':'sum',1),500);break}
    if(b.state=='error')throw new Error('GitHub 處理失敗：'+(b.err||'未知錯誤'));
    if(run&&run.status=='completed'){if(run.conclusion!='success')throw new Error('GitHub 執行'+(RUNC[run.conclusion]||'結束（'+run.conclusion+'）')+'，請按「↻ 重試」');
     if(!doneAt)doneAt=Date.now();else if(Date.now()-doneAt>150000)throw new Error('GitHub 已執行完，但沒有產生結果，請按「↻ 重試」')}
@@ -1378,7 +1379,7 @@ function learnFix(a,b){if(S.set.vlearn===0||!a||!b||a===b||a.length>400||b.lengt
   const f=S.set.fixes.find(z=>z[0]===w&&z[1]===r);if(f)f[2]=(f[2]||1)+1;else S.set.fixes.unshift([w,r,1]);k++}
  if(k){S.set.fixes=S.set.fixes.slice(0,300);S.set.vocT=Date.now();save()}return k}
 function aiSt(m,t,p,eta){m.ap=pgUp(m.ap,t,p,eta);m.as=t+(p!=null?` ${Math.round(p)}%`:'')+etaT(eta);saveM(m,1);cloudNote(m,(x=>/^AI/.test(x)?x:'AI '+x)(t.replace(/^GitHub /,'').replace(/^Claude /,'Claude '))+etaT(eta),p);if(MD.id==m.id)renderMD();if(R.m==m&&cur=='meet')mStatus()}
-async function aiRun(m,what){if(AIJ[m.id])return;if(claudeMeetOn())return claudeMeet(m,what);if(!S.set.ghTok&&S.set.sync)await syTokFetch(0);if(!needTok('AI 修正錯字・重點整理'))return;
+async function aiRun(m,what){if(AIJ[m.id])return;if(S.set.llm=='cweb')return claudeHand(m,what);if(claudeMeetOn())return claudeMeet(m,what);if(!S.set.ghTok&&S.set.sync)await syTokFetch(0);if(!needTok('AI 修正錯字・重點整理'))return;
  if(!m.u.length)return toast('這場會議還沒有逐字稿');const o=aiOpts();if(!o.llm)return toast('AI 整理已關閉，請到「設定 → ✨ AI 修正錯字・重點整理」開啟',3500);
  AIJ[m.id]=1;m.ap=null;let rel=null;forkSync(0);
  try{aiSt(m,'建立 GitHub 工作');const r0=await ghApi('POST','/releases',{tag_name:'job-ai-'+m.id+'-'+Date.now().toString(36),name:'job-ai-'+m.id,draft:true,body:JSON.stringify({state:'uploading'})});rel=r0.id;AREL[m.id]={rel,disp:0};notifAsk();
@@ -1403,7 +1404,7 @@ async function aiRun(m,what){if(AIJ[m.id])return;if(claudeMeetOn())return claude
  Claude 不能聽音訊，所以語音轉文字仍由 GitHub（FireRedASR）或手機（Whisper）處理。 */
 const CLM=[['claude-haiku-5-5','Haiku 5.5','最快、最便宜（翻譯推薦）'],['claude-sonnet-5-5','Sonnet 5.5','品質與速度平衡（重點整理推薦）'],['claude-opus-5-5','Opus 5.5','最強、較慢、較貴']];
 const claudeOn=()=>!!String(S.set.ck||'').trim();
-const claudeTrOn=()=>claudeOn()&&(S.set.eng=='claude'||(S.set.eng=='auto'&&S.set.cTr!==0))&&navigator.onLine!==false;
+let CLFAIL=0;const claudeTrOn=()=>claudeOn()&&Date.now()-CLFAIL>1800000&&(S.set.eng=='claude'||(S.set.eng=='auto'&&S.set.cTr!==0))&&navigator.onLine!==false;
 const claudeMeetOn=()=>claudeOn()&&S.set.llm=='claude';
 const CKURL='https://console.anthropic.com/settings/keys';
 async function claude(o){const body={model:o.model||S.set.csm||'claude-sonnet-5-5',max_tokens:o.max||4096,...(o.system?{system:o.system}:{}),messages:o.messages||[{role:'user',content:o.user}],...(o.temp!=null?{temperature:o.temp}:{}),...(o.onText?{stream:true}:{})};
@@ -1435,6 +1436,27 @@ Rules: keep the meaning, tone and register; keep paragraph and line breaks exact
 Output only the translation — no notes, no quotes, no explanations.`;
  const r=await claude({model:o.model||S.set.ctm||'claude-haiku-5-5',system:sys,user:text,max:Math.min(16000,Math.max(512,Math.round(text.length*(isZh(src)?3:2.2))+200)),temp:0.2,tries:2,stop:o.stop,onText:o.onPart?t=>o.onPart(t):null,timeout:120000});
  let t=r.text.trim();if(isZh(tgt))t=await zhOut(t,tgt);return t}
+/* ---- 用你的 Claude 方案（claude.ai 上的「會議整理台」頁面）：App 複製內容 → 頁面整理 → 複製結果 → 回 App 自動套用 ---- */
+let CPEND=null;
+async function handOff(job,label){const txt='AITM-JOB:'+JSON.stringify({v:1,...job});CPEND={id:job.id,k:job.k,ts:Date.now()};
+ try{if(IS_APP&&NB.copy)NB.copy(txt);else await navigator.clipboard.writeText(txt)}catch(e){const x=document.createElement('textarea');x.value=txt;document.body.appendChild(x);x.select();document.execCommand('copy');x.remove()}
+ toast(`📋 已複製${label}，正在打開「會議整理台」：在框裡長按貼上就會開始；完成後按「複製結果」再回到這裡`,7000);setTimeout(()=>openURL(S.set.cbURL),600);if(job.k=='tr')trPendUI()}
+function claudeHand(m,what){if(!m.u.length)return toast('這場會議還沒有逐字稿');const nm=s=>spkOf(m,s).name;
+ handOff({k:'meet',id:m.id,title:[m.title,m.client&&'客戶：'+m.client,m.room&&'地點：'+m.room].filter(Boolean).join('・'),what:what||'both',hint:hintsJS(m),lines:m.u.map((u,i)=>[i,nm(u.s),Math.round(u.t0),u.text])},'逐字稿（'+m.u.length+' 句）')}
+function trHand(t){const src=S.set.src=='auto'?detect(t):S.set.src,tgt=S.set.tgt;const tl=(vocab().groups||[]).flatMap(g=>g.items).slice(0,150).join('、');
+ handOff({k:'tr',id:'tr'+Date.now().toString(36),text:t,src,tgt,tname:LNAME(tgt),terms:tl},'要翻譯的文字');$('#tout').classList.add('ph');$('#tout').textContent='✨ 已交給「會議整理台」用 Claude 翻譯…\n完成後在那一頁按「複製結果」，回到這裡就會自動顯示譯文。'}
+function trPendUI(){let b=$('#tpend');if(!b){b=document.createElement('div');b.id='tpend';b.className='pr';b.style.cssText='margin-top:8px;justify-content:flex-start';$('#tout').after(b)}b.innerHTML='<button class="btn sm on" data-cpaste="1">📋 貼上 Claude 譯文</button>';b.onclick=()=>claudeCheck(1)}
+/* 讀剪貼簿裡的結果並套用（回到 App 時自動檢查；也可以按「📋 貼上 Claude 結果」） */
+async function claudeCheck(manual){let t='';try{t=IS_APP&&NB.paste?NB.paste():(manual||CPEND)?await navigator.clipboard.readText():''}catch(e){if(manual)toast('無法讀取剪貼簿：請允許讀取，或長按輸入框貼上',3500);return}
+ const i=(t||'').indexOf('AITM-RES:');if(i<0){if(manual)toast('剪貼簿裡沒有 Claude 的結果：請在「會議整理台」按「📋 複製結果」',4000);return}
+ let r;try{r=JSON.parse(t.slice(i+9))}catch(e){if(manual)toast('結果不完整，請在「會議整理台」再按一次「複製結果」',4000);return}
+ const h=await sha1s(t);if(!manual&&S.set.cbLast==h)return;S.set.cbLast=h;save();
+ if(r.k=='tr'){CPEND=null;const b=$('#tpend');if(b)b.remove();let x=String(r.t||'');if(isZh(S.set.tgt))x=await zhOut(x,S.set.tgt);TOUT=x;$('#tout').classList.remove('ph');$('#tout').textContent=x;$('#teng').textContent='✨ Claude（你的方案）';if(cur!='tr')show('tr');toast('✅ 已貼上 Claude 譯文',2500);return}
+ const m=await getM(r.id);if(!m)return toast('找不到這份結果對應的會議（可能已刪除）',3500);
+ const nf=Object.keys(r.fix||{}).length;const k=await menu(`套用 Claude 的整理結果到「${mTitle(m)}」？`,[['go',`✅ 套用（${r.fix&&nf?'修正 '+nf+' 句':''}${r.sum?(nf?'、':'')+'重點整理':''}）`],['no','不要']]);if(k!='go')return;
+ let n=0;for(const [ix,v] of Object.entries(r.fix||{})){const u=m.u[+ix];if(!u||u.ed||typeof v!='string'||!v.trim()||v===u.text)continue;u.raw=u.raw||u.text;u.text=v.trim();n++}
+ if(r.sum&&(r.sum.chapters||r.sum.overview)){m.sum=r.sum;m.llm='claude.ai'}CPEND=null;saveM(m);if(MD.id!=m.id)openMD(m.id);else renderMD();if(r.sum){MD.tab='s';renderMD()}toast(`✅ 已套用 Claude 整理`+(n?`・修正 ${n} 句`:'')+(r.sum?'・重點已更新':''),3500)}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&CPEND&&Date.now()-CPEND.ts<3600000)setTimeout(()=>claudeCheck(0),700)});
 /* ---- 會議：AI 修正錯字＋重點整理（用 Claude，取代 GitHub 上的 Qwen） ---- */
 function hintsJS(m){const v=vocab(),L=[],info=[m.title,m.client&&'客戶：'+m.client,m.room&&'地點：'+m.room].filter(Boolean).join('、');if(info)L.push('會議資訊：'+info);
  const names=m.spk.map(s=>s.name).filter(n=>!/^講者\s?\d+$/.test(n));(v.groups||[]).forEach(g=>L.push(`- ${g.name}：`+g.items.join('、')));if(names.length)L.push('- 與會者：'+names.join('、'));
@@ -1464,7 +1486,7 @@ async function claudeMeet(m,what,quiet){if(AIJ[m.id])return;if(!m.u.length){if(!
    const s=cjson(r.text);if(!s.chapters&&!s.overview)throw new Error('Claude 沒有產生重點');s.by='claude';m.sum=s}
   m.llm=model;m.as='';saveM(m);const sec=Math.round((Date.now()-t0)/1000);cloudFin(m,1,'Claude 整理完成');
   if(!quiet||1)toast(`✨ Claude 整理完成（${sec} 秒）`+(doFix?`・修正 ${fixed} 句`:'')+(doSum?'・重點已更新':''),3000)}
- catch(e){m.as='';saveM(m,1);cloudFin(m,0,'Claude 整理失敗：'+e.message);toast('❌ Claude 整理失敗：'+e.message,6000)}
+ catch(e){m.as='';saveM(m,1);cloudFin(m,0,'Claude 整理失敗：'+e.message);if(e.fatal&&S.set.cbURL){setTimeout(async()=>{const k=await menu('❌ '+e.message,[['web','✨ 改用「會議整理台」（用你的 Claude 方案，不另外收費）'],['no','取消']]);if(k=='web'){S.set.llm='cweb';save();claudeHand(m,what)}},300)}else toast('❌ Claude 整理失敗：'+e.message,6000)}
  finally{delete AIJ[m.id];delete m.ap;if(MD.id==m.id)renderMD();if(R.m==m&&cur=='meet')renderMeet()}}
 
 /* ================= 會議記錄同步(AES-256-GCM 加密後存到 GitHub 的 notes 分支) ================= */
@@ -1695,7 +1717,7 @@ function seAct(m,k,i){if(k=='se-edit'){SE.on=1;SE.d=JSON.parse(JSON.stringify(su
  const y=$('#mdb').scrollTop;renderMD();if(k!='se-save'&&k!='se-cancel')$('#mdb').scrollTop=y;return 1}
 function sumHTML(m){if(SE.on)return seHTML();const s=sumNamed(m);const busy=AIJ[m.id]||m.as;
  const btn=busy?pgHTML(m.ap||{t:m.as||'AI 整理中…',t0:Date.now(),at:Date.now(),ch:Date.now()},'✨ AI 修正錯字・重點整理'):'';
- if(!s)return btn+`<div class="emp">✨ 還沒有重點整理<br><small>用 AI 把逐字稿整理成分章節的重點、決議和待辦事項</small><div class="pr" style="justify-content:center;margin-top:12px"><button class="btn on" data-a="aisum">✨ 產生重點整理</button><button class="btn" data-a="se-edit">✍️ 自己寫重點</button></div></div>`;
+ if(!s)return btn+`<div class="emp">✨ 還沒有重點整理<br><small>用 AI 把逐字稿整理成分章節的重點、決議和待辦事項</small><div class="pr" style="justify-content:center;margin-top:12px"><button class="btn on" data-a="aisum">${S.set.llm=='cweb'?'✨ 用 Claude 整理':'✨ 產生重點整理'}</button>${S.set.llm=='cweb'?'<button class="btn" data-a="cpaste">📋 貼上 Claude 結果</button>':''}<button class="btn" data-a="se-edit">✍️ 自己寫重點</button></div></div>`;
  const tt=v=>{const p=String(v||'').split(':').map(Number);return p.length==3?p[0]*3600+p[1]*60+p[2]:p.length==2?p[0]*60+p[1]:null};
  const L=x=>Array.isArray(x)?x:[];
  return btn+`${s.title?`<div class="sm-h">${esc(s.title)}</div>`:''}${s.overview?`<p class="sm-o">${esc(s.overview)}</p>`:''}
@@ -1715,7 +1737,7 @@ function renderMD(){const m=MD.m;if(!m)return;$('#mdt').textContent=mTitle(m)+' 
  $('#mdb').innerHTML=`<div class="mdh">${infoOn().cli||infoOn().room||m.client||m.room?`<div class="mi-row" data-a="info">${infoChips(m)}</div>`:''}<small>${m.train?'<b style="color:var(--ac)">🎓 訓練資料</b>・':''}📅 ${fmtD(m.ts)}・⏱ ${fmtT(m.dur)}・${m.u.length} 句${m.ca&&Object.keys(m.ca).length?'・☁️ 錄音已備份':''}${pend?`・<b style="color:var(--ac)">辨識中 ${pend} 段</b>`:''}</small></div>
  ${m.cloud&&m.st!='done'?`${m.st=='cloud'?pgHTML(m.cp||{t:m.cs||'處理中',t0:Date.now(),at:Date.now(),ch:Date.now()},'☁️ GitHub 雲端轉文字'):`<div class="prog glass"><b>☁️ GitHub 雲端轉文字</b><div>${esc(m.cs||'')}</div>${m.cp&&m.cp.url?`<a class="pgl" data-url="${esc(m.cp.url)}">在 GitHub 查看執行紀錄 ›</a>`:''}</div>`}<div class="pr" style="margin:-2px 0 10px;justify-content:flex-start;flex-wrap:wrap">${m.st=='cloudfail'||m.st=='cloudwait'?'<button class="btn sm on" data-a="cretry">↻ 重試</button>':''}<button class="btn sm" data-a="clocal">📱 改用手機辨識</button><button class="btn sm dng" data-a="ccancel">✕ 取消雲端工作</button></div>`:''}
  <div class="mdtab glass"><b data-tab="s" class="${MD.tab=='s'?'on':''}">✨ 重點整理</b><b data-tab="t" class="${MD.tab=='t'?'on':''}">📝 逐字稿</b></div>
- ${MD.tab=='s'?sumHTML(m):`<div class="mtb">${m.aud.length?'<button class="btn sm on" data-a="play">🎧 播放錄音</button>':m.ca?'<button class="btn sm on" data-a="cadl">☁️ 下載並播放錄音</button>':''}${(m.st=='done'||!m.cloud)&&(m.aud.length||m.u.some(u=>u.e))?'<button class="btn sm" data-a="rean">🔄 重新分析</button>':''}<button class="btn sm" data-a="aifix">✨ AI 修正錯字</button>${m.u.some(u=>u.raw)?`<button class="btn sm${MD.raw?' on':''}" data-a="raw">${MD.raw?'顯示修正後':'對照原始辨識'}</button>`:''}<button class="btn sm" data-a="exp">⬇ 匯出</button><button class="btn sm" data-a="cp">⧉ 複製全文</button><button class="btn sm" data-a="tr">🌐 翻譯全文</button><button class="btn sm" data-a="ren">✏️ 標題・客戶・會議室</button></div>${m.as&&AIJ[m.id]?pgHTML(m.ap||{t:m.as,t0:Date.now(),at:Date.now(),ch:Date.now()},'✨ AI 修正錯字・重點整理'):''}${AUDP[m.id]?`<div class="prog glass" id="audcs">${esc(AUDP[m.id])}</div>`:''}
+ ${MD.tab=='s'?sumHTML(m):`<div class="mtb">${m.aud.length?'<button class="btn sm on" data-a="play">🎧 播放錄音</button>':m.ca?'<button class="btn sm on" data-a="cadl">☁️ 下載並播放錄音</button>':''}${(m.st=='done'||!m.cloud)&&(m.aud.length||m.u.some(u=>u.e))?'<button class="btn sm" data-a="rean">🔄 重新分析</button>':''}<button class="btn sm" data-a="aifix">✨ AI 修正錯字</button>${S.set.llm=='cweb'?'<button class="btn sm" data-a="cpaste">📋 貼上 Claude 結果</button>':''}${m.u.some(u=>u.raw)?`<button class="btn sm${MD.raw?' on':''}" data-a="raw">${MD.raw?'顯示修正後':'對照原始辨識'}</button>`:''}<button class="btn sm" data-a="exp">⬇ 匯出</button><button class="btn sm" data-a="cp">⧉ 複製全文</button><button class="btn sm" data-a="tr">🌐 翻譯全文</button><button class="btn sm" data-a="ren">✏️ 標題・客戶・會議室</button></div>${m.as&&AIJ[m.id]?pgHTML(m.ap||{t:m.as,t0:Date.now(),at:Date.now(),ch:Date.now()},'✨ AI 修正錯字・重點整理'):''}${AUDP[m.id]?`<div class="prog glass" id="audcs">${esc(AUDP[m.id])}</div>`:''}
  <div class="spks">${m.spk.map(s=>`<span class="spk" data-sid="${s.id}"><i style="background:${s.c}">${esc(s.name.slice(-1))}</i>${esc(s.name)}・${m.u.filter(u=>u.s==s.id).length}</span>`).join('')}</div>
  <input class="sb" id="mdq" placeholder="🔍 搜尋這場會議" value="${esc(MD.q)}">
  <div class="mlw glass" id="mdl">${L.map(([u,i])=>utHTML(m,u,i)).join('')||'<p class="emp">'+(pend?'辨識中…':'沒有內容')+'</p>'}</div>`}`;
@@ -1734,6 +1756,7 @@ $('#mdb').addEventListener('click',async e=>{const m=MD.m;if(!m)return;
   if(k=='clocal'){if(m.cj)await cloudCancel(m);m.cloud=0;await mLocal(m);renderMD()}
   if(k=='aisum'&&m.sum&&m.sum.edited&&!confirm('重新用 AI 整理會取代你手動編輯的重點，確定嗎？'))return;
   if(k=='aisum')aiRun(m,m.u.some(u=>u.raw)?'sum':'both').then(()=>{MD.tab='s';renderMD()});
+  if(k=='cpaste'){claudeCheck(1);return}
   if(k=='aifix'){if(m.u.some(u=>u.raw)&&!confirm('已經修正過了，要重新修正一次嗎？'))return;aiRun(m,'fix')}
   if(k=='raw'){MD.raw=MD.raw?0:1;renderMD()}
   if(k=='cpsum')copy(sumText(m));
@@ -1933,12 +1956,13 @@ function renderSet(){if(TRM===null&&S.set.ghTok){TRM=undefined;trModels().then((
  h+=sec('📝 逐字稿',`<div class="grp glass">${tg('tw','中文輸出為繁體（台灣用語）','Whisper 預設常輸出簡體，自動用 OpenCC 轉成繁體')}${tg('hall','過濾「幻聽」字幕','移除「請訂閱」「字幕由…提供」這類模型亂補的句子')}${tg('keepAud','保存錄音檔','可以從逐字稿任一句直接播放原音（約 15 MB／小時）')}</div>`);
  h+=sec('🌐 翻譯引擎',`<div class="grp glass">${Object.entries(MTE).map(([k,e])=>`<div class="row${s.eng==k?' on':''}" data-eng="${k}"><b>${e.n}<small>${e.s}</small></b><span class="ck">✔</span></div>`).join('')}</div>`);
  let G=sec('☁️ GitHub 雲端轉文字',`<div class="grp glass"><div class="sl"><label>會議錄音・音檔轉文字在哪裡運算</label>${sg('smcloud',[['gh','GitHub 雲端'],['local','這支手機']],s.mcloud)}<small>${s.mcloud=='gh'?'錄音上傳到你 GitHub 的草稿 Release（只有你看得到）→ GitHub 伺服器辨識 → 錄音立刻從 GitHub 刪除 → 結果傳回手機。手機不用下載語音模型。':'在手機上辨識，不需要網路，但要下載模型、比較耗電。'}</small></div>${s.mcloud=='gh'?`${s.ghTok?`<div class="row"><span>✅</span><b>已連接 ${esc(CR())}<small>${S.set.cRepo?'你自己的儲存庫（Fork）':'原始儲存庫'}・權杖只存在這台裝置</small></b></div><div class="tokbar"><button class="btn sm on" data-a="toktest">測試連線</button><button class="btn sm" data-a="tokwiz">重新設定</button><button class="btn sm dng" data-a="tokoff">中斷連線</button></div>`:`<div class="row tw-cta" data-a="tokwiz"><span>☁️</span><b>設定雲端功能（約 3 分鐘）<small>連接你自己的 GitHub（免費）；沒設定前，會議會自動改在這支手機上轉文字</small></b>›</div>`}<div class="sl"><label>雲端語音模型</label>${sg('scm',[['firered','FireRed 最準'],['sensevoice','SenseVoice 最快'],['large-v3-turbo','Whisper 多語'],...(S.set.cmOK||s.cmodel=='custom'?[['custom','🎓 我的模型']]:[])],s.cmodel)}<small>${s.cmodel=='firered'?'小紅書 FireRedASR：中文、中英夾雜辨識最準（AISHELL-1 錯誤率約 0.6%），比較慢，1 小時會議約 1～1.5 小時':s.cmodel=='sensevoice'?'阿里巴巴 SenseVoice：中英日韓粵語，速度最快（1 小時會議約 5～10 分鐘），準確度略低於 FireRedASR':'OpenAI Whisper：支援約 100 種語言，但中文準確度較低、速度較慢'}</small></div>`:''}</div>`);
- G+=sec('🤖 Claude（Anthropic API）',`<div class="grp glass"><div class="sl"><label>API 金鑰<span>${claudeOn()?'✅ 已設定':'未設定'}</span></label><input class="ti" id="ckey" type="password" value="${esc(s.ck||'')}" placeholder="sk-ant-api03-…" autocomplete="off"><small>到 Anthropic Console 建立金鑰（按用量計費）。金鑰只存在這台裝置；有開啟同步時，會用同步密碼加密後同步到你的其他裝置。</small><div class="pr" style="margin-top:8px"><button class="btn sm on" data-a="cktest">測試金鑰</button><button class="btn sm" data-a="ckurl">🔑 取得金鑰</button></div></div>
+ G+=sec('🤖 Claude',`<div class="grp glass"><div class="sl"><label>方法一：用你的 Claude 方案（不另外收費）</label><small>翻譯頁的 ✨ 和會議的「✨ 用 Claude 整理」會把內容複製好、打開 claude.ai 上的「會議整理台」頁面；在頁面裡貼上就會開始，完成後按「複製結果」回到 App 就會自動套用。用的是你的 Claude 訂閱方案額度。需要在手機的 Claude App 或瀏覽器登入 claude.ai。</small><input class="ti" id="cburl" value="${esc(s.cbURL||'')}" placeholder="會議整理台網址" style="margin-top:6px"><div class="pr" style="margin-top:8px"><button class="btn sm on" data-a="cbopen">開啟會議整理台</button>${s.llm!='cweb'?'<button class="btn sm" data-a="cbuse">會議整理改用這個方法</button>':''}</div></div>
+  <div class="sl"><label>方法二：Claude API 金鑰（全自動，另外按用量付費）<span>${claudeOn()?'✅ 已設定':'未設定'}</span></label><input class="ti" id="ckey" type="password" value="${esc(s.ck||'')}" placeholder="sk-ant-api03-…" autocomplete="off"><small>到 Anthropic Console 建立金鑰（按用量計費）。金鑰只存在這台裝置；有開啟同步時，會用同步密碼加密後同步到你的其他裝置。</small><div class="pr" style="margin-top:8px"><button class="btn sm on" data-a="cktest">測試金鑰</button><button class="btn sm" data-a="ckurl">🔑 取得金鑰</button></div></div>
   <div class="sl"><label>翻譯用的模型</label>${sg('sctm',CLM.map(x=>[x[0],x[1]]),s.ctm)}<small>${(CLM.find(x=>x[0]==s.ctm)||CLM[0])[2]}</small></div>
   <div class="sl"><label>修正錯字・重點整理用的模型</label>${sg('scsm',CLM.map(x=>[x[0],x[1]]),s.csm)}<small>${(CLM.find(x=>x[0]==s.csm)||CLM[1])[2]}；翻譯頁的 ✨ 也用這個模型</small></div>
   ${tg('cTr','翻譯使用 Claude','翻譯引擎是「自動」時優先用 Claude；沒有網路或失敗時自動改用 Google／手機模型')}
   <div class="sl"><small>Claude 不能直接聽錄音，所以<b>語音轉文字</b>仍由 GitHub（FireRedASR）或手機（Whisper）處理；轉好的逐字稿交給 Claude 修正錯字、整理重點。費用參考：1 小時會議用 Sonnet 整理約 US$0.1～0.3；翻譯 300 字用 Haiku 不到 US$0.01。</small></div></div>`);
- G+=sec('✨ AI 修正錯字・重點整理',`<div class="grp glass"><div class="sl"><label>AI 整理引擎</label>${sg('sllm',[['claude','🤖 Claude'],['local','開源 Qwen3'],['off','關閉']],s.llm=='off'?'off':s.llm=='claude'?'claude':'local')}<small>${s.llm=='off'?'不做 AI 修正與重點整理':s.llm=='claude'?(claudeOn()?'逐字稿轉好後交給 Claude 修正錯字、整理重點，1 小時會議約 1～2 分鐘完成（模型在「🤖 Claude」設定）':'⚠️ 還沒設定 Claude API 金鑰，暫時改用 GitHub 上的 Qwen3；請到下方「🤖 Claude」貼上金鑰'):'在你的 GitHub 伺服器上跑阿里巴巴開源的 Qwen3 4B 語言模型，逐字稿不會送到其他服務。1 小時的會議大約多花 30～60 分鐘'}</small></div>
+ G+=sec('✨ AI 修正錯字・重點整理',`<div class="grp glass"><div class="sl"><label>AI 整理引擎</label>${sg('sllm',[['cweb','Claude 方案'],['claude','Claude API'],['local','Qwen3'],['off','關閉']],s.llm=='off'?'off':s.llm=='claude'?'claude':s.llm=='cweb'?'cweb':'local')}<small>${s.llm=='off'?'不做 AI 修正與重點整理':s.llm=='cweb'?'用你的 Claude 訂閱方案，不另外收費：按「✨ 用 Claude 整理」→ 在「會議整理台」頁面貼上 → 複製結果 → 回 App 自動套用（要手動切換一次 App）':s.llm=='claude'?(claudeOn()?'逐字稿轉好後交給 Claude 修正錯字、整理重點，1 小時會議約 1～2 分鐘完成（模型在「🤖 Claude」設定）':'⚠️ 還沒設定 Claude API 金鑰，暫時改用 GitHub 上的 Qwen3；請到下方「🤖 Claude」貼上金鑰'):'在你的 GitHub 伺服器上跑阿里巴巴開源的 Qwen3 4B 語言模型，逐字稿不會送到其他服務。1 小時的會議大約多花 30～60 分鐘'}</small></div>
   ${s.llm!='off'?tg('aifix','自動修正錯字','依上下文修正同音字、專有名詞、英文拼寫，保留原始辨識可對照')+tg('aisum','自動產生重點整理','分章節列出重點、決議事項、待辦事項'):''}</div>`);
  if(IS_APP){const P=perm()||{},ok=!!NB.cloudWatch;G+=sec('🔔 雲端處理通知',`<div class="grp glass"><div class="sl"><small>${ok?'✅ 這個 App 版本支援通知欄進度與完成通知':'⚠️ 目前安裝的 App 版本太舊，沒有通知功能：請到「檢查更新」下載新版 APK 安裝'}</small></div>
   <div class="row" data-p="notif"><b>通知權限<small>${P.notif=='yes'?'已允許':'未允許：點這裡允許，不然通知不會出現'}</small></b>${P.notif=='yes'?'<span class="pst ok">已允許</span>':'<span class="pst no">允許 ›</span>'}</div>
@@ -1984,13 +2008,15 @@ $('#se').onclick=async e=>{const _vc=e.target.closest('[data-vc]');if(_vc){if(aw
   if(k=='sytok'){const pw=$('#sypw');if(pw){S.set.syncPw=pw.value;SY.key=null;save()}await syTokFetch(1);return}
   if(k=='synow'){const pw=$('#sypw');if(pw){S.set.syncPw=pw.value;SY.key=null;save()}if(!S.set.syncPw)return toast('請先設定同步密碼',3000);syncNow(1)}
   if(k=='ckurl'){openURL(CKURL);return}
+  if(k=='cbopen'){openURL(S.set.cbURL);return}
+  if(k=='cbuse'){S.set.llm='cweb';save();renderSet();toast('✅ 會議整理改用你的 Claude 方案（會議整理台）',3000);return}
   if(k=='cktest'){const i=$('#ckey');if(i){S.set.ck=i.value.trim();save()}if(!claudeOn())return toast('請先貼上 API 金鑰',2500);toast('測試中…',8000);try{const t0=Date.now(),r=await claude({model:'claude-haiku-5-5',user:'請只回覆「連線成功」四個字',max:20});toast('✅ Claude 連線成功（'+((Date.now()-t0)/1000).toFixed(1)+' 秒）：'+r.text.trim().slice(0,20),3500)}catch(x){toast('❌ '+x.message,6000)}return}
   if(k=='upd')checkUpd(1);if(k=='vers')verList();if(k=='apkup')apkInstall(relApk('v'+S.set.latest.apkName),'v'+S.set.latest.apkName);if(k=='rst'&&confirm('還原為 APK 內建版本？')){NB.resetApp();location.reload()}if(k=='ghweb')openURL(GH.pages);if(k=='ghrepo')openURL(GH.web+'/releases');
   if(k=='ej'){toast('打包中…');const out=[];for(const x of S.meets){const m=await getM(x.id);if(m)out.push({...m,spk:m.spk.map(({v,...q})=>q),u:m.u.map(({e,...u})=>u)})}dl('AI翻譯會議-備份.json',JSON.stringify({meets:out,hist:S.hist},null,1),'application/json')}
   if(k=='clr'&&confirm('這會刪除全部會議記錄、錄音與翻譯紀錄，確定嗎？')){if(R.on)await mStop();for(const st of ['m','a','q'])await idb(st,'readwrite',x=>x.clear());S.meets=[];S.hist=[];MQ=[];for(const k in MS)delete MS[k];R.m=null;save();renderSet();toast('已清除')}}};
 $('#se').oninput=e=>{const k=e.target.dataset.r;if(!k)return;const v=+e.target.value;S.set[k]=k=='glass'||k=='thr'?v/100:v;const o=$('#o_'+k);if(o)o.textContent=k=='glass'||k=='thr'?v+'%':v+'px';
  if(k=='maxSpk'){const lb=e.target.parentNode.querySelector('label span');lb.textContent=v?'最多 '+v+' 人':'自動'}apply();save()};
-$('#se').onchange=e=>{if(e.target.id=='ckey'){const had=claudeOn();S.set.ck=e.target.value.trim();S.set.cfgH='';if(!had&&claudeOn()){S.set.llm='claude';S.set.cTr=1;toast('✅ 已設定 Claude：翻譯、AI 修正錯字與重點整理都改用 Claude（可在下方調整）',4000)}save();renderSet();if(S.set.sync)syncSoon();return}if(e.target.id=='sypw'){S.set.syncPw=e.target.value;SY.key=null;save();return}if(e.target.id=='ghtok'){S.set.ghTok=e.target.value.trim();save();$('#tokst').textContent=S.set.ghTok?'已設定（按測試連線確認）':'未設定';return}if(e.target.id=='asrc'){S.set.asrc=e.target.value.trim();save();renderSet()}};
+$('#se').onchange=e=>{if(e.target.id=='cburl'){S.set.cbURL=e.target.value.trim();save();return}if(e.target.id=='ckey'){const had=claudeOn();S.set.ck=e.target.value.trim();S.set.cfgH='';if(!had&&claudeOn()){S.set.llm='claude';S.set.cTr=1;toast('✅ 已設定 Claude：翻譯、AI 修正錯字與重點整理都改用 Claude（可在下方調整）',4000)}save();renderSet();if(S.set.sync)syncSoon();return}if(e.target.id=='sypw'){S.set.syncPw=e.target.value;SY.key=null;save();return}if(e.target.id=='ghtok'){S.set.ghTok=e.target.value.trim();save();$('#tokst').textContent=S.set.ghTok?'已設定（按測試連線確認）':'未設定';return}if(e.target.id=='asrc'){S.set.asrc=e.target.value.trim();save();renderSet()}};
 
 /* ================= 模型管理 ================= */
 function openMM(){$('#mm').classList.add('on');renderMM()}
@@ -2411,7 +2437,7 @@ $('#pmL').onclick=()=>{S.set.onb=1;save();$('#pm').classList.remove('on')};
 addEventListener('beforeunload',e=>{if(R.on){e.preventDefault();e.returnValue=''}});
 (async()=>{const d=await iget('k','s');if(d){S.set={...DEF,...d.set};S.hist=d.hist||[];S.meets=d.meets||[];S.fav=d.fav||[]}if(['word','phr','gram','term','fav'].includes(S.set.lsub))LS.sub=S.set.lsub;if(!TH[S.set.theme])S.set.theme='sea';
  /* v1.3:手機預設改用 CPU(GPU 容易發燙、當機);開 App 時不自動開相機/麥克風 */
- if(!S.set.v212){if(S.set.eng!='gg')S.set.eng='auto';S.set.v212=1;save()}if(!S.set.v13){S.set.dev='wasm';S.set.v13=1;save()}if(!S.set.v16){if(S.set.cmodel=='sensevoice')S.set.cmodel='firered';S.set.v16=1;save()}if(S.set.llm=='github'){S.set.llm='local';save()}if(!S.set.v15){if(S.set.cmodel=='large-v3-turbo'||S.set.cmodel=='medium'||S.set.cmodel=='small')S.set.cmodel='sensevoice';S.set.v15=1;save()}if(S.set.tsub=='cam'||S.set.tsub=='live')S.set.tsub='text';
+ if(!S.set.v126){if(S.set.llm=='local'||(S.set.llm=='claude'&&!claudeOn()))S.set.llm='cweb';S.set.v126=1;save()}if(!S.set.v212){if(S.set.eng!='gg')S.set.eng='auto';S.set.v212=1;save()}if(!S.set.v13){S.set.dev='wasm';S.set.v13=1;save()}if(!S.set.v16){if(S.set.cmodel=='sensevoice')S.set.cmodel='firered';S.set.v16=1;save()}if(S.set.llm=='github'){S.set.llm='local';save()}if(!S.set.v15){if(S.set.cmodel=='large-v3-turbo'||S.set.cmodel=='medium'||S.set.cmodel=='small')S.set.cmodel='sensevoice';S.set.v15=1;save()}if(S.set.tsub=='cam'||S.set.tsub=='live')S.set.tsub='text';
  layout();apply();show('tr');
  /* 告訴 App「新版介面已正常啟動」。舊版 APK 會在頁面載入完成時重設這個狀態，
     若 10 秒內沒再收到就誤判成啟動失敗、把更新還原 → 前 25 秒內每 2 秒回報一次，避開這個時間差 */

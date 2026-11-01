@@ -1,1 +1,1 @@
-{"app": "1.25.0", "apk": 11, "apkName": "1.25.0", "minApk": 5, "notes": "新增 Claude（Anthropic API）：翻譯、AI 修正錯字、重點整理（1 小時會議約 1～2 分鐘）；GitHub 轉文字改成進度條、自動偵測卡住或失敗；修正套用新版本後被誤判失敗而還原的問題（建議安裝新版 APK）"}
+{"app": "1.26.0", "apk": 11, "apkName": "1.25.0", "minApk": 5, "notes": "新增「用你的 Claude 方案」（不另外收費）：會議整理與 ✨ 翻譯交給 claude.ai 上的「會議整理台」，結果回到 App 自動套用；Claude API 額度不足時自動改用 Google 翻譯，不再顯示失敗"}
