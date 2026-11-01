@@ -66,7 +66,8 @@ public class MainActivity extends Activity {
     int saveSeq = 0;
     int insT, insR, insB, insL;
     boolean recording = false;
-    volatile boolean readyOk = false, safeMode = false;
+    volatile boolean readyOk = false, safeMode = false, resumed = true;
+    volatile int pageGen = 0;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -190,12 +191,12 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        CloudService.appVisible = true;
+        CloudService.appVisible = true; resumed = true;
         js("window.__resume&&__resume()");
     }
 
     @Override
-    protected void onPause() { CloudService.appVisible = false; super.onPause(); }
+    protected void onPause() { CloudService.appVisible = false; resumed = false; super.onPause(); }
 
     /* 點通知 → 開啟那場會議 */
     String pendingOpen = null;
@@ -298,7 +299,7 @@ public class MainActivity extends Activity {
                 c.disconnect();
                 break;
             }
-        } catch (Exception e) { code = -1; out = String.valueOf(e.getMessage()); }
+        } catch (Throwable e) { code = -1; out = String.valueOf(e.getMessage()); }
         final String js = "window.__http&&__http(" + JSONObject.quote(cb) + "," + code + "," + JSONObject.quote(out) + ")";
         js(js);
     }
@@ -339,20 +340,22 @@ public class MainActivity extends Activity {
         }
 
         @Override
-        public void onPageFinished(WebView v, String url) {
-            pushInsets();
-            /* 更新版 10 秒內沒有正常啟動 → 自動還原內建版本 */
+        public void onPageStarted(WebView v, String url, android.graphics.Bitmap fav) {
+            /* 每次開始載入頁面才重設「已啟動」狀態（舊版在載入完成時重設，若網頁先回報就會被誤判成失敗） */
+            readyOk = false; final int g = ++pageGen;
             final File ov = new File(getFilesDir(), "www/index.html");
-            if (ov.exists() && !safeMode) {
-                readyOk = false;
-                ui.postDelayed(() -> {
-                    if (!readyOk && web != null) {
-                        ov.delete(); safeMode = true; web.loadUrl(HOME);
-                        android.widget.Toast.makeText(MainActivity.this, "新版介面啟動失敗，已還原內建版本", android.widget.Toast.LENGTH_LONG).show();
-                    }
-                }, 10000);
-            }
+            if (ov.exists() && !safeMode) ui.postDelayed(new Runnable() { int tries = 0; public void run() {
+                if (g != pageGen || readyOk || web == null || safeMode) return;
+                /* App 在背景時網頁的計時器會暫停，不能判斷 → 回到前景再算 */
+                if (!resumed && tries++ < 60) { ui.postDelayed(this, 5000); return; }
+                if (!ov.exists()) return;
+                ov.delete(); safeMode = true; web.loadUrl(HOME);
+                android.widget.Toast.makeText(MainActivity.this, "新版介面啟動失敗，已還原內建版本", android.widget.Toast.LENGTH_LONG).show();
+            }}, 25000);
         }
+
+        @Override
+        public void onPageFinished(WebView v, String url) { pushInsets(); }
     }
 
     static String mime(String p) {
@@ -442,7 +445,9 @@ public class MainActivity extends Activity {
                 File d = new File(getFilesDir(), "www"); d.mkdirs();
                 File tmp = new File(d, name + ".tmp");
                 FileOutputStream fo = new FileOutputStream(tmp); fo.write(text.getBytes("UTF-8")); fo.close();
-                return tmp.renameTo(new File(d, name));
+                boolean ok = tmp.renameTo(new File(d, name));
+                if (ok) safeMode = false;   /* 寫入新版後，下次重新載入就用新版（不再停留在還原模式） */
+                return ok;
             } catch (Exception e) { return false; }
         }
         @JavascriptInterface public void resetApp() { new File(getFilesDir(), "www/index.html").delete(); }
