@@ -613,7 +613,7 @@ let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.27.2';
+const APP_VER='1.27.3';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -1449,8 +1449,8 @@ function trHand(t){const src=S.set.src=='auto'?detect(t):S.set.src,tgt=S.set.tgt
  handOff({k:'tr',id:'tr'+Date.now().toString(36),text:t,src,tgt,tname:LNAME(tgt),terms:tl},'要翻譯的文字');if(IS_APP&&NB.claudeRun)return;$('#tout').classList.add('ph');$('#tout').textContent='✨ 已交給「會議整理台」用 Claude 翻譯…\n完成後在那一頁按「複製結果」，回到這裡就會自動顯示譯文。'}
 function trPendUI(){let b=$('#tpend');if(!b){b=document.createElement('div');b.id='tpend';b.className='pr';b.style.cssText='margin-top:8px;justify-content:flex-start';$('#tout').after(b)}b.innerHTML='<button class="btn sm on" data-cpaste="1">📋 貼上 Claude 譯文</button>';b.onclick=()=>claudeCheck(1)}
 /* 讀剪貼簿裡的結果並套用（回到 App 時自動檢查；也可以按「📋 貼上 Claude 結果」） */
-window.__claudeProg=(st,p)=>{if(!CPEND)return;if(CPEND.k=='meet'){const m=MS[CPEND.id];if(m)aiSt(m,'Claude：'+st,p<0?null:p,null)}else{$('#teng').textContent='✨ Claude：'+st}};
-window.__claudeErr=(msg,code)=>{if(!CPEND)return;const c=CPEND;if(c.k=='meet'){const m=MS[c.id];if(m){delete AIJ[m.id];m.as='';saveM(m,1);cloudFin(m,code=='closed'?-1:0,'Claude 整理失敗：'+msg);if(MD.id==m.id)renderMD()}}else if(code=='closed'){$('#tout').classList.remove('ph');$('#tout').textContent='已關閉 Claude 視窗'}if(code=='closed'){CPEND=null;return}toast('❌ Claude：'+msg,5000)};
+window.__claudeProg=(st,p)=>{if(!CPEND)return;if(CPEND.k=='ask'){const a=ASKP[CPEND.id];if(a&&a.prog)a.prog(st);return}if(CPEND.k=='meet'){const m=MS[CPEND.id];if(m)aiSt(m,'Claude：'+st,p<0?null:p,null)}else{$('#teng').textContent='✨ Claude：'+st}};
+window.__claudeErr=(msg,code)=>{if(!CPEND)return;const c=CPEND;if(c.k=='ask'){const a=ASKP[c.id];delete ASKP[c.id];CPEND=null;if(a)a.rej(new Error(code=='closed'?'已關閉 Claude 視窗':'Claude：'+msg));return}if(c.k=='meet'){const m=MS[c.id];if(m){delete AIJ[m.id];m.as='';saveM(m,1);cloudFin(m,code=='closed'?-1:0,'Claude 整理失敗：'+msg);if(MD.id==m.id)renderMD()}}else if(code=='closed'){$('#tout').classList.remove('ph');$('#tout').textContent='已關閉 Claude 視窗'}if(code=='closed'){CPEND=null;return}toast('❌ Claude：'+msg,5000)};
 window.__claudeRes=t=>claudeApply(String(t||''),0);
 async function claudeCheck(manual){if(IS_APP&&NB.claudeRun&&!manual)return;let t='';try{t=IS_APP&&NB.paste?NB.paste():(manual||CPEND)?await navigator.clipboard.readText():''}catch(e){if(manual)toast('無法讀取剪貼簿：請允許讀取，或長按輸入框貼上',3500);return}
  return claudeApply(t,1,manual)}
@@ -1458,6 +1458,7 @@ async function claudeApply(t,ask,manual){
  const i=(t||'').indexOf('AITM-RES:');if(i<0){if(manual)toast('剪貼簿裡沒有 Claude 的結果：請在「會議整理台」按「📋 複製結果」',4000);return}
  let r;try{r=JSON.parse(t.slice(i+9))}catch(e){if(manual)toast('結果不完整，請在「會議整理台」再按一次「複製結果」',4000);return}
  const h=await sha1s(t);if(!manual&&S.set.cbLast==h)return;S.set.cbLast=h;save();
+ if(r.k=='ask'){const a=ASKP[r.id];delete ASKP[r.id];if(CPEND&&CPEND.id==r.id)CPEND=null;if(a)a.res(String(r.t||''));return}
  if(r.k=='tr'){CPEND=null;const b=$('#tpend');if(b)b.remove();let x=String(r.t||'');if(isZh(S.set.tgt))x=await zhOut(x,S.set.tgt);TOUT=x;$('#tout').classList.remove('ph');$('#tout').textContent=x;$('#teng').textContent='✨ Claude（你的方案）';if(cur!='tr')show('tr');toast('✅ 已貼上 Claude 譯文',2500);return}
  const m=await getM(r.id);if(!m)return toast('找不到這份結果對應的會議（可能已刪除）',3500);
  const nf=Object.keys(r.fix||{}).length;const k=!ask?'go':await menu(`套用 Claude 的整理結果到「${mTitle(m)}」？`,[['go',`✅ 套用（${r.fix&&nf?'修正 '+nf+' 句':''}${r.sum?(nf?'、':'')+'重點整理':''}）`],['no','不要']]);if(k!='go'){cloudFin(m,-1,'');return}
@@ -2224,8 +2225,8 @@ const exH=(e,forms)=>`<div class="ex"><button class="sp" data-say="${esc(e[0])}"
 async function fillEx(){const L=$$('#lcb2 [data-exz]').filter(p=>/待補/.test(p.textContent));if(!L.length)return;
  for(const p of L){p.innerHTML='<i>翻譯中…</i>';try{const r=await translate(p.dataset.exz,'en','zh-TW',{eng:'opus'});p.textContent=r.t+'（AI 翻譯）'}catch(e){p.innerHTML='<i>（無法翻譯：'+esc(e.message)+'）</i>'}}}
 const LACT={fillex:fillEx,
- ai:async b=>{const box=b.parentElement;b.disabled=true;const q=b.dataset.q,kind=b.dataset.k;box.querySelector('.ai').textContent='🤖 AI 思考中…（第一次使用會下載語言模型，約 0.5–1.2 GB）';
-  try{const t=await llmExplain(q,kind);box.querySelector('.ai').textContent=t;b.remove()}catch(e){box.querySelector('.ai').textContent='❌ '+e.message;b.disabled=false}},
+ ai:async b=>{const box=b.parentElement;b.disabled=true;const q=b.dataset.q,kind=b.dataset.k;const A=box.querySelector('.ai');A.textContent='🤖 AI 思考中…';
+  try{const t=await llmExplain(q,kind,x=>{A.textContent=x});box.querySelector('.ai').textContent=t;b.remove()}catch(e){box.querySelector('.ai').textContent='❌ '+e.message;b.disabled=false}},
  more:b=>{b.nextElementSibling.style.display='';b.remove()}};
 
 /* 單字卡 */
@@ -2266,7 +2267,7 @@ async function openWord(w,push){await words();let i=WI.get(String(w).toLowerCase
  let rs='';if(x&&x.rs){const R=await resem().catch(()=>null);if(R)rs=x.rs.map(id=>R[id]).filter(Boolean).map(g=>`<div class="rsg"><b>易混淆字辨析：${g.w.map(z=>`<span data-ow="${esc(z)}" style="cursor:pointer;text-decoration:underline dotted">${esc(z)}</span>`).join('、')}</b>${g.t.map(t=>{const m=t.match(/^-\s*([^:：]+)[:：]\s*(.*)$/);return m?`<p><strong>${esc(m[1])}</strong>：${esc(m[2])}</p>`:`<p>${esc(t)}</p>`}).join('')}</div>`).join('')}
  if(nt.length||rs)body+=`<div class="stl">💡 用法・使用時要注意</div><div class="ps glass">${nt.length?`<ul class="nt">${nt.map(n=>`<li>${n}</li>`).join('')}</ul>`:''}${rs}</div>`;
  if(x&&x.rt)body+=`<div class="stl">🌱 字根・字首字尾</div><div class="ps glass">${x.rt.map(t=>`<div><b>${esc(t[0])}</b> <small style="color:var(--sub)">${esc(t[2])}</small>：${esc(t[1])}</div>`).join('')}</div>`;
- body+=`<div class="stl">🤖 AI 詳細解說</div><div class="ps glass"><div class="ai lhint" style="margin:0 0 8px">讓手機上的 AI 語言模型（Qwen）補充搭配用法、語氣差別和更多例句。</div><button class="btn" data-act="ai" data-q="${esc(word)}" data-k="w">✨ 產生 AI 解說</button></div>`;
+ body+=`<div class="stl">🤖 AI 詳細解說</div><div class="ps glass"><div class="ai lhint" style="margin:0 0 8px">讓 AI（Claude）補充搭配用法、語氣差別和更多例句。</div><button class="btn" data-act="ai" data-q="${esc(word)}" data-k="w">✨ 產生 AI 解說</button></div>`;
  const kk=kkOf(r);
  const head=`<div class="wc glass"><h2>${esc(word)}</h2><div class="kk">${esc(kk)}${kk?`<small>${r[6]?'KK 音標':'音標'}</small>`:''}</div>${fromNote}<div class="wca"><button class="ib" data-say="${esc(word)}" title="朗讀">🔊</button>${favBtn('w',word,short(r[2]),kk)}<span style="flex:1"></span></div><div style="margin-top:8px">${lv}</div></div>`;
  lcOpen(word,head+body+(body.includes('待補')?`<button class="btn" data-act="fillex" style="margin:10px 0">🌐 用 AI 翻譯例句的中文</button>`:''),false)}
@@ -2291,27 +2292,37 @@ async function openPhrase(p,push){await Promise.all([phrases(),words()]);const i
  const mid=r[1].match(/（([^）]+)）/g);if(mid)nt.push('補充：'+mid.map(m=>esc(m.slice(1,-1))).join('；'));
  if(nt.length)body+=`<div class="stl">💡 用法・注意</div><div class="ps glass"><ul class="nt">${nt.map(n=>`<li>${n}</li>`).join('')}</ul></div>`;
  body+=`<div class="stl">🔤 拆開來看</div><div class="wchips">${toks.filter(t=>WI.has(t.toLowerCase())).map(t=>`<span class="chip" data-ow="${esc(t)}">${esc(t)}</span>`).join('')}</div>`;
- body+=`<div class="stl">🤖 AI 詳細解說</div><div class="ps glass"><div class="ai lhint" style="margin:0 0 8px">讓 AI 語言模型補充這個片語的語氣、使用場合和更多例句。</div><button class="btn" data-act="ai" data-q="${esc(r[0])}" data-k="p">✨ 產生 AI 解說</button></div>`;
+ body+=`<div class="stl">🤖 AI 詳細解說</div><div class="ps glass"><div class="ai lhint" style="margin:0 0 8px">讓 AI（Claude）補充這個片語的語氣、使用場合和更多例句。</div><button class="btn" data-act="ai" data-q="${esc(r[0])}" data-k="p">✨ 產生 AI 解說</button></div>`;
  const head=`<div class="wc glass"><h2>${esc(r[0])}</h2><div class="kk">${esc(kkS)}${kkS?'<small>KK 音標</small>':''}</div><div class="wca"><button class="ib" data-say="${esc(r[0])}" title="朗讀">🔊</button>${favBtn('p',r[0],ms.slice(0,2).join('、'),kkS)}</div></div>`;
  lcOpen(r[0],head+body+(body.includes('待補')?`<button class="btn" data-act="fillex" style="margin:10px 0">🌐 用 AI 翻譯例句的中文</button>`:''),false)}
 
 /* 詞庫沒有的字：用手機上的翻譯模型查 */
 async function openAIWord(q,kind,push){q=String(q).trim();const me=z=>openAIWord(q,kind,z);
  lcOpen(q,`<div class="wc glass"><h2>${esc(q)}</h2><div class="wca"><button class="ib" data-say="${esc(q)}">🔊</button></div></div><div class="ps glass"><h5><em>AI 翻譯</em><small>詞庫沒有收錄，以下由手機上的翻譯模型產生</small></h5><div id="aiw" class="ai">🤖 翻譯中…（第一次使用會下載翻譯模型）</div></div>
- <div class="stl">🤖 AI 詳細解說</div><div class="ps glass"><div class="ai lhint" style="margin:0 0 8px">讓 AI 語言模型（Qwen）解釋意思、用法並舉例。</div><button class="btn" data-act="ai" data-q="${esc(q)}" data-k="${kind||'w'}">✨ 產生 AI 解說</button></div>`,push,me);
+ <div class="stl">🤖 AI 詳細解說</div><div class="ps glass"><div class="ai lhint" style="margin:0 0 8px">讓 AI（Claude）解釋意思、用法並舉例。</div><button class="btn" data-act="ai" data-q="${esc(q)}" data-k="${kind||'w'}">✨ 產生 AI 解說</button></div>`,push,me);
  try{const r=await translate(q,'en','zh-TW',{eng:'opus'});const o=$('#aiw');if(o){o.innerHTML=esc(r.t||'（沒有結果）')+'<div class="lhint" style="margin:6px 0 0">單一個字的機器翻譯可能不準，建議看「AI 詳細解說」</div>'+favBtn(kind=='p'?'p':'w',q,r.t,'')}}
  catch(e){const o=$('#aiw');if(o)o.textContent='❌ '+e.message}}
 
-/* AI 語言模型解說（Qwen，在手機上執行） */
-const LLMC=new Map();
-async function llmExplain(q,kind){const ck=kind+'|'+q;if(LLMC.has(ck))return LLMC.get(ck);
- const e=String(S.set.eng||'').startsWith('q')?S.set.eng:'q05',m=MTE[e];
- if(!S.set.llmOk){const k=await menu(`使用 ${m.n}`,[['go',`✅ 下載並使用（${m.s.split('・')[0]}）`],['no','取消']]);if(k!='go')throw new Error('已取消');S.set.llmOk=1;save()}
+/* AI 解說：優先用 Claude（API 金鑰，或 App 內建 Claude 視窗用你的 Claude 方案）；都沒有才用手機上的 Qwen */
+const LLMC=new Map(),ASKP={};
+const tidy=t=>String(t||'').replace(/\*\*(.+?)\*\*/g,'$1').replace(/^#{1,4}\s*/gm,'').replace(/^\s*[-*]\s+/gm,'・').replace(/\n{3,}/g,'\n\n').trim();
+function aiWho(){return claudeOn()&&Date.now()-CLFAIL>1800000?'api':IS_APP&&NB.claudeRun&&S.set.cbURL?'web':'local'}
+function askHand(sys,user,label,onProg){return new Promise((res,rej)=>{const id='a'+Date.now().toString(36);const job={v:1,k:'ask',id,sys,user,label};
+ let ok=false;try{ok=NB.claudeRun(S.set.cbURL,'AITM-JOB:'+JSON.stringify(job))}catch(e){}if(!ok)return rej(new Error('無法開啟 Claude 視窗'));
+ CPEND={id,k:'ask',ts:Date.now()};ASKP[id]={res,rej,prog:onProg}})}
+async function llmExplain(q,kind,onProg){const ck=kind+'|'+q;if(LLMC.has(ck))return LLMC.get(ck);
  const what=kind=='p'?'片語':kind=='t'?'專有名詞':kind=='g'?'句子':'單字';
- const sys='你是台灣的英文老師，用繁體中文（台灣用語）回答，條列清楚、精簡。';
+ const sys='你是台灣的英文老師，用繁體中文（台灣用語）回答，條列清楚、精簡。只用純文字和數字編號排版，不要用 Markdown 符號（不要 **、#、表格）。';
  const user=kind=='g'?`請分析這個英文句子使用的時態和文法重點，說明為什麼用這個時態，並翻譯成中文：\n${q}`:
   `請解釋英文${what}「${q}」：\n1. 主要意思（若有多個意思請分別列出）\n2. 每個意思各一個英文例句和中文翻譯\n3. 常見搭配用法\n4. 使用時要注意的地方\n5. 相似詞與相反詞`;
- const t=await AI.call('llm',{repo:m.r,sys,user,max:420});const out=String(t||'').trim()||'（沒有結果）';const z=await toTW(out);LLMC.set(ck,z);return z}
+ const P=onProg||(()=>{});let who=aiWho(),z='';
+ if(who=='api'){try{P('🤖 Claude 解說中…');const r=await claude({model:S.set.ctm||'claude-haiku-5-5',system:sys,user,max:1500,tries:2,timeout:60000,onText:t=>P(tidy(t))});z=tidy(r.text)}
+  catch(e){if(e.fatal)CLFAIL=Date.now();who=IS_APP&&NB.claudeRun&&S.set.cbURL?'web':'local';if(who=='local')throw e}}
+ if(!z&&who=='web'){P('🤖 交給 Claude（你的 Claude 方案）解說中…\n會開啟 Claude 視窗，完成後自動回到這裡');z=tidy(await askHand(sys,user,'AI 解說：'+q,t=>P('🤖 Claude：'+t)))}
+ if(!z){const e=String(S.set.eng||'').startsWith('q')?S.set.eng:'q05',m=MTE[e];
+  if(!S.set.llmOk){const k=await menu(`沒有設定 Claude，改用手機上的 ${m.n}？`,[['go',`✅ 下載並使用（${m.s.split('・')[0]}，較慢、較不準）`],['no','取消（到「設定 → 🤖 Claude」設定後就能用 Claude）']]);if(k!='go')throw new Error('已取消');S.set.llmOk=1;save()}
+  P('🤖 手機上的 Qwen 思考中…（第一次會下載語言模型）');const t=await AI.call('llm',{repo:m.r,sys,user,max:420});z=await toTW(String(t||'').trim()||'（沒有結果）')}
+ LLMC.set(ck,z);return z}
 
 /* 文法頁 */
 const TLC={past:'#8a7f72',present:'var(--ac)',future:'var(--ac2)'};
@@ -2375,7 +2386,7 @@ function tenseOf(s){const t=' '+s.toLowerCase().replace(/[’]/g,"'").replace(/[
  return[...new Set(R)]}
 async function tenseAnalyze(s){s=s.trim();const o=$('#lgr');if(!s){o.innerHTML='';return}const G=await gram();const ids=[...new Set(s.split(/[,;:]|\b(?:but|because|when|before|after|while|although|though|unless|until|whereas|so that)\b/i).filter(c=>c&&c.trim().split(/\s+/).length>1).flatMap(c=>tenseOf(c)))];const all=[...G.tenses,...G.extra];
  o.innerHTML=`<div class="ps glass"><p style="margin:0 0 8px;font-weight:600">${esc(s)}</p><div class="lhint" style="margin:0 0 6px">這句用到：</div><div class="wchips">${ids.map(id=>{const x=all.find(a=>a.id==id);return x?`<span class="chip on" data-g="${id}">${esc(x.zh)} ›</span>`:''}).join('')}</div><div class="lhint" id="lgtr" style="margin:10px 0 0">🌐 翻譯中…</div><div class="lhint" style="margin:6px 0 0;font-size:.78em">時態判斷是依句型規則自動分析，複雜句子可能不完全準確；點「AI 解說」可請語言模型詳細分析</div><div style="margin-top:8px"><div class="ai"></div><button class="btn sm" id="lgai">✨ AI 解說這句</button></div></div>`;
- $('#lgai').onclick=async()=>{const b=$('#lgai'),a=b.previousElementSibling;b.disabled=true;a.textContent='🤖 分析中…';try{a.textContent=await llmExplain(s,'g');b.remove()}catch(e){a.textContent='❌ '+e.message;b.disabled=false}};
+ $('#lgai').onclick=async()=>{const b=$('#lgai'),a=b.previousElementSibling;b.disabled=true;a.textContent='🤖 分析中…';try{a.textContent=await llmExplain(s,'g',x=>{a.textContent=x});b.remove()}catch(e){a.textContent='❌ '+e.message;b.disabled=false}};
  o.querySelectorAll('[data-g]').forEach(c=>c.onclick=()=>openTense(c.dataset.g));
  try{const r=await translate(s,'en','zh-TW');const z=$('#lgtr');if(z)z.textContent='中文：'+r.t}catch(e){const z=$('#lgtr');if(z)z.textContent='（翻譯失敗：'+e.message+'）'}}
 
@@ -2405,7 +2416,7 @@ async function openTerm(c,i,push){const D=await terms();const t=D.t[c][i];if(!t)
  const ws=name.split(/[\s\-\/]+/).filter(w=>WI&&WI.has(w.toLowerCase()));
  if(ws.length)h+=`<div class="stl">🔤 相關單字</div><div class="wchips">${ws.map(w=>`<span class="chip" data-ow="${esc(w.toLowerCase())}">${esc(w)}</span>`).join('')}</div>`;
  const rel=D.t[c].filter(x=>x!==t&&x[3]==t[3]).slice(Math.max(0,i-3),i+5).filter(x=>x!==t).slice(0,6);
- h+=`<div class="stl">🤖 AI 詳細解說</div><div class="ps glass"><div class="ai lhint" style="margin:0 0 8px">讓 AI 語言模型說明這個名詞在${esc(cat[2])}領域的意思與用法。</div><button class="btn" data-act="ai" data-q="${esc(t[0]+'（'+cat[2]+'）')}" data-k="t">✨ 產生 AI 解說</button></div>`;
+ h+=`<div class="stl">🤖 AI 詳細解說</div><div class="ps glass"><div class="ai lhint" style="margin:0 0 8px">讓 AI（Claude）說明這個名詞在${esc(cat[2])}領域的意思與用法。</div><button class="btn" data-act="ai" data-q="${esc(t[0]+'（'+cat[2]+'）')}" data-k="t">✨ 產生 AI 解說</button></div>`;
  lcOpen(name,h,push,me)}
 
 /* 收藏頁 */

@@ -98,7 +98,7 @@ function msg(id,t,cls){const el=$(id);el.hidden=!t;el.textContent=t||'';el.class
 function parse(){const v=$('#inp').value.trim();JOB=null;$('#job').hidden=true;$('#go').disabled=true;msg('#m1','');
   if(!v)return;const i=v.indexOf('AITM-JOB:');if(i<0){msg('#m1','這不是 App 複製的內容。請回到 App 按「✨ 用 Claude 整理」再貼上一次。','bad');return}
   try{JOB=JSON.parse(v.slice(i+9))}catch(e){msg('#m1','內容不完整（可能只貼上一部分），請回到 App 再複製一次。','bad');return}
-  const d=[];if(JOB.k=='tr'){d.push(['工作','翻譯成 '+(JOB.tname||JOB.tgt)],['字數',JOB.text.length+' 字'])}
+  const d=[];if(JOB.k=='ask'){d.push(['工作',JOB.label||'AI 解說'])}else if(JOB.k=='tr'){d.push(['工作','翻譯成 '+(JOB.tname||JOB.tgt)],['字數',JOB.text.length+' 字'])}
   else{d.push(['會議',JOB.title||'（未命名）'],['逐字稿',JOB.lines.length+' 句'],['工作',JOB.what=='fix'?'修正錯字':JOB.what=='sum'?'整理重點':'修正錯字＋整理重點'])}
   $('#job').innerHTML=d.map(([a,b])=>`<dt>${esc(a)}</dt><dd>${esc(b)}</dd>`).join('');$('#job').hidden=false;$('#go').disabled=!sample;
   if(!sample)msg('#m1','這一頁要在 claude.ai 登入後開啟，才能使用你的 Claude 方案。','bad')}
@@ -112,7 +112,10 @@ async function ask(prompt,o={}){return await sample(prompt,{modelTier:o.tier||'d
 async function run(){busy=true;RES='';say('準備中…',2);ctl=new AbortController();$('#go').disabled=true;$('#stop').hidden=false;$('#c2').hidden=false;$('#c3').hidden=true;msg('#m1','');
   t0=Date.now();clearInterval(tick);tick=setInterval(()=>{$('#mt').textContent='已進行 '+fmt((Date.now()-t0)/1000)+'・Claude 思考時畫面可能停幾十秒，屬正常'},1000);
   try{let out;
-    if(JOB.k=='tr'){say('翻譯中（Claude 思考中…）',5);
+    if(JOB.k=='ask'){say('Claude 思考中…',5);
+      const r=await ask((JOB.sys?JOB.sys+'\n\n':'')+JOB.user,{onText:({text})=>{say('已寫 '+text.length+' 字',Math.min(95,10+text.length/8));show({k:'ask',t:text},1)}});
+      out={k:'ask',id:JOB.id||'',t:r.text.trim()}}
+    else if(JOB.k=='tr'){say('翻譯中（Claude 思考中…）',5);
       const r=await ask(`把下面的文字翻譯成${JOB.tname}。保留段落與換行、人名、數字、單位、產品代碼與網址；用母語人士自然的寫法${/Chinese/.test(JOB.tname)?'，使用全形中文標點':''}。只輸出譯文，不要任何說明。${JOB.terms?'\n專有名詞的正確寫法：'+JOB.terms:''}\n\n${JOB.text}`,{onText:({text})=>{say('翻譯中…已寫 '+text.length+' 字',Math.min(95,10+text.length/JOB.text.length*80));show({k:'tr',t:text},1)}});
       out={k:'tr',id:JOB.id||'',t:r.text.trim()}}
     else{out={k:'meet',id:JOB.id,fix:{},sum:null};const L=JOB.lines;const doFix=JOB.what!='sum',doSum=JOB.what!='fix';
@@ -131,7 +134,7 @@ async function run(){busy=true;RES='';say('準備中…',2);ctl=new AbortControl
 
 /* 3. 顯示結果＋複製 */
 function show(o,partial){$('#c3').hidden=false;$('#cp').disabled=!!partial;let h='';
-  if(o.k=='tr')h=`<div class="out">${esc(o.t)}</div>`;
+  if(o.k=='tr'||o.k=='ask')h=`<div class="out">${esc(o.t)}</div>`;
   else{const s=o.sum,n=Object.keys(o.fix||{}).length;if(JOB.what!='sum')h+=`<p class="msg ok">修正了 ${n} 句的錯字</p>`;
     if(s)h+=`<div class="sum">${s.overview?`<h3>摘要</h3><p class="ov">${esc(s.overview)}</p>`:''}${(s.chapters||[]).map(c=>`<h3>${esc(c.title)}<span class="t">${esc(c.start||'')}${c.end?'–'+esc(c.end):''}</span></h3>${c.summary?`<p class="ov">${esc(c.summary)}</p>`:''}<ul>${(c.points||[]).map(p=>`<li>${esc(p)}</li>`).join('')}</ul>`).join('')}${(s.decisions||[]).length?`<h3>決議事項</h3><ul>${s.decisions.map(d=>`<li>${esc(d)}</li>`).join('')}</ul>`:''}${(s.actions||[]).length?`<h3>待辦事項</h3><ul>${s.actions.map(a=>`<li>${esc(a.owner||'未指定')}：${esc(a.task)}${a.due?'（'+esc(a.due)+'）':''}</li>`).join('')}</ul>`:''}</div>`}
   $('#view').innerHTML=h;$('#raw').value=partial?'':RES;msg('#m3','')}
