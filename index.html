@@ -613,7 +613,7 @@ let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.27.3';
+const APP_VER='1.27.4';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -892,7 +892,7 @@ $('#tnat').onclick=async()=>{const t=$('#tin').value.trim();if(!t)return;if(tBus
  if(claudeOn()){tBusy=2;nStop=0;const b=$('#tnat'),o=$('#tout'),t0=performance.now(),mdl=S.set.csm||'claude-sonnet-5-5',mn=(CLM.find(x=>x[0]==mdl)||[0,mdl])[1];b.textContent='⏹';o.classList.add('ph');o.textContent='✨ Claude '+mn+' 翻譯中…';
   try{const src=S.set.src=='auto'?detect(t):S.set.src;const r=await claudeTrans(t,src,S.set.tgt,{model:mdl,stop:()=>nStop,onPart:x=>{o.classList.remove('ph');o.textContent=x;$('#teng').textContent='✨ Claude '+mn+'・'+((performance.now()-t0)/1000).toFixed(0)+' 秒'}});
    TOUT=r;o.classList.remove('ph');o.textContent=r;$('#teng').textContent='✨ Claude '+mn+'・'+((performance.now()-t0)/1000).toFixed(1)+' 秒'}
-  catch(x){if(x.stopped){TOUT=o.textContent;$('#teng').textContent='已停止'}else{if(x.fatal)CLFAIL=Date.now();o.classList.remove('ph');o.textContent='❌ '+x.message+(x.fatal&&S.set.cbURL?'\n\n再按一次 ✨ 會改用「會議整理台」（用你的 Claude 方案，不另外收費）':'')}}finally{tBusy=0;nStop=0;b.textContent='✨'}return}
+  catch(x){if(x.stopped){TOUT=o.textContent;$('#teng').textContent='已停止'}else if(x.fatal&&S.set.cbURL){CLFAIL=Date.now();tBusy=0;b.textContent='✨';toast('ℹ️ '+x.message,4500);return trHand(t)}else{if(x.fatal)CLFAIL=Date.now();o.classList.remove('ph');o.textContent='❌ '+x.message+(x.fatal&&S.set.cbURL?'\n\n再按一次 ✨ 會改用「會議整理台」（用你的 Claude 方案，不另外收費）':'')}}finally{tBusy=0;nStop=0;b.textContent='✨'}return}
  /* 沒有 GPU(WebGPU)的手機:1.5B 太慢,固定用 0.5B;並先提醒大概要多久 */
  const gpu=S.set.dev!='wasm'&&!!navigator.gpu;let e=String(S.set.eng||'').startsWith('q')?S.set.eng:'q05';if(!gpu)e='q05';const m=MTE[e],n=splitText(t).flat().filter(x=>x.trim()).length;
  if(!gpu&&!S.set.llmCpuOk){const k=await menu(`✨ AI 潤飾翻譯（${m.n.split('（')[0]}）`,[['go',`✅ 繼續（這台手機沒有 GPU 加速，${n} 句大約要 ${Math.max(1,Math.round(n*12/60))}～${Math.max(2,Math.round(n*25/60))} 分鐘，會一句一句顯示）`],['no','取消（一般「🌐 翻譯」已經很準，而且幾秒就好）']]);if(k!='go')return;S.set.llmCpuOk=1;save()}
@@ -1403,7 +1403,7 @@ async function aiRun(m,what){if(AIJ[m.id])return;if(S.set.llm=='cweb')return cla
  金鑰只存在這台裝置（開啟同步時用同步密碼加密後同步）；從瀏覽器直接呼叫 api.anthropic.com。
  Claude 不能聽音訊，所以語音轉文字仍由 GitHub（FireRedASR）或手機（Whisper）處理。 */
 const CLM=[['claude-haiku-5-5','Haiku 5.5','最快、最便宜（翻譯推薦）'],['claude-sonnet-5-5','Sonnet 5.5','品質與速度平衡（重點整理推薦）'],['claude-opus-5-5','Opus 5.5','最強、較慢、較貴']];
-const claudeOn=()=>!!String(S.set.ck||'').trim();
+const claudeOn=()=>!!String(S.set.ck||'').trim()&&!S.set.ckNC; /* ckNC：金鑰沒有額度 → 停用金鑰，改用 Claude 方案 */
 let CLFAIL=0;const claudeTrOn=()=>claudeOn()&&Date.now()-CLFAIL>1800000&&(S.set.eng=='claude'||(S.set.eng=='auto'&&S.set.cTr!==0))&&navigator.onLine!==false;
 const claudeMeetOn=()=>claudeOn()&&S.set.llm=='claude';
 const CKURL='https://console.anthropic.com/settings/keys';
@@ -1413,7 +1413,7 @@ async function claude(o){const body={model:o.model||S.set.csm||'claude-sonnet-5-
   try{const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',signal:ac.signal,headers:{'content-type':'application/json','x-api-key':String(S.set.ck).trim(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify(body)});
    if(!r.ok){let j={};try{j=await r.json()}catch(e){}const msg=(j.error&&j.error.message)||'';
     if(r.status==401)throw Object.assign(new Error('Claude API 金鑰無效，請到「設定 → 🤖 Claude」重新貼上'),{fatal:1});
-    if(r.status==400&&/credit|balance|billing/i.test(msg))throw Object.assign(new Error('Claude 帳戶的額度不足，請到 Anthropic Console 儲值'),{fatal:1});
+    if(r.status==400&&/credit|balance|billing/i.test(msg)){S.set.ckNC=Date.now();if(S.set.llm=='claude')S.set.llm='cweb';save();throw Object.assign(new Error('API 金鑰沒有額度（API 是另外計費，不能用月費方案的額度）→ 已自動改用你的 Claude 方案'),{fatal:1,nc:1})}
     if(r.status==403)throw Object.assign(new Error('這把金鑰沒有使用權限（'+msg+'）'),{fatal:1});
     if(r.status==404)throw Object.assign(new Error('找不到模型 '+body.model+'（'+msg+'）'),{fatal:1});
     if(r.status==429||r.status>=500){last=new Error(r.status==429?'Claude 使用量達到上限，稍候重試':'Claude 伺服器忙碌（'+r.status+'）');if(k+1<(o.tries||4))await sleep((o.tries||4)<3?800:2000*(k+1)*(k+1));continue}
@@ -1494,7 +1494,7 @@ async function claudeMeet(m,what,quiet){if(AIJ[m.id])return;if(!m.u.length){if(!
    const s=cjson(r.text);if(!s.chapters&&!s.overview)throw new Error('Claude 沒有產生重點');s.by='claude';m.sum=s}
   m.llm=model;m.as='';saveM(m);const sec=Math.round((Date.now()-t0)/1000);cloudFin(m,1,'Claude 整理完成');
   if(!quiet||1)toast(`✨ Claude 整理完成（${sec} 秒）`+(doFix?`・修正 ${fixed} 句`:'')+(doSum?'・重點已更新':''),3000)}
- catch(e){m.as='';saveM(m,1);cloudFin(m,0,'Claude 整理失敗：'+e.message);if(e.fatal&&S.set.cbURL){setTimeout(async()=>{const k=await menu('❌ '+e.message,[['web','✨ 改用「會議整理台」（用你的 Claude 方案，不另外收費）'],['no','取消']]);if(k=='web'){S.set.llm='cweb';save();claudeHand(m,what)}},300)}else toast('❌ Claude 整理失敗：'+e.message,6000)}
+ catch(e){m.as='';saveM(m,1);if(e.nc&&S.set.cbURL){cloudFin(m,-1,'');toast('ℹ️ '+e.message,4500);setTimeout(()=>claudeHand(m,what),400);return}cloudFin(m,0,'Claude 整理失敗：'+e.message);if(e.fatal&&S.set.cbURL){setTimeout(async()=>{const k=await menu('❌ '+e.message,[['web','✨ 改用「會議整理台」（用你的 Claude 方案，不另外收費）'],['no','取消']]);if(k=='web'){S.set.llm='cweb';save();claudeHand(m,what)}},300)}else toast('❌ Claude 整理失敗：'+e.message,6000)}
  finally{delete AIJ[m.id];delete m.ap;if(MD.id==m.id)renderMD();if(R.m==m&&cur=='meet')renderMeet()}}
 
 /* ================= 會議記錄同步(AES-256-GCM 加密後存到 GitHub 的 notes 分支) ================= */
@@ -1964,8 +1964,8 @@ function renderSet(){if(TRM===null&&S.set.ghTok){TRM=undefined;trModels().then((
  h+=sec('📝 逐字稿',`<div class="grp glass">${tg('tw','中文輸出為繁體（台灣用語）','Whisper 預設常輸出簡體，自動用 OpenCC 轉成繁體')}${tg('hall','過濾「幻聽」字幕','移除「請訂閱」「字幕由…提供」這類模型亂補的句子')}${tg('keepAud','保存錄音檔','可以從逐字稿任一句直接播放原音（約 15 MB／小時）')}</div>`);
  h+=sec('🌐 翻譯引擎',`<div class="grp glass">${Object.entries(MTE).map(([k,e])=>`<div class="row${s.eng==k?' on':''}" data-eng="${k}"><b>${e.n}<small>${e.s}</small></b><span class="ck">✔</span></div>`).join('')}</div>`);
  let G=sec('☁️ GitHub 雲端轉文字',`<div class="grp glass"><div class="sl"><label>會議錄音・音檔轉文字在哪裡運算</label>${sg('smcloud',[['gh','GitHub 雲端'],['local','這支手機']],s.mcloud)}<small>${s.mcloud=='gh'?'錄音上傳到你 GitHub 的草稿 Release（只有你看得到）→ GitHub 伺服器辨識 → 錄音立刻從 GitHub 刪除 → 結果傳回手機。手機不用下載語音模型。':'在手機上辨識，不需要網路，但要下載模型、比較耗電。'}</small></div>${s.mcloud=='gh'?`${s.ghTok?`<div class="row"><span>✅</span><b>已連接 ${esc(CR())}<small>${S.set.cRepo?'你自己的儲存庫（Fork）':'原始儲存庫'}・權杖只存在這台裝置</small></b></div><div class="tokbar"><button class="btn sm on" data-a="toktest">測試連線</button><button class="btn sm" data-a="tokwiz">重新設定</button><button class="btn sm dng" data-a="tokoff">中斷連線</button></div>`:`<div class="row tw-cta" data-a="tokwiz"><span>☁️</span><b>設定雲端功能（約 3 分鐘）<small>連接你自己的 GitHub（免費）；沒設定前，會議會自動改在這支手機上轉文字</small></b>›</div>`}<div class="sl"><label>雲端語音模型</label>${sg('scm',[['firered','FireRed 最準'],['sensevoice','SenseVoice 最快'],['large-v3-turbo','Whisper 多語'],...(S.set.cmOK||s.cmodel=='custom'?[['custom','🎓 我的模型']]:[])],s.cmodel)}<small>${s.cmodel=='firered'?'小紅書 FireRedASR：中文、中英夾雜辨識最準（AISHELL-1 錯誤率約 0.6%），比較慢，1 小時會議約 1～1.5 小時':s.cmodel=='sensevoice'?'阿里巴巴 SenseVoice：中英日韓粵語，速度最快（1 小時會議約 5～10 分鐘），準確度略低於 FireRedASR':'OpenAI Whisper：支援約 100 種語言，但中文準確度較低、速度較慢'}</small></div>`:''}</div>`);
- G+=sec('🤖 Claude',`<div class="grp glass"><div class="sl"><label>方法一：用你的 Claude 方案（不另外收費）</label><small>翻譯頁的 ✨ 和會議的「✨ 用 Claude 整理」會把內容複製好、打開 claude.ai 上的「會議整理台」頁面；在頁面裡貼上就會開始，完成後按「複製結果」回到 App 就會自動套用。用的是你的 Claude 訂閱方案額度。需要在手機的 Claude App 或瀏覽器登入 claude.ai。</small><input class="ti" id="cburl" value="${esc(s.cbURL||'')}" placeholder="會議整理台網址" style="margin-top:6px"><div class="pr" style="margin-top:8px"><button class="btn sm on" data-a="cbopen">開啟會議整理台</button>${s.llm!='cweb'?'<button class="btn sm" data-a="cbuse">會議整理改用這個方法</button>':''}</div></div>
-  <div class="sl"><label>方法二：Claude API 金鑰（全自動，另外按用量付費）<span>${claudeOn()?'✅ 已設定':'未設定'}</span></label><input class="ti" id="ckey" type="password" value="${esc(s.ck||'')}" placeholder="sk-ant-api03-…" autocomplete="off"><small>到 Anthropic Console 建立金鑰（按用量計費）。金鑰只存在這台裝置；有開啟同步時，會用同步密碼加密後同步到你的其他裝置。</small><div class="pr" style="margin-top:8px"><button class="btn sm on" data-a="cktest">測試金鑰</button><button class="btn sm" data-a="ckurl">🔑 取得金鑰</button></div></div>
+ G+=sec('🤖 Claude',`<div class="grp glass"><div class="sl"><label>方法一：用你的 Claude 方案（不另外收費）</label><small>翻譯頁的 ✨、會議的「✨ 用 Claude 整理」、學習頁的「AI 解說」會在 App 裡開啟 Claude 視窗，自動處理完再回到 App。<b>用的是你的 Claude 月費方案額度，不另外收費</b>。第一次要在視窗裡登入 claude.ai。</small><input class="ti" id="cburl" value="${esc(s.cbURL||'')}" placeholder="會議整理台網址" style="margin-top:6px"><div class="pr" style="margin-top:8px"><button class="btn sm on" data-a="cbopen">開啟會議整理台</button>${s.llm!='cweb'?'<button class="btn sm" data-a="cbuse">會議整理改用這個方法</button>':''}</div></div>
+  <div class="sl"><label>方法二：Claude API 金鑰（全自動，另外按用量付費）<span>${claudeOn()?'✅ 已設定':s.ck&&s.ckNC?'⚠️ 沒有額度，已停用':'未設定'}</span></label><input class="ti" id="ckey" type="password" value="${esc(s.ck||'')}" placeholder="sk-ant-api03-…" autocomplete="off"><small>${s.ck&&s.ckNC?'<b>這把金鑰的 API 帳戶沒有額度，已停用，全部改用方法一（你的月費方案）。</b>儲值後按「測試連線」就會重新啟用。<br>':''}<b>API 和 Claude 月費方案是分開計費的：月費方案的額度不能給 API 金鑰用。</b>不想另外付費就不用填，或把它清空。到 Anthropic Console 建立金鑰（按用量計費）。金鑰只存在這台裝置；有開啟同步時，會用同步密碼加密後同步到你的其他裝置。</small><div class="pr" style="margin-top:8px"><button class="btn sm on" data-a="cktest">測試金鑰</button><button class="btn sm" data-a="ckurl">🔑 取得金鑰</button></div></div>
   <div class="sl"><label>翻譯用的模型</label>${sg('sctm',CLM.map(x=>[x[0],x[1]]),s.ctm)}<small>${(CLM.find(x=>x[0]==s.ctm)||CLM[0])[2]}</small></div>
   <div class="sl"><label>修正錯字・重點整理用的模型</label>${sg('scsm',CLM.map(x=>[x[0],x[1]]),s.csm)}<small>${(CLM.find(x=>x[0]==s.csm)||CLM[1])[2]}；翻譯頁的 ✨ 也用這個模型</small></div>
   ${tg('cTr','翻譯使用 Claude','翻譯引擎是「自動」時優先用 Claude；沒有網路或失敗時自動改用 Google／手機模型')}
@@ -2018,13 +2018,13 @@ $('#se').onclick=async e=>{const _vc=e.target.closest('[data-vc]');if(_vc){if(aw
   if(k=='ckurl'){openURL(CKURL);return}
   if(k=='cbopen'){openURL(S.set.cbURL);return}
   if(k=='cbuse'){S.set.llm='cweb';save();renderSet();toast('✅ 會議整理改用你的 Claude 方案（會議整理台）',3000);return}
-  if(k=='cktest'){const i=$('#ckey');if(i){S.set.ck=i.value.trim();save()}if(!claudeOn())return toast('請先貼上 API 金鑰',2500);toast('測試中…',8000);try{const t0=Date.now(),r=await claude({model:'claude-haiku-5-5',user:'請只回覆「連線成功」四個字',max:20});toast('✅ Claude 連線成功（'+((Date.now()-t0)/1000).toFixed(1)+' 秒）：'+r.text.trim().slice(0,20),3500)}catch(x){toast('❌ '+x.message,6000)}return}
+  if(k=='cktest'){const i=$('#ckey');if(i){S.set.ck=i.value.trim()}S.set.ckNC=0;CLFAIL=0;save();if(!claudeOn())return toast('請先貼上 API 金鑰',2500);toast('測試中…',8000);try{const t0=Date.now(),r=await claude({model:'claude-haiku-5-5',user:'請只回覆「連線成功」四個字',max:20});toast('✅ Claude 連線成功（'+((Date.now()-t0)/1000).toFixed(1)+' 秒）：'+r.text.trim().slice(0,20),3500)}catch(x){toast('❌ '+x.message,6000)}renderSet();return}
   if(k=='upd')checkUpd(1);if(k=='vers')verList();if(k=='apkup')apkInstall(relApk('v'+S.set.latest.apkName),'v'+S.set.latest.apkName);if(k=='rst'&&confirm('還原為 APK 內建版本？')){NB.resetApp();location.reload()}if(k=='ghweb')openURL(GH.pages);if(k=='ghrepo')openURL(GH.web+'/releases');
   if(k=='ej'){toast('打包中…');const out=[];for(const x of S.meets){const m=await getM(x.id);if(m)out.push({...m,spk:m.spk.map(({v,...q})=>q),u:m.u.map(({e,...u})=>u)})}dl('AI翻譯會議-備份.json',JSON.stringify({meets:out,hist:S.hist},null,1),'application/json')}
   if(k=='clr'&&confirm('這會刪除全部會議記錄、錄音與翻譯紀錄，確定嗎？')){if(R.on)await mStop();for(const st of ['m','a','q'])await idb(st,'readwrite',x=>x.clear());S.meets=[];S.hist=[];MQ=[];for(const k in MS)delete MS[k];R.m=null;save();renderSet();toast('已清除')}}};
 $('#se').oninput=e=>{const k=e.target.dataset.r;if(!k)return;const v=+e.target.value;S.set[k]=k=='glass'||k=='thr'?v/100:v;const o=$('#o_'+k);if(o)o.textContent=k=='glass'||k=='thr'?v+'%':v+'px';
  if(k=='maxSpk'){const lb=e.target.parentNode.querySelector('label span');lb.textContent=v?'最多 '+v+' 人':'自動'}apply();save()};
-$('#se').onchange=e=>{if(e.target.id=='cburl'){S.set.cbURL=e.target.value.trim();save();return}if(e.target.id=='ckey'){const had=claudeOn();S.set.ck=e.target.value.trim();S.set.cfgH='';if(!had&&claudeOn()){S.set.llm='claude';S.set.cTr=1;toast('✅ 已設定 Claude：翻譯、AI 修正錯字與重點整理都改用 Claude（可在下方調整）',4000)}save();renderSet();if(S.set.sync)syncSoon();return}if(e.target.id=='sypw'){S.set.syncPw=e.target.value;SY.key=null;save();return}if(e.target.id=='ghtok'){S.set.ghTok=e.target.value.trim();save();$('#tokst').textContent=S.set.ghTok?'已設定（按測試連線確認）':'未設定';return}if(e.target.id=='asrc'){S.set.asrc=e.target.value.trim();save();renderSet()}};
+$('#se').onchange=e=>{if(e.target.id=='cburl'){S.set.cbURL=e.target.value.trim();save();return}if(e.target.id=='ckey'){const had=claudeOn();S.set.ck=e.target.value.trim();S.set.ckNC=0;CLFAIL=0;S.set.cfgH='';if(!had&&claudeOn()){S.set.llm='claude';S.set.cTr=1;toast('✅ 已設定 Claude：翻譯、AI 修正錯字與重點整理都改用 Claude（可在下方調整）',4000)}save();renderSet();if(S.set.sync)syncSoon();return}if(e.target.id=='sypw'){S.set.syncPw=e.target.value;SY.key=null;save();return}if(e.target.id=='ghtok'){S.set.ghTok=e.target.value.trim();save();$('#tokst').textContent=S.set.ghTok?'已設定（按測試連線確認）':'未設定';return}if(e.target.id=='asrc'){S.set.asrc=e.target.value.trim();save();renderSet()}};
 
 /* ================= 模型管理 ================= */
 function openMM(){$('#mm').classList.add('on');renderMM()}
@@ -2317,7 +2317,7 @@ async function llmExplain(q,kind,onProg){const ck=kind+'|'+q;if(LLMC.has(ck))ret
   `請解釋英文${what}「${q}」：\n1. 主要意思（若有多個意思請分別列出）\n2. 每個意思各一個英文例句和中文翻譯\n3. 常見搭配用法\n4. 使用時要注意的地方\n5. 相似詞與相反詞`;
  const P=onProg||(()=>{});let who=aiWho(),z='';
  if(who=='api'){try{P('🤖 Claude 解說中…');const r=await claude({model:S.set.ctm||'claude-haiku-5-5',system:sys,user,max:1500,tries:2,timeout:60000,onText:t=>P(tidy(t))});z=tidy(r.text)}
-  catch(e){if(e.fatal)CLFAIL=Date.now();who=IS_APP&&NB.claudeRun&&S.set.cbURL?'web':'local';if(who=='local')throw e}}
+  catch(e){if(!e.fatal)throw e;CLFAIL=Date.now();who=IS_APP&&NB.claudeRun&&S.set.cbURL?'web':'local'}}
  if(!z&&who=='web'){P('🤖 交給 Claude（你的 Claude 方案）解說中…\n會開啟 Claude 視窗，完成後自動回到這裡');z=tidy(await askHand(sys,user,'AI 解說：'+q,t=>P('🤖 Claude：'+t)))}
  if(!z){const e=String(S.set.eng||'').startsWith('q')?S.set.eng:'q05',m=MTE[e];
   if(!S.set.llmOk){const k=await menu(`沒有設定 Claude，改用手機上的 ${m.n}？`,[['go',`✅ 下載並使用（${m.s.split('・')[0]}，較慢、較不準）`],['no','取消（到「設定 → 🤖 Claude」設定後就能用 Claude）']]);if(k!='go')throw new Error('已取消');S.set.llmOk=1;save()}

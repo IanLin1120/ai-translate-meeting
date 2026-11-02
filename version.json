@@ -1,1 +1,1 @@
-{"app": "1.27.3", "apk": 13, "apkName": "1.27.1", "minApk": 5, "notes": "學習頁的「AI 詳細解說」改用 Claude（你的 Claude 方案或 API 金鑰），不用再下載手機上的語言模型（自動更新即可）"}
+{"app": "1.27.4", "apk": 13, "apkName": "1.27.1", "minApk": 5, "notes": "API 金鑰沒有額度時，自動改用你的 Claude 月費方案（翻譯 ✨、會議整理、AI 解說），不再跳「請到 Anthropic Console 儲值」"}
