@@ -1,1 +1,1 @@
-{"app": "1.27.4", "apk": 13, "apkName": "1.27.1", "minApk": 5, "notes": "API 金鑰沒有額度時，自動改用你的 Claude 月費方案（翻譯 ✨、會議整理、AI 解說），不再跳「請到 Anthropic Console 儲值」"}
+{"app": "1.27.5", "apk": 13, "apkName": "1.27.1", "minApk": 5, "notes": "學習頁 AI 詳細解說一律用你的 Claude 月費方案，不再自動改成下載 Qwen（只有沒網路時才會詢問）"}

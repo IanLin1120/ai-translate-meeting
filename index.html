@@ -613,7 +613,7 @@ let S={set:{...DEF},hist:[],meets:[],fav:[]},cur='tr';
 const SPC=['#d0643a','#3a7bd0','#3f9a5b','#a052c0','#c9a227','#1f9e9e','#d04a7a','#6b7a8f','#8a5a2b','#4b5bd6','#5b8a2b','#b0503a'];
 
 /* ---- App 平台層(原生橋接 NB) ---- */
-const APP_VER='1.27.4';
+const APP_VER='1.27.5';
 const GH={user:'IanLin1120',repo:'ai-translate-meeting'};GH.pages=`https://${GH.user.toLowerCase()}.github.io/${GH.repo}/`;GH.models=`https://raw.githubusercontent.com/${GH.user}/${GH.repo}/models/`;GH.web=`https://github.com/${GH.user}/${GH.repo}`;
 const NB=window.NB||null,IS_APP=!!(NB&&NB.info),ON_PAGES=/\.github\.io$/.test(location.hostname);
 /* 函式庫位置:App 用內建檔案;GitHub Pages 用同站;其他(直接開 HTML 檔)用 GitHub Pages */
@@ -2024,7 +2024,7 @@ $('#se').onclick=async e=>{const _vc=e.target.closest('[data-vc]');if(_vc){if(aw
   if(k=='clr'&&confirm('這會刪除全部會議記錄、錄音與翻譯紀錄，確定嗎？')){if(R.on)await mStop();for(const st of ['m','a','q'])await idb(st,'readwrite',x=>x.clear());S.meets=[];S.hist=[];MQ=[];for(const k in MS)delete MS[k];R.m=null;save();renderSet();toast('已清除')}}};
 $('#se').oninput=e=>{const k=e.target.dataset.r;if(!k)return;const v=+e.target.value;S.set[k]=k=='glass'||k=='thr'?v/100:v;const o=$('#o_'+k);if(o)o.textContent=k=='glass'||k=='thr'?v+'%':v+'px';
  if(k=='maxSpk'){const lb=e.target.parentNode.querySelector('label span');lb.textContent=v?'最多 '+v+' 人':'自動'}apply();save()};
-$('#se').onchange=e=>{if(e.target.id=='cburl'){S.set.cbURL=e.target.value.trim();save();return}if(e.target.id=='ckey'){const had=claudeOn();S.set.ck=e.target.value.trim();S.set.ckNC=0;CLFAIL=0;S.set.cfgH='';if(!had&&claudeOn()){S.set.llm='claude';S.set.cTr=1;toast('✅ 已設定 Claude：翻譯、AI 修正錯字與重點整理都改用 Claude（可在下方調整）',4000)}save();renderSet();if(S.set.sync)syncSoon();return}if(e.target.id=='sypw'){S.set.syncPw=e.target.value;SY.key=null;save();return}if(e.target.id=='ghtok'){S.set.ghTok=e.target.value.trim();save();$('#tokst').textContent=S.set.ghTok?'已設定（按測試連線確認）':'未設定';return}if(e.target.id=='asrc'){S.set.asrc=e.target.value.trim();save();renderSet()}};
+$('#se').onchange=e=>{if(e.target.id=='cburl'){S.set.cbURL=e.target.value.trim()||CBDEF;save();return}if(e.target.id=='ckey'){const had=claudeOn();S.set.ck=e.target.value.trim();S.set.ckNC=0;CLFAIL=0;S.set.cfgH='';if(!had&&claudeOn()){S.set.llm='claude';S.set.cTr=1;toast('✅ 已設定 Claude：翻譯、AI 修正錯字與重點整理都改用 Claude（可在下方調整）',4000)}save();renderSet();if(S.set.sync)syncSoon();return}if(e.target.id=='sypw'){S.set.syncPw=e.target.value;SY.key=null;save();return}if(e.target.id=='ghtok'){S.set.ghTok=e.target.value.trim();save();$('#tokst').textContent=S.set.ghTok?'已設定（按測試連線確認）':'未設定';return}if(e.target.id=='asrc'){S.set.asrc=e.target.value.trim();save();renderSet()}};
 
 /* ================= 模型管理 ================= */
 function openMM(){$('#mm').classList.add('on');renderMM()}
@@ -2306,10 +2306,17 @@ async function openAIWord(q,kind,push){q=String(q).trim();const me=z=>openAIWord
 /* AI 解說：優先用 Claude（API 金鑰，或 App 內建 Claude 視窗用你的 Claude 方案）；都沒有才用手機上的 Qwen */
 const LLMC=new Map(),ASKP={};
 const tidy=t=>String(t||'').replace(/\*\*(.+?)\*\*/g,'$1').replace(/^#{1,4}\s*/gm,'').replace(/^\s*[-*]\s+/gm,'・').replace(/\n{3,}/g,'\n\n').trim();
-function aiWho(){return claudeOn()&&Date.now()-CLFAIL>1800000?'api':IS_APP&&NB.claudeRun&&S.set.cbURL?'web':'local'}
-function askHand(sys,user,label,onProg){return new Promise((res,rej)=>{const id='a'+Date.now().toString(36);const job={v:1,k:'ask',id,sys,user,label};
- let ok=false;try{ok=NB.claudeRun(S.set.cbURL,'AITM-JOB:'+JSON.stringify(job))}catch(e){}if(!ok)return rej(new Error('無法開啟 Claude 視窗'));
- CPEND={id,k:'ask',ts:Date.now()};ASKP[id]={res,rej,prog:onProg}})}
+const CBDEF='https://claude.ai/artifact/5ZS9ovXbfZjngWMwTzRdaX',cbu=()=>/^https:\/\/claude\.ai\//.test(S.set.cbURL||'')?S.set.cbURL:CBDEF;
+function aiWho(){return claudeOn()&&Date.now()-CLFAIL>1800000?'api':navigator.onLine===false?'local':'web'}
+function askHand(sys,user,label,onProg){return new Promise(async(res,rej)=>{const id='a'+Date.now().toString(36);const txt='AITM-JOB:'+JSON.stringify({v:1,k:'ask',id,sys,user,label});
+ for(const k in ASKP){try{ASKP[k].rej(new Error('已取消'))}catch(e){}delete ASKP[k]}
+ ASKP[id]={res,rej,prog:onProg};CPEND={id,k:'ask',ts:Date.now()};
+ let ok=false;if(IS_APP&&NB.claudeRun){try{ok=NB.claudeRun(cbu(),txt)}catch(e){}}
+ if(ok){onProg&&onProg('🤖 Claude 解說中（用你的 Claude 月費方案）…\n第一次使用要在 Claude 視窗登入 claude.ai');return}
+ /* 舊版 APK（沒有內建 Claude 視窗）或網頁版：複製工作 → 開「會議整理台」→ 完成後按「複製結果」回來自動顯示 */
+ try{if(IS_APP&&NB.copy)NB.copy(txt);else await navigator.clipboard.writeText(txt)}catch(e){const x=document.createElement('textarea');x.value=txt;document.body.appendChild(x);x.select();document.execCommand('copy');x.remove()}
+ onProg&&onProg('📋 已複製，正在打開「會議整理台」（用你的 Claude 月費方案）\n在框裡長按貼上就會開始；完成後按「複製結果」，回到這裡就會自動顯示解說。'+(IS_APP?'\n\n（安裝最新版 APK 後就不用複製貼上，會直接在 App 裡完成）':''));
+ setTimeout(()=>openURL(cbu()),600)})}
 async function llmExplain(q,kind,onProg){const ck=kind+'|'+q;if(LLMC.has(ck))return LLMC.get(ck);
  const what=kind=='p'?'片語':kind=='t'?'專有名詞':kind=='g'?'句子':'單字';
  const sys='你是台灣的英文老師，用繁體中文（台灣用語）回答，條列清楚、精簡。只用純文字和數字編號排版，不要用 Markdown 符號（不要 **、#、表格）。';
@@ -2317,10 +2324,10 @@ async function llmExplain(q,kind,onProg){const ck=kind+'|'+q;if(LLMC.has(ck))ret
   `請解釋英文${what}「${q}」：\n1. 主要意思（若有多個意思請分別列出）\n2. 每個意思各一個英文例句和中文翻譯\n3. 常見搭配用法\n4. 使用時要注意的地方\n5. 相似詞與相反詞`;
  const P=onProg||(()=>{});let who=aiWho(),z='';
  if(who=='api'){try{P('🤖 Claude 解說中…');const r=await claude({model:S.set.ctm||'claude-haiku-5-5',system:sys,user,max:1500,tries:2,timeout:60000,onText:t=>P(tidy(t))});z=tidy(r.text)}
-  catch(e){if(!e.fatal)throw e;CLFAIL=Date.now();who=IS_APP&&NB.claudeRun&&S.set.cbURL?'web':'local'}}
- if(!z&&who=='web'){P('🤖 交給 Claude（你的 Claude 方案）解說中…\n會開啟 Claude 視窗，完成後自動回到這裡');z=tidy(await askHand(sys,user,'AI 解說：'+q,t=>P('🤖 Claude：'+t)))}
+  catch(e){if(!e.fatal)throw e;CLFAIL=Date.now();who='web'}}
+ if(!z&&who=='web'){z=tidy(await askHand(sys,user,'AI 解說：'+q,t=>P(/^[🤖📋]/u.test(t)?t:'🤖 Claude：'+t)))}
  if(!z){const e=String(S.set.eng||'').startsWith('q')?S.set.eng:'q05',m=MTE[e];
-  if(!S.set.llmOk){const k=await menu(`沒有設定 Claude，改用手機上的 ${m.n}？`,[['go',`✅ 下載並使用（${m.s.split('・')[0]}，較慢、較不準）`],['no','取消（到「設定 → 🤖 Claude」設定後就能用 Claude）']]);if(k!='go')throw new Error('已取消');S.set.llmOk=1;save()}
+  {const k=await menu(`目前沒有網路，Claude 無法使用。改用手機上的 ${m.n}？`,[['go',`下載並使用（${m.s.split('・')[0]}，較慢、較不準）`],['no','取消（連上網路後再用 Claude）']]);if(k!='go')throw new Error('沒有網路，請連上網路後再按一次');S.set.llmOk=1;save()}
   P('🤖 手機上的 Qwen 思考中…（第一次會下載語言模型）');const t=await AI.call('llm',{repo:m.r,sys,user,max:420});z=await toTW(String(t||'').trim()||'（沒有結果）')}
  LLMC.set(ck,z);return z}
 
@@ -2455,7 +2462,7 @@ $('#pmL').onclick=()=>{S.set.onb=1;save();$('#pm').classList.remove('on')};
 addEventListener('beforeunload',e=>{if(R.on){e.preventDefault();e.returnValue=''}});
 (async()=>{const d=await iget('k','s');if(d){S.set={...DEF,...d.set};S.hist=d.hist||[];S.meets=d.meets||[];S.fav=d.fav||[]}if(['word','phr','gram','term','fav'].includes(S.set.lsub))LS.sub=S.set.lsub;if(!TH[S.set.theme])S.set.theme='sea';
  /* v1.3:手機預設改用 CPU(GPU 容易發燙、當機);開 App 時不自動開相機/麥克風 */
- if(!S.set.v126){if(S.set.llm=='local'||(S.set.llm=='claude'&&!claudeOn()))S.set.llm='cweb';S.set.v126=1;save()}if(!S.set.v212){if(S.set.eng!='gg')S.set.eng='auto';S.set.v212=1;save()}if(!S.set.v13){S.set.dev='wasm';S.set.v13=1;save()}if(!S.set.v16){if(S.set.cmodel=='sensevoice')S.set.cmodel='firered';S.set.v16=1;save()}if(S.set.llm=='github'){S.set.llm='local';save()}if(!S.set.v15){if(S.set.cmodel=='large-v3-turbo'||S.set.cmodel=='medium'||S.set.cmodel=='small')S.set.cmodel='sensevoice';S.set.v15=1;save()}if(S.set.tsub=='cam'||S.set.tsub=='live')S.set.tsub='text';
+ if(!/^https:\/\/claude\.ai\//.test(S.set.cbURL||'')){S.set.cbURL=CBDEF;save()}if(!S.set.v126){if(S.set.llm=='local'||(S.set.llm=='claude'&&!claudeOn()))S.set.llm='cweb';S.set.v126=1;save()}if(!S.set.v212){if(S.set.eng!='gg')S.set.eng='auto';S.set.v212=1;save()}if(!S.set.v13){S.set.dev='wasm';S.set.v13=1;save()}if(!S.set.v16){if(S.set.cmodel=='sensevoice')S.set.cmodel='firered';S.set.v16=1;save()}if(S.set.llm=='github'){S.set.llm='local';save()}if(!S.set.v15){if(S.set.cmodel=='large-v3-turbo'||S.set.cmodel=='medium'||S.set.cmodel=='small')S.set.cmodel='sensevoice';S.set.v15=1;save()}if(S.set.tsub=='cam'||S.set.tsub=='live')S.set.tsub='text';
  layout();apply();show('tr');
  /* 告訴 App「新版介面已正常啟動」。舊版 APK 會在頁面載入完成時重設這個狀態，
     若 10 秒內沒再收到就誤判成啟動失敗、把更新還原 → 前 25 秒內每 2 秒回報一次，避開這個時間差 */
