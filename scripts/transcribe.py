@@ -6,7 +6,7 @@
       → 結果 result.json 上傳回同一個草稿 Release，App 取回後會刪除整個 Release。
 隱私：這個儲存庫是公開的，Actions 紀錄任何人都看得到，所以這裡「絕不」印出逐字稿內容。
 """
-import glob, json, os, re, shutil, subprocess, sys, tempfile, time, traceback, urllib.request, urllib.error
+import base64, glob, json, os, re, shutil, subprocess, sys, tempfile, time, traceback, urllib.request, urllib.error
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -85,6 +85,49 @@ def to_tw(text, cc):
     return cc.convert(text) if cc and re.search(r"[一-鿿]", text) else text
 
 
+# ---- 瀏覽器版（網頁／PWA）的傳輸方式 ----
+# 瀏覽器不能把檔案傳到 uploads.github.com（GitHub 沒開放跨站），所以網頁版改用 git blob 傳：
+# 檔案先用隨機金鑰 AES-GCM 加密再上傳；金鑰與檔案清單只放在草稿 Release 的名稱裡（草稿只有儲存庫擁有者看得到），
+# 名稱格式：aitm-git:<金鑰>:<清單 blob>[:<結果 blob>]。處理完 App 會刪掉 Release，金鑰就跟著消失。
+def git_info(rel):
+    n = (rel or {}).get("name") or ""
+    if not n.startswith("aitm-git:"):
+        return None
+    p = n.split(":")
+    key = base64.b64decode(p[1])
+    files = json.loads(gdec(key, blob_get(p[2])))
+    return {"key": key, "files": files, "parts": p}
+
+
+def gdec(key, data):
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    return AESGCM(key).decrypt(data[:12], data[12:], None)
+
+
+def genc(key, data):
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    iv = os.urandom(12)
+    return iv + AESGCM(key).encrypt(iv, data, None)
+
+
+def blob_get(sha):
+    return gh("GET", f"/git/blobs/{sha}", accept="application/vnd.github.raw+json", raw=True)
+
+
+def blob_put(data):
+    return gh("POST", "/git/blobs", {"content": base64.b64encode(data).decode(), "encoding": "base64"})["sha"]
+
+
+def git_result(data):
+    """網頁版：結果也加密放成 git blob，把位置加到 Release 名稱（要在上傳 result.json 附件之前做）"""
+    rel = gh("GET", f"/releases/{REL}")
+    g = git_info(rel)
+    if not g:
+        return
+    sha = blob_put(genc(g["key"], data))
+    gh("PATCH", f"/releases/{REL}", {"name": ":".join(g["parts"][:3] + [sha])})
+
+
 def load_job():
     tmp = tempfile.mkdtemp()
     if TEST:
@@ -93,6 +136,25 @@ def load_job():
         files = {os.path.basename(TEST): TEST}
     else:
         rel = gh("GET", f"/releases/{REL}")
+        g = git_info(rel)
+        if g:  # 網頁版上傳的工作
+            if "job.json" not in g["files"]:
+                raise RuntimeError("找不到 job.json")
+            job = json.loads(gdec(g["key"], blob_get(g["files"]["job.json"])))
+            if job.get("mode") == "text":
+                return job, None
+            status("下載錄音", 0)
+            files = {}
+            names = [p["name"] for p in job["parts"]]
+            for i, n in enumerate(names):
+                if n not in g["files"]:
+                    raise RuntimeError(f"缺少錄音檔 {n}")
+                dest = os.path.join(tmp, n)
+                with open(dest, "wb") as f:
+                    f.write(gdec(g["key"], blob_get(g["files"][n])))
+                files[n] = dest
+                status("下載錄音", (i + 1) / len(names) * 100)
+            return job, files
         assets = {a["name"]: a for a in rel["assets"]}
         if "job.json" not in assets:
             raise RuntimeError("找不到 job.json")

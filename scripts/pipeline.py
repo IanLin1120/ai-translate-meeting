@@ -38,6 +38,8 @@ def assets():
 def put(name, data, ctype="application/json"):
     if isinstance(data, (dict, list)):
         data = json.dumps(data, ensure_ascii=False, separators=(",", ":")).encode()
+    if name == "result.json" and T.REL and not T.TEST:
+        T.git_result(data)  # 網頁版：結果另外加密放一份（瀏覽器讀不到 Release 附件）
     a = assets().get(name)
     if a:
         T.gh("DELETE", f"/releases/assets/{a['id']}")
